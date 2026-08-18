@@ -1,5 +1,7 @@
-const WORLD_W = 1500;
-const WORLD_H = 1050;
+const PX_PER_M = 6;
+const WORLD_W = 4200;
+const WORLD_H = 3000;
+const m = (meters) => meters * PX_PER_M;
 
 class JerusalemGraybox extends Phaser.Scene {
   constructor() {
@@ -9,195 +11,220 @@ class JerusalemGraybox extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#a79c7d');
-    this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
-    this.cameras.main.centerOn(WORLD_W / 2, WORLD_H / 2);
-    this.cameras.main.setZoom(0.78);
+    const cam = this.cameras.main;
+    cam.setBackgroundColor('#a79c7d');
+    cam.setBounds(0, 0, WORLD_W, WORLD_H);
+    cam.centerOn(2150, 1450);
+    cam.setZoom(0.28);
 
     this.drawGround();
-    this.drawTemple();
+    this.drawTempleMount();
     this.drawBethesda();
-    this.drawMarket();
-    this.drawStreet();
+    this.drawMarketAndStreet();
     this.drawCharacter();
+    this.drawScaleBar();
     this.drawLabels();
     this.setupCameraControls();
   }
 
   drawGround() {
     const g = this.add.graphics();
-    g.fillStyle(0xb7a779, 1);
+    g.fillStyle(0xb5aa88, 1);
     g.fillRect(0, 0, WORLD_W, WORLD_H);
 
-    g.fillStyle(0x9d916d, 1);
-    for (let y = 0; y < WORLD_H; y += 48) {
-      for (let x = 0; x < WORLD_W; x += 64) {
-        if (((x / 64) + (y / 48)) % 2 === 0) {
-          g.fillRect(x, y, 64, 48);
-        }
-      }
-    }
-
-    g.fillStyle(0x7f7358, 1);
-    g.fillRect(0, 840, WORLD_W, 210);
-
-    g.fillStyle(0x8ca06d, 1);
-    g.fillRect(1210, 0, 290, WORLD_H);
+    // Subtle 10 m planning grid. This is only a graybox aid.
+    g.lineStyle(1, 0x756b52, 0.12);
+    for (let x = 0; x <= WORLD_W; x += m(10)) g.lineBetween(x, 0, x, WORLD_H);
+    for (let y = 0; y <= WORLD_H; y += m(10)) g.lineBetween(0, y, WORLD_W, y);
   }
 
   makeZone(x, y, w, h, fill, stroke, name, detail) {
-    const box = this.add.rectangle(x, y, w, h, fill, 0.88)
-      .setStrokeStyle(4, stroke, 0.95)
+    const box = this.add.rectangle(x, y, w, h, fill, 0.32)
+      .setStrokeStyle(6, stroke, 0.9)
       .setInteractive({ useHandCursor: true });
 
     box.on('pointerdown', () => {
       const el = document.getElementById('status');
       if (el) el.textContent = `${name} — ${detail}`;
     });
-
     return box;
   }
 
-  drawTemple() {
-    this.makeZone(795, 245, 720, 360, 0xc5b792, 0x6d5c3d,
-      '聖殿外院', '教導、辯論、群眾聚集與潔淨聖殿事件核心區');
+  drawTempleMount() {
+    // Approximate Herodian platform footprint: 480 m x 300 m.
+    const x = 1050;
+    const y = 760;
+    const w = m(480);
+    const h = m(300);
+
+    this.makeZone(
+      x + w / 2, y + h / 2, w, h,
+      0xc8b992, 0x665638,
+      '聖殿山平台', 'Graybox 按約 480 × 300 公尺尺度呈現；人物與其他物件共用同一比例'
+    );
 
     const g = this.add.graphics();
+    g.fillStyle(0xc7b894, 1);
+    g.fillRect(x, y, w, h);
+    g.lineStyle(12, 0x665638, 1);
+    g.strokeRect(x, y, w, h);
 
-    g.fillStyle(0x776448, 1);
-    g.fillRect(445, 95, 700, 40);
-    g.fillRect(445, 355, 700, 38);
+    // Broad outer colonnade strips: placeholders, not final archaeology.
+    g.fillStyle(0x8f7c5b, 0.55);
+    g.fillRect(x + m(8), y + m(8), w - m(16), m(12));
+    g.fillRect(x + m(8), y + h - m(20), w - m(16), m(12));
+    g.fillRect(x + m(8), y + m(20), m(12), h - m(40));
+    g.fillRect(x + w - m(20), y + m(20), m(12), h - m(40));
 
-    for (let x = 475; x <= 1115; x += 80) {
-      g.fillStyle(0xd9cfb4, 1);
-      g.fillRect(x, 125, 18, 225);
-      g.fillStyle(0x5b4a34, 0.25);
-      g.fillRect(x + 18, 130, 9, 220);
-    }
+    // Temple sanctuary placeholder, intentionally much smaller than the full mount.
+    const sanctuaryW = m(85);
+    const sanctuaryH = m(145);
+    const sx = x + w * 0.56 - sanctuaryW / 2;
+    const sy = y + h * 0.42 - sanctuaryH / 2;
 
-    g.fillStyle(0xa59065, 1);
-    g.fillRect(650, 150, 300, 125);
-    g.fillStyle(0xd3c49c, 1);
-    g.fillRect(680, 120, 240, 115);
-    g.lineStyle(5, 0x6b5736, 1);
-    g.strokeRect(680, 120, 240, 115);
+    g.fillStyle(0xd8caa6, 1);
+    g.fillRect(sx, sy, sanctuaryW, sanctuaryH);
+    g.lineStyle(8, 0x6c5738, 1);
+    g.strokeRect(sx, sy, sanctuaryW, sanctuaryH);
 
-    g.fillStyle(0x6e5635, 1);
-    g.fillRect(770, 175, 58, 60);
-
-    for (let i = 0; i < 6; i++) {
-      g.fillStyle(0xb3a47d, 1);
-      g.fillRect(690 + i * 38, 280 + i * 5, 220 - i * 30, 12);
-    }
+    // Inner court placeholder.
+    g.lineStyle(6, 0x7f6b49, 0.9);
+    g.strokeRect(sx - m(28), sy - m(22), sanctuaryW + m(56), sanctuaryH + m(44));
   }
 
   drawBethesda() {
-    this.makeZone(270, 250, 360, 300, 0xa89978, 0x3f6482,
-      '畢士大池', '聖殿北側附近；病患聚集與醫治故事區');
+    // Approximate combined double-pool complex: 46 m x 92 m.
+    // Located north of the Temple Mount in the compressed map.
+    const x = 760;
+    const y = 150;
+    const w = m(46);
+    const h = m(92);
+
+    this.makeZone(
+      x + w / 2, y + h / 2, w + m(16), h + m(16),
+      0x8ca2aa, 0x315b75,
+      '畢士大池', '雙池 complex 約 46 × 92 公尺；正式版會以五廊／池階結構重畫'
+    );
 
     const g = this.add.graphics();
-    g.fillStyle(0x496e7e, 1);
-    g.fillRect(160, 180, 100, 175);
-    g.fillRect(285, 180, 100, 175);
+    const border = m(3);
+    const divider = m(4);
+    const innerX = x + border;
+    const innerY = y + border;
+    const innerW = w - border * 2;
+    const innerH = h - border * 2;
+    const halfH = (innerH - divider) / 2;
 
-    g.fillStyle(0x7ea6ad, 1);
-    g.fillRect(170, 190, 80, 155);
-    g.fillRect(295, 190, 80, 155);
+    g.fillStyle(0x6f929d, 1);
+    g.fillRect(innerX, innerY, innerW, halfH);
+    g.fillRect(innerX, innerY + halfH + divider, innerW, halfH);
 
-    g.lineStyle(8, 0xd0c3a0, 1);
-    g.strokeRect(150, 170, 245, 195);
-    g.lineBetween(272, 170, 272, 365);
+    g.lineStyle(border, 0xd1c5a5, 1);
+    g.strokeRect(x, y, w, h);
 
-    for (const x of [135, 200, 272, 340, 405]) {
-      g.fillStyle(0xd6c9aa, 1);
-      g.fillRect(x, 145, 12, 245);
-    }
+    g.fillStyle(0xd1c5a5, 1);
+    g.fillRect(x, innerY + halfH, w, divider);
+
+    // Five-portico visual hint: perimeter + central divider.
+    g.lineStyle(m(2), 0xb9aa87, 0.9);
+    g.strokeRect(x - m(5), y - m(5), w + m(10), h + m(10));
+    g.lineBetween(x - m(5), y + h / 2, x + w + m(5), y + h / 2);
   }
 
-  drawMarket() {
-    this.makeZone(660, 650, 680, 300, 0x9d835b, 0x8e5c2d,
-      '市場與祭物區', '換錢桌、鴿籠、羊群與高密度日常互動區');
-
+  drawMarketAndStreet() {
     const g = this.add.graphics();
+
+    // A modest street/market area west-southwest of the Temple Mount.
+    // Stalls are 2–4 m, streets roughly 8–12 m wide.
+    const streetX = 520;
+    const streetY = 1120;
+    g.fillStyle(0xc7bb98, 1);
+    g.fillRoundedRect(streetX, streetY, m(70), m(220), m(3));
+
     const stalls = [
-      [420, 565], [540, 565], [660, 565], [780, 565],
-      [470, 685], [600, 690], [740, 690], [870, 665]
+      [470, 1190], [470, 1260], [470, 1330],
+      [960, 1220], [960, 1300], [960, 1380]
     ];
 
     stalls.forEach(([x, y], i) => {
-      g.fillStyle(i % 2 ? 0x6d4e2f : 0x7d5c37, 1);
-      g.fillRect(x, y, 90, 46);
-      g.fillStyle(0xb98d59, 1);
-      g.fillRect(x - 5, y - 18, 100, 18);
+      const sw = m(i % 2 ? 3.5 : 3);
+      const sh = m(2.2);
+      g.fillStyle(i % 2 ? 0x765333 : 0x86603b, 1);
+      g.fillRect(x, y, sw, sh);
     });
 
-    // Animal pens
-    g.lineStyle(5, 0x725638, 1);
-    g.strokeRect(865, 560, 190, 105);
-    g.strokeRect(910, 690, 150, 90);
+    // Small animal pen ~12 x 8 m.
+    g.lineStyle(4, 0x715638, 1);
+    g.strokeRect(930, 1490, m(12), m(8));
 
-    for (let i = 0; i < 5; i++) {
-      this.add.circle(895 + (i % 3) * 42, 590 + Math.floor(i / 3) * 42, 10, 0xe7dfca)
-        .setStrokeStyle(2, 0x665845);
-    }
-
-    for (let i = 0; i < 3; i++) {
-      this.add.ellipse(945 + i * 42, 725, 30, 18, 0xd9d0ba)
-        .setStrokeStyle(2, 0x665845);
-    }
-  }
-
-  drawStreet() {
-    const g = this.add.graphics();
-    g.fillStyle(0xc5b992, 1);
-    g.fillRoundedRect(525, 800, 360, 220, 36);
-    g.fillRect(650, 690, 110, 180);
-
-    g.lineStyle(4, 0x7d6d4f, 0.45);
-    for (let y = 830; y < 1010; y += 44) {
-      g.lineBetween(530, y, 875, y);
-    }
-
-    g.fillStyle(0x615744, 1);
-    g.fillRect(610, 895, 70, 125);
-    g.fillRect(740, 895, 70, 125);
+    this.makeZone(
+      760, 1370, m(95), m(115),
+      0xa38459, 0x8b5b2f,
+      '市場 / 街道', '第一版只保留可互動的生活區；不再畫尚未製作的遠方道路預留'
+    );
   }
 
   drawCharacter() {
-    const group = this.add.container(710, 755);
-    const shadow = this.add.ellipse(0, 18, 34, 14, 0x2d2a23, 0.25);
-    const body = this.add.ellipse(0, 0, 24, 38, 0xb24d3e, 1).setStrokeStyle(2, 0x5b2e27);
-    const head = this.add.circle(0, -25, 10, 0xc8996b, 1).setStrokeStyle(2, 0x5f4633);
+    // Real scale: 1.7 m adult ≈ 10 px tall at 1x world zoom.
+    const pxHeight = m(1.7);
+    const group = this.add.container(760, 1315);
+    const shadow = this.add.ellipse(0, pxHeight * 0.44, m(0.55), m(0.18), 0x2d2a23, 0.28);
+    const body = this.add.ellipse(0, 0, m(0.48), pxHeight * 0.72, 0xb24d3e, 1);
+    const head = this.add.circle(0, -pxHeight * 0.46, m(0.16), 0xc8996b, 1);
     group.add([shadow, body, head]);
     group.setDepth(999);
 
     this.tweens.add({
       targets: group,
-      x: 790,
-      duration: 2800,
+      x: group.x + m(10),
+      duration: 6500,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.inOut'
     });
   }
 
+  drawScaleBar() {
+    const g = this.add.graphics().setDepth(1100).setScrollFactor(0);
+    const x = 28;
+    const y = 80;
+    const length = m(50) * 0.28; // screen-space length at initial zoom
+
+    g.lineStyle(4, 0x2e2920, 1);
+    g.lineBetween(x, y, x + length, y);
+    g.lineBetween(x, y - 7, x, y + 7);
+    g.lineBetween(x + length, y - 7, x + length, y + 7);
+
+    this.add.text(x, y + 10, '50 m', {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontSize: '15px',
+      color: '#2c251b',
+      backgroundColor: 'rgba(242,232,207,.82)',
+      padding: { x: 6, y: 3 }
+    }).setDepth(1101).setScrollFactor(0);
+  }
+
   drawLabels() {
     const style = {
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontSize: '26px',
+      fontSize: '24px',
       color: '#2c251b',
-      backgroundColor: 'rgba(242,232,207,.78)',
-      padding: { x: 10, y: 6 }
+      backgroundColor: 'rgba(242,232,207,.82)',
+      padding: { x: 9, y: 5 }
     };
 
-    this.add.text(720, 85, '聖殿外院', style).setDepth(1000);
-    this.add.text(145, 405, '畢士大池', style).setDepth(1000);
-    this.add.text(590, 505, '市場 / 換錢 / 祭物', style).setDepth(1000);
-    this.add.text(625, 920, '城內街道 / 出入口', style).setDepth(1000);
+    this.add.text(2140, 820, '聖殿山平台  ≈ 480 × 300 m', style).setDepth(1000);
+    this.add.text(690, 90, '畢士大池  ≈ 46 × 92 m', style).setDepth(1000);
+    this.add.text(560, 1670, '市場 / 城內街道', style).setDepth(1000);
 
-    const small = { ...style, fontSize: '18px' };
-    this.add.text(1218, 710, '→ 東側預留\n汲淪谷 / 客西馬尼', small).setDepth(1000);
-    this.add.text(905, 940, '南側預留 →\n西羅亞池方向', small).setDepth(1000);
+    const note = {
+      ...style,
+      fontSize: '17px',
+      color: '#4c4233'
+    };
+    this.add.text(25, 20, 'Graybox v0.2 · 統一真實尺度：1 m = 6 px · 滾輪縮放後可看人物尺度', note)
+      .setDepth(1200)
+      .setScrollFactor(0);
   }
 
   setupCameraControls() {
@@ -224,7 +251,7 @@ class JerusalemGraybox extends Phaser.Scene {
 
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
       const oldZoom = cam.zoom;
-      const newZoom = Phaser.Math.Clamp(oldZoom - deltaY * 0.001, 0.45, 1.7);
+      const newZoom = Phaser.Math.Clamp(oldZoom - deltaY * 0.0008, 0.18, 2.5);
       if (newZoom === oldZoom) return;
 
       const worldBefore = cam.getWorldPoint(pointer.x, pointer.y);
