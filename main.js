@@ -77,9 +77,11 @@ class JerusalemGraybox extends Phaser.Scene {
   }
 
   drawBethesda() {
-    const x = 760, y = 150, w = m(46), h = m(92);
+    // Keep Bethesda visually adjacent to the north / northeast side of the Temple Mount.
+    // Exact gate geometry is intentionally not claimed in this graybox.
+    const x = 3300, y = 300, w = m(46), h = m(92);
     this.makeZone(x + w / 2, y + h / 2, w + m(16), h + m(16), 0x8ca2aa, 0x315b75,
-      '畢士大池', '雙池 complex 約 46 × 92 公尺；正式版會以五廊／池階結構重畫');
+      '畢士大池', '雙池 complex 約 46 × 92 公尺；位置壓縮到聖殿北／東北側附近，正式版再細化羊門與廊柱');
 
     const g = this.add.graphics();
     const border = m(3), divider = m(4);
@@ -140,9 +142,9 @@ class JerusalemGraybox extends Phaser.Scene {
       backgroundColor: 'rgba(242,232,207,.82)', padding: { x: 9, y: 5 }
     };
     this.add.text(2140, 820, '聖殿山平台  ≈ 480 × 300 m', style).setDepth(1000);
-    this.add.text(690, 90, '畢士大池  ≈ 46 × 92 m', style).setDepth(1000);
+    this.add.text(3200, 240, '畢士大池  ≈ 46 × 92 m', style).setDepth(1000);
     this.add.text(560, 1670, '市場 / 城內街道', style).setDepth(1000);
-    this.add.text(25, 20, 'Graybox v0.2 · 1 m = 6 px · 支援雙指縮放與 ± 按鈕', {
+    this.add.text(25, 20, 'Graybox v0.3 · 1 m = 6 px · Bethesda 移至聖殿北／東北側', {
       ...style, fontSize: '17px', color: '#4c4233'
     }).setDepth(1200).setScrollFactor(0);
   }
