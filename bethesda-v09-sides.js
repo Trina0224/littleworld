@@ -43,8 +43,6 @@
     scene.polygon([b0, b3, t3, t0], colors.west, 1, null, 1, 0, baseDepth + 2);
     scene.polygon([b1, b2, t2, t1], colors.east, 1, null, 1, 0, baseDepth + 2);
     scene.polygon([t0, t1, t2, t3], colors.top, 1, colors.stroke, 0.65, 1.5, baseDepth + 3);
-
-    return { b0, b1, b2, b3, t0, t1, t2, t3 };
   }
 
   function shiftedShadow(scene, east, south, widthM, depthM, heightM, depth, alpha) {
@@ -68,11 +66,14 @@
 
   function placeColumn(scene, east, south, heightM, depthOffset) {
     const point = scene.p(east, south);
-    const shadowLength = heightM * PX_PER_M * 0.7;
-    const shadow = scene.add.graphics().setDepth(point.y + depthOffset - 4);
-    shadow.fillStyle(0x000000, 0.11);
-    shadow.fillEllipse(point.x - shadowLength * 0.44, point.y - shadowLength * 0.27, shadowLength, 3.4);
-    shadow.setRotation(-0.14);
+    const shadowLength = heightM * PX_PER_M * 0.72;
+    const shadowWidth = 2.1 * PX_PER_M;
+    scene.polygon([
+      new Phaser.Math.Vector2(point.x - shadowWidth * 0.45, point.y),
+      new Phaser.Math.Vector2(point.x + shadowWidth * 0.45, point.y),
+      new Phaser.Math.Vector2(point.x + shadowWidth * 0.45 - shadowLength * 0.82, point.y - shadowLength * 0.52),
+      new Phaser.Math.Vector2(point.x - shadowWidth * 0.45 - shadowLength * 0.82, point.y - shadowLength * 0.52)
+    ], 0x000000, 0.1, null, 1, 0, point.y + depthOffset - 4);
 
     scene.add.image(point.x, point.y, 'bethesdaV2-column')
       .setOrigin(0.5, 0.98)
@@ -80,7 +81,7 @@
       .setDepth(point.y + depthOffset);
   }
 
-  function drawSidePortico(scene, east, south, widthM, depthM, innerEast, label) {
+  function drawSidePortico(scene, east, south, widthM, depthM, innerEast) {
     shiftedShadow(scene, east, south, widthM, depthM, 6.2, 219, 0.09);
 
     scene.worldRect(east, south, widthM, depthM, 0xc7b894, 0.96, 0x9b896a, 221);
@@ -103,13 +104,9 @@
     );
     roofTileLines(scene, east, south, widthM, depthM, 6.2, 264);
 
-    const columnEast = innerEast;
     for (let offset = 5; offset <= depthM - 4; offset += 11.5) {
-      placeColumn(scene, columnEast, south + offset, 5.9, 285);
+      placeColumn(scene, innerEast, south + offset, 5.9, 285);
     }
-
-    const point = scene.p(east + widthM / 2, south + depthM / 2, 6.3);
-    point.label = label;
   }
 
   function drawSidePoolWall(scene, east, south, widthM, depthM) {
@@ -145,8 +142,8 @@
     drawSidePoolWall(scene, e - 0.7, s, 1.45, totalDepth);
     drawSidePoolWall(scene, e + w - 0.75, s, 1.45, totalDepth);
 
-    drawSidePortico(scene, e - 7.0, s - 1.5, 4.8, totalDepth + 3, e - 3.0, 'west');
-    drawSidePortico(scene, e + w + 2.2, s - 1.5, 4.8, totalDepth + 3, e + w + 3.0, 'east');
+    drawSidePortico(scene, e - 7.0, s - 1.5, 4.8, totalDepth + 3, e - 3.0);
+    drawSidePortico(scene, e + w + 2.2, s - 1.5, 4.8, totalDepth + 3, e + w + 3.0);
 
     for (const child of scene.children.list) {
       if (child.type !== 'Text') continue;
