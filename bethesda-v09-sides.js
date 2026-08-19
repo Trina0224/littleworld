@@ -29,15 +29,16 @@
     }
   }
 
-  function prism(scene, east, south, widthM, depthM, heightM, colors, baseDepth) {
-    const b0 = scene.p(east, south, 0);
-    const b1 = scene.p(east + widthM, south, 0);
-    const b2 = scene.p(east + widthM, south + depthM, 0);
-    const b3 = scene.p(east, south + depthM, 0);
-    const t0 = scene.p(east, south, heightM);
-    const t1 = scene.p(east + widthM, south, heightM);
-    const t2 = scene.p(east + widthM, south + depthM, heightM);
-    const t3 = scene.p(east, south + depthM, heightM);
+  function prism(scene, east, south, widthM, depthM, baseHeightM, heightM, colors, baseDepth) {
+    const topHeightM = baseHeightM + heightM;
+    const b0 = scene.p(east, south, baseHeightM);
+    const b1 = scene.p(east + widthM, south, baseHeightM);
+    const b2 = scene.p(east + widthM, south + depthM, baseHeightM);
+    const b3 = scene.p(east, south + depthM, baseHeightM);
+    const t0 = scene.p(east, south, topHeightM);
+    const t1 = scene.p(east + widthM, south, topHeightM);
+    const t2 = scene.p(east + widthM, south + depthM, topHeightM);
+    const t3 = scene.p(east, south + depthM, topHeightM);
 
     scene.polygon([b3, b2, t2, t3], colors.south, 1, null, 1, 0, baseDepth + 1);
     scene.polygon([b0, b3, t3, t0], colors.west, 1, null, 1, 0, baseDepth + 2);
@@ -92,7 +93,8 @@
       south,
       widthM,
       depthM,
-      6.2,
+      5.65,
+      0.58,
       {
         top: 0xa85f3f,
         south: 0x77523c,
@@ -102,7 +104,7 @@
       },
       260
     );
-    roofTileLines(scene, east, south, widthM, depthM, 6.2, 264);
+    roofTileLines(scene, east, south, widthM, depthM, 6.23, 264);
 
     for (let offset = 5; offset <= depthM - 4; offset += 11.5) {
       placeColumn(scene, innerEast, south + offset, 5.9, 285);
@@ -116,6 +118,7 @@
       south,
       widthM,
       depthM,
+      0,
       1.05,
       {
         top: 0xe3d5b6,
