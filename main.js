@@ -1,182 +1,229 @@
-const PX_PER_M = 6;
-const WORLD_W = 3600;
-const WORLD_H = 4200;
-const INITIAL_ZOOM = 0.24;
-const MIN_ZOOM = 0.13;
+const PX_PER_M = 5.2;
+const WORLD_W = 4600;
+const WORLD_H = 3600;
+const INITIAL_ZOOM = 0.28;
+const MIN_ZOOM = 0.14;
 const MAX_ZOOM = 2.5;
-const m = v => v * PX_PER_M;
 
-class JerusalemGraybox extends Phaser.Scene {
+// Oblique 2.5D projection.
+// World axes stay intuitive: north is up, east is right.
+// Southward distance also shifts left, creating the 2.5D slant.
+const ORIGIN_X = 1250;
+const ORIGIN_Y = 280;
+const SOUTH_SKEW = 0.34;
+const SOUTH_COMPRESS = 0.58;
+
+class Jerusalem25D extends Phaser.Scene {
   constructor() {
-    super('JerusalemGraybox');
+    super('Jerusalem25D');
     this.dragging = false;
     this.lastPointer = null;
     this.lastPinchDistance = 0;
   }
 
-  preload() {
-    this.load.image('stoneFloor', './assets/bethesda/stone-floor.png');
-    this.load.image('waterTile', './assets/bethesda/water-tile.png');
-    this.load.image('poolWall', './assets/bethesda/pool-wall.png');
-    this.load.image('poolStairs', './assets/bethesda/pool-stairs.png');
-  }
-
   create() {
     const cam = this.cameras.main;
-    cam.setBackgroundColor('#a79c7d');
+    cam.setBackgroundColor('#b5aa88');
     cam.setBounds(0, 0, WORLD_W, WORLD_H);
-    cam.centerOn(1850, 2100);
+    cam.centerOn(2200, 1700);
     cam.setZoom(INITIAL_ZOOM);
 
     this.drawGround();
-    this.drawTopography();
+    this.drawKidron();
+    this.drawCityFabric();
     this.drawTempleMount();
     this.drawAntonia();
     this.drawPoolOfIsrael();
-    this.drawBethesdaArtPass();
-    this.drawCityStreets();
+    this.drawBethesda();
     this.drawCharacter();
     this.drawLabels();
     this.setupCameraControls();
     this.setupZoomButtons();
   }
 
+  p(eastM, southM, zM = 0) {
+    return new Phaser.Math.Vector2(
+      ORIGIN_X + eastM * PX_PER_M - southM * PX_PER_M * SOUTH_SKEW,
+      ORIGIN_Y + southM * PX_PER_M * SOUTH_COMPRESS - zM * PX_PER_M
+    );
+  }
+
+  quad(eastM, southM, widthM, depthM) {
+    return [
+      this.p(eastM, southM),
+      this.p(eastM + widthM, southM),
+      this.p(eastM + widthM, southM + depthM),
+      this.p(eastM, southM + depthM)
+    ];
+  }
+
+  polygon(points, fill, alpha = 1, stroke = null, strokeAlpha = 1, strokeWidth = 3, depth = 0) {
+    const g = this.add.graphics().setDepth(depth);
+    g.fillStyle(fill, alpha);
+    g.fillPoints(points, true);
+    if (stroke !== null) {
+      g.lineStyle(strokeWidth, stroke, strokeAlpha);
+      g.strokePoints(points, true);
+    }
+    return g;
+  }
+
+  worldRect(e, s, w, d, fill, alpha = 1, stroke = null, depth = 0) {
+    return this.polygon(this.quad(e, s, w, d), fill, alpha, stroke, 1, 4, depth);
+  }
+
   drawGround() {
     const g = this.add.graphics();
     g.fillStyle(0xb5aa88, 1).fillRect(0, 0, WORLD_W, WORLD_H);
-    g.lineStyle(1, 0x756b52, 0.08);
-    for (let x = 0; x <= WORLD_W; x += m(10)) g.lineBetween(x, 0, x, WORLD_H);
-    for (let y = 0; y <= WORLD_H; y += m(10)) g.lineBetween(0, y, WORLD_W, y);
+
+    // 25 m planning grid, projected through the same transform.
+    g.lineStyle(1, 0x746951, 0.11);
+    for (let e = 0; e <= 650; e += 25) {
+      const a = this.p(e, 0);
+      const b = this.p(e, 760);
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
+    for (let s = 0; s <= 760; s += 25) {
+      const a = this.p(0, s);
+      const b = this.p(650, s);
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
   }
 
-  drawTopography() {
-    const g = this.add.graphics();
-    g.fillStyle(0x87956c, 0.38).fillRoundedRect(3000, 300, 420, 3500, 80);
-    this.add.text(3050, 1850, '汲淪谷', this.labelStyle(20)).setDepth(50);
+  drawKidron() {
+    this.worldRect(535, 90, 78, 650, 0x87956c, 0.38, 0x657457, 2);
+    const a = this.p(575, 105);
+    const b = this.p(575, 720);
+    const g = this.add.graphics().setDepth(3);
+    g.lineStyle(5, 0x647255, 0.55).lineBetween(a.x, a.y, b.x, b.y);
   }
 
-  makeZone(x, y, w, h, fill, stroke, name, detail) {
-    const box = this.add.rectangle(x, y, w, h, fill, 0.16)
-      .setStrokeStyle(4, stroke, 0.8)
-      .setInteractive({ useHandCursor: true });
-    box.on('pointerdown', () => {
-      const el = document.getElementById('status');
-      if (el) el.textContent = `${name} — ${detail}`;
-    });
-    return box;
+  drawCityFabric() {
+    this.worldRect(15, 285, 135, 425, 0xc2b794, 0.65, 0x8c8068, 4);
+    const g = this.add.graphics().setDepth(5);
+    g.lineStyle(3, 0x81755d, 0.28);
+    for (let s = 320; s <= 680; s += 55) {
+      const a = this.p(25, s);
+      const b = this.p(140, s + 12);
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
   }
 
   drawTempleMount() {
-    const x = 1120, y = 1020, w = m(304), h = m(472);
-    this.makeZone(x + w/2, y + h/2, w, h, 0xc8b992, 0x665638,
-      '聖殿山平台', '約 304m 東西 × 472m 南北；正式建築素材下一階段處理');
-    const g = this.add.graphics();
-    g.fillStyle(0xc7b894, 1).fillRect(x, y, w, h);
-    g.lineStyle(12, 0x665638, 1).strokeRect(x, y, w, h);
-    g.fillStyle(0x9b8969, 0.65).fillRect(x + m(20), y + h - m(45), w - m(40), m(25));
+    // ~304 m east-west x 472 m north-south.
+    const e = 195, s = 245, w = 304, d = 472;
+    const platform = this.quad(e, s, w, d);
+    this.polygon(platform, 0xc7b894, 1, 0x665638, 1, 8, 10);
 
-    const innerX = x + m(78), innerY = y + m(145), innerW = m(165), innerH = m(155);
-    g.lineStyle(6, 0x7f6b49, 0.9).strokeRect(innerX, innerY, innerW, innerH);
-    const templeW = m(88), templeH = m(42);
-    const templeX = innerX + m(28), templeY = innerY + (innerH - templeH)/2;
-    g.fillStyle(0xd8caa6, 1).fillRect(templeX, templeY, templeW, templeH);
-    g.lineStyle(8, 0x6c5738, 1).strokeRect(templeX, templeY, templeW, templeH);
+    // Inner courts, same world projection.
+    this.worldRect(e + 72, s + 145, 168, 158, 0xd2c39d, 0.5, 0x7f6b49, 12);
+
+    // Temple sanctuary, east-west axis.
+    this.worldRect(e + 102, s + 196, 90, 44, 0xd9cba8, 1, 0x6c5738, 14);
+
+    // Royal Stoa massing along southern edge.
+    this.worldRect(e + 18, s + d - 43, w - 36, 24, 0x968363, 0.76, null, 13);
   }
 
   drawAntonia() {
-    const x = 850, y = 930, w = m(48), h = m(55);
-    const g = this.add.graphics();
-    g.fillStyle(0x8f8069, 1).fillRect(x, y, w, h);
-    g.lineStyle(7, 0x51483d, 1).strokeRect(x, y, w, h);
+    // Northwest of Temple Mount.
+    this.worldRect(151, 212, 48, 55, 0x8f8069, 1, 0x51483d, 15);
   }
 
   drawPoolOfIsrael() {
-    const x = 2200, y = 845, w = m(82), h = m(24);
-    const g = this.add.graphics();
-    g.fillStyle(0x789aa6, 1).fillRect(x, y, w, h);
-    g.lineStyle(5, 0xd0c5a8, 1).strokeRect(x, y, w, h);
+    this.worldRect(388, 205, 82, 24, 0x789aa6, 1, 0xd0c5a8, 9);
   }
 
-  drawBethesdaArtPass() {
-    const x = 2390, y = 235;
-    const poolW = m(46), totalH = m(92), gap = m(6.5);
-    const eachH = (totalH - gap) / 2;
+  drawBethesda() {
+    // Double-pool complex. Geometry is real world-space; only its rendering is projected.
+    const e = 418;
+    const s = 78;
+    const w = 46;
+    const totalD = 92;
+    const divider = 6.5;
+    const eachD = (totalD - divider) / 2;
 
-    // Clickable footprint remains to preserve interaction while art replaces the graybox.
-    this.makeZone(x + poolW/2, y + totalH/2, poolW + m(18), totalH + m(18),
-      0x000000, 0x315b75, '畢士大池', 'Bethesda Art Pass 01：石板、水、池壁、階梯已換成生成素材');
+    // Stone apron around complex.
+    this.worldRect(e - 7, s - 7, w + 14, totalD + 14, 0xcdbf9d, 1, 0x9f8d6d, 18);
 
-    // Stone paving around the pools.
-    const floor = this.add.tileSprite(x + poolW/2, y + totalH/2, poolW + m(34), totalH + m(34), 'stoneFloor');
-    floor.setAlpha(0.92).setDepth(10);
+    // North pool.
+    this.worldRect(e, s, w, eachD, 0x6f929d, 1, 0x315b75, 19);
 
-    // North pool + south pool water, using neutral-ish water texture.
-    const northWater = this.add.tileSprite(x + poolW/2, y + eachH/2 + m(4), poolW - m(10), eachH - m(8), 'waterTile');
-    northWater.setAlpha(0.92).setDepth(11);
-    const southY = y + eachH + gap;
-    const southWater = this.add.tileSprite(x + poolW/2, southY + eachH/2, poolW - m(10), eachH - m(8), 'waterTile');
-    southWater.setAlpha(0.92).setDepth(11);
+    // Central dividing wall / fifth portico footprint.
+    this.worldRect(e, s + eachD, w, divider, 0xb7a783, 1, 0x7f6e52, 21);
 
-    // Pool edge/wall sprites repeated around the perimeter.
-    const topWall = this.add.tileSprite(x + poolW/2, y - m(2), poolW + m(6), m(9), 'poolWall');
-    topWall.setDepth(13);
-    const middleWall = this.add.tileSprite(x + poolW/2, y + eachH + gap/2, poolW + m(6), m(10), 'poolWall');
-    middleWall.setDepth(13);
-    const bottomWall = this.add.tileSprite(x + poolW/2, y + totalH + m(2), poolW + m(6), m(9), 'poolWall');
-    bottomWall.setDepth(13);
+    // South pool.
+    this.worldRect(e, s + eachD + divider, w, eachD, 0x7198a3, 1, 0x315b75, 19);
 
-    // Wide southern steps.
-    const stairs = this.add.image(x + poolW/2, y + totalH - m(5), 'poolStairs');
-    stairs.setDisplaySize(poolW * 0.78, m(15)).setDepth(14);
+    // Wide stepped landing in southern pool.
+    for (let i = 0; i < 6; i++) {
+      this.worldRect(
+        e + 4 + i * 0.8,
+        s + totalD - 13 + i * 1.5,
+        w - 8 - i * 1.6,
+        1.5,
+        i % 2 ? 0xb7aa88 : 0xc8ba97,
+        1,
+        null,
+        22 + i
+      );
+    }
 
-    // Programmatic cast shadows: semi-transparent black polygons, NW direction.
-    const shadow = this.add.graphics().setDepth(12);
-    shadow.fillStyle(0x000000, 0.16);
-    const sx = x + poolW + m(2), sy = y + m(8);
-    shadow.fillPoints([
-      new Phaser.Geom.Point(sx, sy),
-      new Phaser.Geom.Point(sx + m(5), sy),
-      new Phaser.Geom.Point(sx - m(12), sy - m(12)),
-      new Phaser.Geom.Point(sx - m(17), sy - m(12))
-    ], true);
+    // Programmatic shadow: SE sun -> NW cast shadow.
+    // This is deliberately simple and independent of asset textures.
+    const p1 = this.p(e + w + 2, s + 7);
+    const p2 = this.p(e + w + 5, s + 7);
+    const p3 = new Phaser.Math.Vector2(p2.x - 52, p2.y - 34);
+    const p4 = new Phaser.Math.Vector2(p1.x - 52, p1.y - 34);
+    this.polygon([p1, p2, p3, p4], 0x000000, 0.16, null, 20);
 
-    // Small caption near the art-pass area.
-    this.add.text(x - m(4), y - m(18), 'Bethesda · Art Pass 01', this.labelStyle(18)).setDepth(30);
-  }
-
-  drawCityStreets() {
-    const g = this.add.graphics();
-    g.fillStyle(0xc1b692, 0.62).fillRoundedRect(180, 1280, 720, 2350, 44);
-    g.lineStyle(5, 0x81755d, 0.28);
-    for (let y = 1400; y < 3500; y += 170) g.lineBetween(240, y, 850, y + 45);
-    for (let x = 320; x < 850; x += 145) g.lineBetween(x, 1320, x - 80, 3550);
+    // Click hit area uses the projected polygon itself.
+    const zone = this.add.polygon(0, 0, this.quad(e - 7, s - 7, w + 14, totalD + 14), 0x000000, 0)
+      .setOrigin(0, 0)
+      .setInteractive(new Phaser.Geom.Polygon(this.quad(e - 7, s - 7, w + 14, totalD + 14)), Phaser.Geom.Polygon.Contains)
+      .setDepth(100);
+    zone.on('pointerdown', () => {
+      const el = document.getElementById('status');
+      if (el) el.textContent = '畢士大池 — 2.5D projection test：46 × 92m 世界座標已投影成斜四邊形';
+    });
   }
 
   drawCharacter() {
-    const h = m(1.7);
-    const group = this.add.container(670, 2050);
+    const base = this.p(92, 480);
+    const h = 1.7 * PX_PER_M;
+    const group = this.add.container(base.x, base.y).setDepth(80);
     group.add([
-      this.add.ellipse(0, h*0.44, m(0.55), m(0.18), 0x2d2a23, 0.28),
-      this.add.ellipse(0, 0, m(0.48), h*0.72, 0xb24d3e, 1),
-      this.add.circle(0, -h*0.46, m(0.16), 0xc8996b, 1)
-    ]).setDepth(999);
-    this.tweens.add({ targets: group, x: group.x + m(12), duration: 7000, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.add.ellipse(0, 3, 11, 4, 0x000000, 0.18),
+      this.add.ellipse(0, -h * 0.35, 5, h * 0.72, 0xb24d3e, 1),
+      this.add.circle(0, -h * 0.86, 2.2, 0xc8996b, 1)
+    ]);
   }
 
-  labelStyle(size=22) {
-    return {
+  labelAt(text, e, s, size = 20, depth = 120) {
+    const p = this.p(e, s);
+    this.add.text(p.x, p.y, text, {
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontSize: `${size}px`, color: '#2c251b',
-      backgroundColor: 'rgba(242,232,207,.84)', padding: { x: 8, y: 5 }
-    };
+      fontSize: `${size}px`,
+      color: '#2c251b',
+      backgroundColor: 'rgba(242,232,207,.86)',
+      padding: { x: 7, y: 4 }
+    }).setDepth(depth);
   }
 
   drawLabels() {
-    this.add.text(1500, 1120, '聖殿山平台', this.labelStyle()).setDepth(40);
-    this.add.text(790, 865, '安東尼亞堡', this.labelStyle()).setDepth(40);
-    this.add.text(2170, 790, '以色列池', this.labelStyle()).setDepth(40);
-    this.add.text(18, 16, 'Graybox v0.6 · Bethesda 第一批生成素材已套用 · shadow 由 Phaser 疊加', this.labelStyle(15))
-      .setDepth(1200).setScrollFactor(0);
+    this.labelAt('畢士大池', 410, 64, 18);
+    this.labelAt('以色列池', 380, 195, 18);
+    this.labelAt('安東尼亞堡', 142, 198, 18);
+    this.labelAt('聖殿山平台', 260, 270, 20);
+    this.labelAt('汲淪谷', 555, 360, 18);
+
+    this.add.text(18, 16, 'v0.7 · 全場景統一 oblique 2.5D projection · 北朝上', {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontSize: '15px',
+      color: '#4c4233',
+      backgroundColor: 'rgba(242,232,207,.86)',
+      padding: { x: 8, y: 5 }
+    }).setDepth(1000).setScrollFactor(0);
   }
 
   zoomAt(screenX, screenY, targetZoom) {
@@ -192,6 +239,7 @@ class JerusalemGraybox extends Phaser.Scene {
   setupCameraControls() {
     const cam = this.cameras.main;
     this.input.addPointer(2);
+
     this.input.on('pointerdown', pointer => {
       const active = this.input.manager.pointers.filter(p => p.isDown);
       if (active.length >= 2) {
@@ -202,35 +250,53 @@ class JerusalemGraybox extends Phaser.Scene {
       this.dragging = true;
       this.lastPointer = { x: pointer.x, y: pointer.y };
     });
+
     this.input.on('pointerup', () => {
       const active = this.input.manager.pointers.filter(p => p.isDown);
       if (active.length < 2) this.lastPinchDistance = 0;
-      if (active.length === 0) { this.dragging = false; this.lastPointer = null; }
+      if (active.length === 0) {
+        this.dragging = false;
+        this.lastPointer = null;
+      }
     });
+
     this.input.on('pointermove', pointer => {
       const active = this.input.manager.pointers.filter(p => p.isDown);
       if (active.length >= 2) {
-        const [a,b] = active;
-        const d = Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y);
-        if (this.lastPinchDistance > 0) this.zoomAt((a.x+b.x)/2, (a.y+b.y)/2, cam.zoom * d/this.lastPinchDistance);
+        const [a, b] = active;
+        const d = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
+        if (this.lastPinchDistance > 0) {
+          this.zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, cam.zoom * d / this.lastPinchDistance);
+        }
         this.lastPinchDistance = d;
         this.dragging = false;
         return;
       }
+
       if (!this.dragging || !this.lastPointer) return;
-      const dx = pointer.x - this.lastPointer.x, dy = pointer.y - this.lastPointer.y;
-      cam.scrollX -= dx / cam.zoom; cam.scrollY -= dy / cam.zoom;
+      const dx = pointer.x - this.lastPointer.x;
+      const dy = pointer.y - this.lastPointer.y;
+      cam.scrollX -= dx / cam.zoom;
+      cam.scrollY -= dy / cam.zoom;
       this.lastPointer = { x: pointer.x, y: pointer.y };
     });
-    this.input.on('wheel', (pointer, objs, dx, dy) => this.zoomAt(pointer.x, pointer.y, cam.zoom - dy * 0.0008));
+
+    this.input.on('wheel', (pointer, objs, dx, dy) => {
+      this.zoomAt(pointer.x, pointer.y, cam.zoom - dy * 0.0008);
+    });
   }
 
   setupZoomButtons() {
     const cam = this.cameras.main;
-    const cx = () => this.scale.width/2, cy = () => this.scale.height/2;
+    const cx = () => this.scale.width / 2;
+    const cy = () => this.scale.height / 2;
+
     document.getElementById('zoom-in')?.addEventListener('click', () => this.zoomAt(cx(), cy(), cam.zoom * 1.35));
     document.getElementById('zoom-out')?.addEventListener('click', () => this.zoomAt(cx(), cy(), cam.zoom / 1.35));
-    document.getElementById('zoom-reset')?.addEventListener('click', () => { cam.setZoom(INITIAL_ZOOM); cam.centerOn(1850,2100); });
+    document.getElementById('zoom-reset')?.addEventListener('click', () => {
+      cam.setZoom(INITIAL_ZOOM);
+      cam.centerOn(2200, 1700);
+    });
   }
 }
 
@@ -239,10 +305,11 @@ const game = new Phaser.Game({
   parent: 'game',
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: '#a79c7d',
-  scene: JerusalemGraybox,
+  backgroundColor: '#b5aa88',
+  scene: Jerusalem25D,
   input: { activePointers: 3 },
   scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
   render: { antialias: true, pixelArt: false }
 });
+
 window.addEventListener('resize', () => game.scale.resize(window.innerWidth, window.innerHeight));
