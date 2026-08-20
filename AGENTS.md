@@ -126,7 +126,6 @@ GitHub Pages preview:
 These may remain for history but must not drive new work:
 
 - root-level `index.html`, `main.js`, and `styles.css`;
-- `docs/main.js`;
 - `docs/showa-scene-v3.js`;
 - `docs/showa-scene-v4.js`;
 - `docs/map-blueprint.md` — still describes Jerusalem;
