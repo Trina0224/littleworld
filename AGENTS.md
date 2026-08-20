@@ -1,6 +1,6 @@
 # AGENTS.md — LittleWorld Collaboration Contract
 
-**Last updated:** 2026-08-19 22:21 PT (`America/Los_Angeles`)
+**Last updated:** 2026-08-19 22:44 PT (`America/Los_Angeles`)
 
 This file applies to the entire repository. Every AI agent, coding assistant, and human contributor must read it before changing files.
 
@@ -93,9 +93,9 @@ Current `main` contains:
 - no walkable map or collision map;
 - no agent runtime, server, MCP layer, or LLM integration.
 
-The current clean background is loaded as a **640 × 360 web-optimized image reconstructed from Base64 text fragments** in `docs/assets/showa/clean/`. This was an emergency transport workaround caused by binary-upload tooling. It is technical debt, not the intended asset architecture.
+The current clean background is a **640 × 360 web-optimized WebP** at `docs/assets/showa/scene-clean.webp`, loaded directly by Phaser.
 
-The preferred permanent architecture is a normal `.webp` or `.png` background file loaded directly by Phaser.
+The former Base64-fragment runtime loader has been removed. Future background replacements should remain normal `.webp` or `.png` assets.
 
 ## 5. Canonical files and legacy files
 
@@ -106,7 +106,7 @@ Treat these as the current production preview:
 - `docs/index.html`
 - `docs/styles.css`
 - `docs/showa-scene-clean.js`
-- `docs/assets/showa/clean/` — temporary encoded background fragments
+- `docs/assets/showa/scene-clean.webp` — production clean background asset
 
 GitHub Pages preview:
 
@@ -238,8 +238,8 @@ Unless the owner explicitly changes priorities, work in this order:
 ### Phase 0 — Stabilize the scene pipeline
 
 - keep the approved clean background visible and complete;
-- replace the Base64-fragment workaround with a normal image asset when a reliable binary path is available;
-- remove only the obsolete workaround after direct-image loading is verified;
+- preserve direct loading from `docs/assets/showa/scene-clean.webp`;
+- keep obsolete Base64-fragment loaders out of the active pipeline;
 - preserve pan, zoom, pinch, and Fit.
 
 ### Phase 1 — Scene semantics

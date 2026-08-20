@@ -113,7 +113,7 @@ Canonical live files:
 - `docs/styles.css`
 - `docs/showa-scene-clean.js`
 
-The current background is temporarily reconstructed from Base64 text fragments under `docs/assets/showa/clean/`. This was a binary-upload workaround and should eventually be replaced with a normal `.webp` or `.png` asset loaded directly by Phaser.
+The production background is a normal WebP asset at `docs/assets/showa/scene-clean.webp`, loaded directly by Phaser. The earlier Base64-fragment transport workaround has been removed from the active scene pipeline.
 
 ## Repository map
 
@@ -125,7 +125,7 @@ docs/                           Canonical GitHub Pages application
   index.html                    Active page entry
   styles.css                    Preview UI styles
   showa-scene-clean.js          Active Phaser scene
-  assets/showa/clean/           Temporary encoded clean background
+  assets/showa/scene-clean.webp Production clean background (normal WebP asset)
   map-blueprint.md              Legacy Jerusalem blueprint; not current scope
 
 assets/                          Older and experimental assets
@@ -148,7 +148,7 @@ Then open:
 http://localhost:8000/
 ```
 
-Opening `docs/index.html` directly through `file://` is not recommended because the current background loader fetches asset fragments.
+Opening `docs/index.html` directly through `file://` is still not recommended; serve the page over HTTP so Phaser and browser asset loading behave consistently.
 
 ## Controls
 
@@ -161,8 +161,8 @@ Opening `docs/index.html` directly through `file://` is not recommended because 
 ## Planned development order
 
 1. **Stabilize scene assets**
-   - keep the approved clean background complete and visible;
-   - replace the Base64-fragment workaround with a normal image asset when possible.
+   - keep the approved clean WebP background complete and visible;
+   - preserve direct image loading, camera controls, and cache-busting.
 
 2. **Define scene semantics**
    - world coordinates;
