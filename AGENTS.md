@@ -126,8 +126,6 @@ GitHub Pages preview:
 These may remain for history but must not drive new work:
 
 - root-level `index.html`, `main.js`, and `styles.css`;
-- `docs/showa-scene-v3.js`;
-- `docs/showa-scene-v4.js`;
 - `docs/map-blueprint.md` — still describes Jerusalem;
 - `assets/bethesda/` and other Jerusalem-era assets;
 - `remove-sheep-gate.js`;
@@ -189,6 +187,8 @@ Preferred order:
 3. Base64 fragments only as a temporary emergency workaround with explicit owner approval.
 
 Never silently spend a long time building a Base64 transport workaround. Surface the limitation immediately.
+
+Direct binary commits are proven to work in this repository, so option 3 has no remaining justification. Do not create new Base64 fragment directories such as `docs/assets/showa/clean-1440p/`; commit the `.webp` or `.png` file itself instead.
 
 ## 7. Planned character actions and world data
 
