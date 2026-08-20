@@ -1,0 +1,20 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #171a16;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overscroll-behavior: none;
+}
+#app, #game { width:100%; height:100%; }
+#game canvas { display:block; width:100%; height:100%; touch-action:none; }
+#hud { position:fixed; z-index:10; top:max(10px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left)); max-width:min(360px, calc(100vw - 84px)); padding:9px 11px; border:1px solid rgba(255,255,255,.17); border-radius:12px; background:rgba(22,24,21,.76); color:#f5f0e6; backdrop-filter:blur(8px); box-shadow:0 6px 24px rgba(0,0,0,.2); pointer-events:none; }
+.title { font-size:13px; font-weight:700; letter-spacing:.01em; }
+.hint, #status { margin-top:3px; font-size:11px; line-height:1.25; color:rgba(245,240,230,.7); }
+#status { color:#e3c88f; }
+#zoom-controls { position:fixed; z-index:30; top:calc(max(10px, env(safe-area-inset-top)) + 4px); right:max(10px, env(safe-area-inset-right)); display:flex; gap:6px; }
+#zoom-controls button { width:42px; height:42px; border:1px solid rgba(255,255,255,.2); border-radius:11px; background:rgba(22,24,21,.86); color:#f5f0e6; font:700 21px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; box-shadow:0 4px 16px rgba(0,0,0,.23); backdrop-filter:blur(8px); touch-action:manipulation; }
+#zoom-reset { width:48px !important; font-size:12px !important; }
+#zoom-controls button:active { transform:scale(.96); }
+@media (max-width:700px) { #hud { max-width:min(250px, calc(100vw - 170px)); padding:7px 9px; } .hint { display:none; } #status { font-size:10px; } #zoom-controls button { width:38px; height:38px; } #zoom-reset { width:44px !important; } }
