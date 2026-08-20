@@ -93,7 +93,11 @@ Current `main` contains:
 - no walkable map or collision map;
 - no agent runtime, server, MCP layer, or LLM integration.
 
-The current clean background is a **640 × 360 web-optimized WebP** at `docs/assets/showa/scene-clean.webp`, loaded directly by Phaser.
+The current clean background is a **2560 × 1440 losslessly encoded WebP** at `docs/assets/showa/scene-clean-2560.webp`, loaded directly by Phaser. A pixel-identical PNG master lives outside the published directory at `assets/showa/scene-clean-2560.png`.
+
+World coordinates remain **640 × 360**. The background is drawn with `setDisplaySize(WORLD_W, WORLD_H)`, so the higher resolution buys zoom sharpness without changing the coordinate space, hotspot positions, or any future walkable map.
+
+Do not raise the background beyond 2560 × 1440 without checking device limits first. WebGL `MAX_TEXTURE_SIZE` is 4096 on many iPads and older mobile GPUs, and a texture above that limit fails to upload, leaving the scene with no background at all.
 
 The former Base64-fragment runtime loader has been removed. Future background replacements should remain normal `.webp` or `.png` assets.
 
@@ -106,7 +110,7 @@ Treat these as the current production preview:
 - `docs/index.html`
 - `docs/styles.css`
 - `docs/showa-scene-clean.js`
-- `docs/assets/showa/scene-clean.webp` — production clean background asset
+- `docs/assets/showa/scene-clean-2560.webp` — production clean background asset
 
 GitHub Pages preview:
 
@@ -238,7 +242,7 @@ Unless the owner explicitly changes priorities, work in this order:
 ### Phase 0 — Stabilize the scene pipeline
 
 - keep the approved clean background visible and complete;
-- preserve direct loading from `docs/assets/showa/scene-clean.webp`;
+- preserve direct loading from `docs/assets/showa/scene-clean-2560.webp`;
 - keep obsolete Base64-fragment loaders out of the active pipeline;
 - preserve pan, zoom, pinch, and Fit.
 

@@ -3,8 +3,8 @@
 const WORLD_W = 640;
 const WORLD_H = 360;
 const MIN_ZOOM = 0.05;
-const MAX_ZOOM = 3.0;
-const BACKGROUND_URL = './assets/showa/scene-clean.webp?v=20260819-asset1';
+const MAX_ZOOM = 6.0;
+const BACKGROUND_URL = './assets/showa/scene-clean-2560.webp?v=20260820-hires1';
 
 function setStatus(message) {
   const element = document.getElementById('status');
@@ -32,9 +32,12 @@ class ShowaLittleWorld extends Phaser.Scene {
     cam.setBackgroundColor('#171a16');
     cam.setBounds(0, 0, WORLD_W, WORLD_H);
 
+    // The texture is 2560 x 1440; display it at world size so world units
+    // stay 640 x 360 and the extra pixels are spent on zoom instead.
     this.add
       .image(0, 0, 'showa-clean-background')
       .setOrigin(0, 0)
+      .setDisplaySize(WORLD_W, WORLD_H)
       .setDepth(0);
 
     this.hotspots = [
@@ -57,7 +60,7 @@ class ShowaLittleWorld extends Phaser.Scene {
     this.setupCameraControls();
     this.setupZoomButtons();
     this.fitScene();
-    setStatus('Clean WebP background · 無人物 · Agent layer 尚未加入');
+    setStatus('2560×1440 clean WebP background · 無人物 · Agent layer 尚未加入');
   }
 
   fitScene() {

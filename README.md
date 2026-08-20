@@ -113,7 +113,11 @@ Canonical live files:
 - `docs/styles.css`
 - `docs/showa-scene-clean.js`
 
-The production background is a normal WebP asset at `docs/assets/showa/scene-clean.webp`, loaded directly by Phaser. The earlier Base64-fragment transport workaround has been removed from the active scene pipeline.
+The production background is a **2560 × 1440 losslessly encoded WebP** at `docs/assets/showa/scene-clean-2560.webp`, loaded directly by Phaser. World coordinates stay at 640 × 360; the background is drawn at world size, so the extra pixels are spent on zoom sharpness rather than on a larger coordinate space. Existing hotspot coordinates are unaffected.
+
+A matching lossless PNG master of the same render is kept outside the published directory at `assets/showa/scene-clean-2560.png`.
+
+The earlier Base64-fragment transport workaround has been removed from the active scene pipeline.
 
 ## Repository map
 
@@ -125,7 +129,7 @@ docs/                           Canonical GitHub Pages application
   index.html                    Active page entry
   styles.css                    Preview UI styles
   showa-scene-clean.js          Active Phaser scene
-  assets/showa/scene-clean.webp Production clean background (normal WebP asset)
+  assets/showa/                 Production background (2560 x 1440 WebP)
   map-blueprint.md              Legacy Jerusalem blueprint; not current scope
 
 assets/                          Older and experimental assets
