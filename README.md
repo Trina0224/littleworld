@@ -122,21 +122,22 @@ The earlier Base64-fragment transport workaround has been removed from the activ
 ## Repository map
 
 ```text
-AGENTS.md                       AI collaboration rules and project source of truth
-README.md                       Public project overview
+AGENTS.md                                AI collaboration rules and project source of truth
+README.md                                Public project overview
 
-docs/                           Canonical GitHub Pages application
-  index.html                    Active page entry
-  styles.css                    Preview UI styles
-  showa-scene-clean.js          Active Phaser scene
-  assets/showa/                 Production background (2560 x 1440 WebP)
-  map-blueprint.md              Legacy Jerusalem blueprint; not current scope
+docs/                                    Canonical GitHub Pages application
+  index.html                             Active page entry
+  styles.css                             Preview UI styles
+  showa-scene-clean.js                   Active Phaser scene
+  assets/showa/scene-clean-2560.webp     Production background
 
-assets/                          Older and experimental assets
-index.html, main.js, styles.css  Legacy root preview; not the current Pages entry
+assets/                                  Source masters, not published
+  showa/scene-clean-2560.png             Lossless PNG master of the background
 ```
 
-Several Jerusalem / Bethesda files remain in the repository as historical artifacts. They are not the active design direction and should not be used as current requirements.
+Every file in the repository is now part of the active Showa direction. The
+Jerusalem / Bethesda material and the superseded root-level preview have been
+removed; they remain in git history if they are ever needed again.
 
 ## Local preview
 

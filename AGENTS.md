@@ -12,7 +12,7 @@ The current MVP is:
 
 > **A Showa-era Japanese pocket park integrated with a semi-open kissaten / light-meal café, using the visual language of roughly 1965–1985.**
 
-The earlier Second Temple Jerusalem / Bethesda Pool direction has been abandoned. Files that still mention Jerusalem, Bethesda, the Temple Mount, or the Sheep Gate are historical leftovers, not active requirements.
+The earlier Second Temple Jerusalem / Bethesda Pool direction has been abandoned, and its files have been removed from the working tree. They remain in git history only. Treat any reference to Jerusalem, Bethesda, the Temple Mount, or the Sheep Gate as dead history, never as a requirement.
 
 Do not restart, restore, extend, or use the Jerusalem work as the design source unless the project owner explicitly reverses the pivot.
 
@@ -123,15 +123,17 @@ GitHub Pages preview:
 
 ### Legacy / stale material
 
-These may remain for history but must not drive new work:
+There is none left in the working tree. The Jerusalem-era assets, the superseded
+root-level preview, the intermediate scene versions, and the Base64 fragment
+directories have all been removed. Recover anything from git history if it is
+genuinely needed.
 
-- root-level `index.html`, `main.js`, and `styles.css`;
-- `docs/map-blueprint.md` — still describes Jerusalem;
-- `assets/bethesda/` and other Jerusalem-era assets;
-- `remove-sheep-gate.js`;
-- other Bethesda or Jerusalem references.
+Every tracked file is now active. Do not add scratch files, half-finished
+uploads, or parallel `-v2` directories to the repository; keep work in progress
+on a branch until it is complete.
 
-Do not delete legacy files during unrelated work. Cleanup should be a separate, explicitly assigned task so accidental loss is easy to review.
+Deletions still belong in their own commit, separate from unrelated work, so
+they are easy to review.
 
 ## 6. Visual and asset contract
 
