@@ -1,6 +1,12 @@
 {
-  "poses": ["stand", "sit"],
-  "drawnViews": ["front", "back"],
+  "poses": [
+    "stand",
+    "sit"
+  ],
+  "drawnViews": [
+    "front",
+    "back"
+  ],
   "mirroring": "horizontal",
   "statesPerCharacter": 8,
   "walkCycle": false,
@@ -11,8 +17,30 @@
     "note": "The four quadrants give four orientations per pose. Mirroring reads as a turn because the drawn views already have the head and body angled off-axis."
   },
   "sourceSheets": {
-    "layout": "1536 x 1024 RGBA, front view in the left half, back view in the right half",
-    "location": "assets/characters/<id>/<id>[-<outfit>]-<pose>.png"
+    "twoView": {
+      "layout": "1536 x 1024 RGBA, front left, back right, one pose per file",
+      "path": "assets/characters/<id>/<id>[-<outfit>]-<pose>.png",
+      "characters": [
+        "boy-01",
+        "girl-01",
+        "grandma-01",
+        "grandpa-01",
+        "pastor-01",
+        "woman-01",
+        "man-01",
+        "shopkeeper-01",
+        "gentleman-01"
+      ]
+    },
+    "fourView": {
+      "layout": "1536 x 1024 RGBA, left to right: stand front, stand back, sit front, sit back",
+      "path": "assets/characters/<id>/<id>.png",
+      "characters": [
+        "brother-01",
+        "brother-02"
+      ],
+      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters."
+    }
   },
   "scale": {
     "from": "docs/specs/world/world.json characterHeightRamp",

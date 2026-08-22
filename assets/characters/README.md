@@ -27,11 +27,34 @@ sprite pipeline exist (`AGENTS.md` section 8, Phase 2).
 | `shopkeeper-01/shopkeeper-01-sit.png` | shopkeeper-01 | indigo work kimono, white apron, monpe, geta | seated |
 | `gentleman-01/gentleman-01-stand.png` | gentleman-01 | crested haori, kimono, obi, geta | standing |
 | `gentleman-01/gentleman-01-sit.png` | gentleman-01 | crested haori, kimono, obi, geta | seated |
+| `brother-01/brother-01.png` | brother-01, elder brother | cap, backpack, bear tee, cargo shorts | four views in one sheet |
+| `brother-02/brother-02.png` | brother-02, younger brother | ringer tee, cargo shorts | four views in one sheet |
 
-Every sheet is 1536 x 1024 RGBA and holds **two views side by side**. For the
-first five characters that is front on the left, back on the right. `woman-01`
-and `man-01` are drawn turned further toward the side; that is simply how those
-two were drawn, not an attempt at a side view.
+Every sheet is 1536 x 1024 RGBA. There are two layouts.
+
+**Two views**, front on the left and back on the right, with standing and seated
+in separate files. That covers the first nine characters. `woman-01` and
+`man-01` are drawn turned further toward the side; that is simply how those two
+were drawn, not an attempt at a side view.
+
+**Four views** in a single file, left to right: standing front, standing back,
+seated front, seated back. `brother-01` and `brother-02` use this. One such
+sheet is the complete source for the eight-state pose matrix in
+`docs/specs/characters/`, so it is the preferred layout for anything new. The
+four figures separate cleanly on a column-mass cut:
+
+| Sheet | Columns |
+|---|---|
+| `brother-01.png` | 22-355, 467-735, 796-1098, 1220-1498 |
+| `brother-02.png` | 82-341, 468-707, 777-1060, 1169-1461 |
+
+Filenames in this layout carry no pose segment, since one file holds them all.
+
+## Relationships
+
+`brother-01` and `brother-02` are siblings — 01 the elder, 02 the younger. It is
+the only stated relationship in the cast so far, and the agent model will want
+it; see `AGENTS.md` section 7, which lists relationships as part of agent state.
 
 `shopkeeper-01` is named for the counter station in
 `docs/specs/world/anchors.json`, which needs an occupant. Rename freely — nothing

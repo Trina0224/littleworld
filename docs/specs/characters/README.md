@@ -12,7 +12,12 @@ than proposing options, and it is deliberately the smallest matrix that works.
 
 Two poses times two drawn views times a horizontal flip. Every character already
 has all four source images, so **the whole matrix needs no drawing at all**. The
-nine characters in `assets/characters/` are complete for Phase 2 today.
+eleven characters in `assets/characters/` are complete for Phase 2 today.
+
+The four images come from either of two sheet layouts, described in
+`assets/characters/README.md`. The newer four-view sheet holds all of them in a
+single file and maps one-to-one onto this matrix, so it is the layout to ask for
+from here on.
 
 ### No walk cycle
 
