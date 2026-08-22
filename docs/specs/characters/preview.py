@@ -114,10 +114,31 @@ CAST = {'cafe-counter': 'shopkeeper-01',
         'table-far-1': 'boy-01',
         'bench-slot-2': 'brother-01', 'bench-slot-3': 'brother-02'}
 
+PM = json.load(open('/home/user/littleworld/docs/specs/characters/pose-matrix.json'))
+SA = PM['seatedAnchoring']
+HIP = SA['hipFraction']
+SITH = SA['sittingHeightMetres']
+
+def seated_box(cid, sprite_ratio, seat_xy, seat_h):
+    """Height and top-left for a seated sprite, anchored by the hip.
+
+    The part of a body above the seat is anatomically stable; the legs below it
+    are whatever the drawing chose. So scale by sitting height and hang the
+    sprite off its own hip line.
+    """
+    scale = K * (seat_xy[1] - H0)
+    kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
+    above = SITH[kind] * scale                      # hip to head, in world units
+    f = HIP.get(cid, 0.45)
+    h = above / (1.0 - f)
+    w = h * sprite_ratio
+    bottom = seat_xy[1] + f * h
+    return h, w, bottom
+
 place = []
 for s in A['seats']:
     cid = CAST.get(s['id'])
-    if cid: place.append((cid, 'sit', s['ground'], s['facingDeg']))
+    if cid: place.append((cid, 'sit', s['seat'], s['facingDeg']))
 for st in A['stations']:
     cid = CAST.get(st['id'])
     if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
@@ -125,14 +146,16 @@ place.append(('dog-01', 'stand', [455, 300], 300.0))         # in front of the b
 
 bg = Image.open('/home/user/littleworld/docs/assets/showa/scene-clean-2560.webp').convert('RGBA')
 canvas = bg.resize((W*S, HH*S), Image.LANCZOS)
-for cid, pose, foot, deg in sorted(place, key=lambda p: p[2][1]):
-    h = K * (foot[1] - H0) * metres(cid) * (sit_ratio(cid) if pose == 'sit' else 1.0)
+for cid, pose, at, deg in sorted(place, key=lambda p: p[2][1]):
     sp = sprite(cid, pose, deg)
-    w = max(2, round(h * sp.width / sp.height * S)); hp = max(2, round(h * S))
-    sp = sp.resize((w, hp), Image.LANCZOS)
-    canvas.alpha_composite(sp, (round(foot[0]*S - w/2), round(foot[1]*S - hp)))
-    r = sit_ratio(cid) if pose == 'sit' else 1.0
-    print(f'  {cid:14s} {pose:5s} ({foot[0]:5.1f},{foot[1]:5.1f}) {deg:5.1f}°  坐姿比 {r:.2f}  高 {h:5.1f}u')
+    if pose == 'sit':
+        h, w, bottom = seated_box(cid, sp.width / sp.height, at, 0.42)
+    else:
+        h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height; bottom = at[1]
+    wp = max(2, round(w * S)); hp = max(2, round(h * S))
+    sp = sp.resize((wp, hp), Image.LANCZOS)
+    canvas.alpha_composite(sp, (round(at[0]*S - wp/2), round(bottom*S - hp)))
+    print(f'  {cid:14s} {pose:5s} ({at[0]:5.1f},{at[1]:5.1f}) {deg:5.1f}°  高 {h:5.1f}u  底 {bottom:5.1f}')
 # scenery that is drawn in front of characters goes back on top
 occ = Image.open('/home/user/littleworld/docs/specs/world/occluder.png').convert('L').resize((W*S, HH*S), Image.LANCZOS)
 front = bg.resize((W*S, HH*S), Image.LANCZOS).copy()
