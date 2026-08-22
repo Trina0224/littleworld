@@ -23,11 +23,19 @@ sprite pipeline exist (`AGENTS.md` section 8, Phase 2).
 | `woman-01/woman-01-sit.png` | woman-01, office worker | white knit top, rose midi skirt, heels | seated |
 | `man-01/man-01-stand.png` | man-01, office worker | white shirt, striped tie, navy trousers | standing |
 | `man-01/man-01-sit.png` | man-01, office worker | white shirt, striped tie, navy trousers | seated |
+| `shopkeeper-01/shopkeeper-01-stand.png` | shopkeeper-01 | indigo work kimono, white apron, monpe, geta | standing |
+| `shopkeeper-01/shopkeeper-01-sit.png` | shopkeeper-01 | indigo work kimono, white apron, monpe, geta | seated |
+| `gentleman-01/gentleman-01-stand.png` | gentleman-01 | crested haori, kimono, obi, geta | standing |
+| `gentleman-01/gentleman-01-sit.png` | gentleman-01 | crested haori, kimono, obi, geta | seated |
 
 Every sheet is 1536 x 1024 RGBA and holds **two views side by side**. For the
 first five characters that is front on the left, back on the right. `woman-01`
 and `man-01` are drawn turned further toward the side; that is simply how those
 two were drawn, not an attempt at a side view.
+
+`shopkeeper-01` is named for the counter station in
+`docs/specs/world/anchors.json`, which needs an occupant. Rename freely — nothing
+references these ids yet.
 
 **No character has a true side view.** The pose matrix needs one before walking
 animation is possible, and mirroring cannot generate it from front and back.
