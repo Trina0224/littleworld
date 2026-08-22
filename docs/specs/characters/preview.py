@@ -18,7 +18,7 @@ K = SPEC['characterHeightRamp']['unitsPerMetrePerY']
 H0 = SPEC['characterHeightRamp']['horizonY']
 W, HH, S = 640, 360, 2
 
-FOUR = {'brother-01': [504, 820, 1235], 'brother-02': [367, 707, 1060], 'dog-01': [504, 820, 1235]}
+FOUR = {'brother-01': [412, 751, 1156], 'brother-02': [406, 734, 1135], 'dog-01': [502, 819, 1235]}
 
 def views(cid, pose):
     """(front, back) RGBA crops for a character and pose."""

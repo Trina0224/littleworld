@@ -79,13 +79,20 @@ as 1.35 m; `boy-01` and `girl-01` are the children.
 
 ## Sprites need no cutting out
 
-Every reference sheet is RGBA and **already carries a clean matte**. The black
-vignette is only what a sheet looks like flattened onto black. Reading the RGB
-and keying the backdrop out is not just unnecessary, it cannot work: dark hair
-and dark clothing occupy the same value range as the backdrop and the halo drawn
-around each figure, so brightness, local detail, chroma and gradient-limited
-flooding all eat parts of the figure. Five approaches were tried and all failed
-before anyone checked the alpha channel. Use the alpha channel.
+Every reference sheet is RGBA **with a transparent background**. All 22 have
+fully transparent borders. There is nothing to key out.
+
+What looks like a black vignette with a halo is the RGB left under those
+transparent pixels, shown only because a viewer flattens the image onto black.
+Five cut-out methods were built against that phantom — brightness threshold,
+gradient-limited flood, local-detail barrier, chroma barrier, halo erosion — and
+every one ate dark hair or dark trousers, because in the RGB those sit in the
+same range as the thing being keyed. None of it was needed.
+
+The same mistake put wrong numbers in the specs: view boundaries read off the RGB
+were out by up to 75 px, and `grandpa-01-sit.png` was recorded as needing special
+handling on the strength of RGB values under transparent pixels. Read the alpha
+channel, for mattes and for measurements alike.
 
 Splitting a sheet into views is a crop at the recorded column cuts, then a trim
 to the alpha bounding box.

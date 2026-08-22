@@ -31,7 +31,13 @@ sprite pipeline exist (`AGENTS.md` section 8, Phase 2).
 | `brother-02/brother-02.png` | brother-02, younger brother | ringer tee, cargo shorts | four views in one sheet |
 | `dog-01/dog-01.png` | dog-01, the brothers' dog | shetland sheepdog | four views in one sheet |
 
-Every sheet is 1536 x 1024 RGBA. There are two layouts.
+Every sheet is 1536 x 1024 **RGBA with a transparent background**. All 22 have
+fully transparent borders; there is no backdrop to remove and no cut-out step.
+Anything that looks like a black vignette or a warm gradient is the RGB left
+under transparent pixels, which a viewer shows only because it flattens the
+image onto black. Read the alpha channel.
+
+There are two layouts.
 
 **Two views**, front on the left and back on the right, with standing and seated
 in separate files. That covers the first nine characters. `woman-01` and
@@ -49,20 +55,17 @@ four figures separate cleanly on a column-mass cut:
 | `brother-01.png` | 22-355, 467-735, 796-1098, 1220-1498 |
 | `brother-02.png` | 82-341, 468-707, 777-1060, 1169-1461 |
 
-| `dog-01.png` | 11-496, 509-787, 853-1230, 1241-1507 |
+| `dog-01.png` | 9-497, 508-788, 851-1230, 1241-1508 |
 
-`dog-01.png` is the one sheet on a **white** backdrop rather than the black
-vignette, which is why its columns could be measured exactly instead of
-estimated. Its gaps are only 12 px and 10 px wide, the tightest in the set.
+Those are measured from the alpha channel, which is the only correct source.
+Reading them off the RGB got `brother-02` wrong by 39, 26 and 75 px and `dog-01`
+wrong by up to 27 px, because the RGB under a transparent pixel says nothing
+about where a figure ends.
 
-An earlier pass recorded 515, 836 and 1262 for this sheet, read off the black
-version. All three were too far right — by 13, 16 and 27 px — and would have
-clipped two tails. The glow baked into the black backdrop hides where a figure
-actually ends, so checking the cuts against that render could not have caught
-it. **Measure boundaries on a clean backdrop, never on a glowing one.**
-
-White backdrops also make the eventual cut-out far better: no halo to threshold
-around, and the silhouette is exact. Worth asking for on future sheets.
+`brother-01` is a special case: its third and fourth views **touch**, joined
+across five rows at x=1156, so there is no gap there at all. Its third cut is
+that waist rather than a gap, and any tool splitting these sheets has to cope
+with views that meet.
 
 Filenames in this layout carry no pose segment, since one file holds them all.
 
@@ -83,14 +86,15 @@ references these ids yet.
 **No character has a true side view.** The pose matrix needs one before walking
 animation is possible, and mirroring cannot generate it from front and back.
 
-## Known inconsistency
+## A correction
 
-`grandpa-01/grandpa-01-sit.png` was generated in a different batch from the rest.
-It sits on a light grey backdrop (corner pixels around 110) while every other
-sheet uses a black vignette (corner pixels at 0), and its linework is lighter and
-less saturated. Cutting the figure out and colour-matching it will need separate
-handling from the others. Worth regenerating to match if the character is
-redrawn for any other reason.
+An earlier version of this file claimed `grandpa-01-sit.png` came from a
+different batch and would need separate cut-out handling, because its corner
+pixels read about 110 where every other sheet read 0. That was wrong. Those are
+RGB values under **fully transparent** pixels — its alpha borders are 0 like
+every other sheet, and it needs no special handling. The same mistake produced
+the "black vignette" and "white backdrop" descriptions elsewhere in this file,
+now removed.
 
 ## Naming
 

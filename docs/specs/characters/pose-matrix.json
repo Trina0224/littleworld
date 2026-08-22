@@ -40,28 +40,23 @@
         "brother-02",
         "dog-01"
       ],
-      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters. dog-01 is on a white backdrop, which let its columns be measured exactly; the black vignette on every other sheet carries a glow that hides where a figure ends, so ask for white on anything new.",
+      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters. Cuts are measured from the alpha channel, not from the RGB: brother-01 view 3 and view 4 actually touch, joined across five rows at x=1156, so its third cut is the narrowest waist rather than a gap.",
       "columnCuts": {
         "brother-01": [
-          355,
-          735,
-          1098
+          412,
+          751,
+          1156
         ],
         "brother-02": [
-          367,
-          707,
-          1060
+          406,
+          734,
+          1135
         ],
         "dog-01": [
           502,
-          820,
+          819,
           1235
         ]
-      },
-      "backdrop": {
-        "brother-01": "black vignette",
-        "brother-02": "black vignette",
-        "dog-01": "white"
       }
     }
   },
@@ -79,6 +74,6 @@
   },
   "alpha": {
     "source": "native",
-    "note": "Every reference sheet except none is RGBA and already carries a clean matte. The black vignette is only how a sheet looks flattened onto black; reading the RGB and trying to key it out fails on dark hair and dark clothing, which sit in the same value range as the backdrop and its halo. Use the alpha channel."
+    "note": "Every sheet is RGBA with a transparent background — all 22 have fully transparent borders. There is no backdrop to remove. Anything that looks like a black vignette or a warm gradient is the RGB left under transparent pixels, visible only when a viewer flattens the image onto black. Read the alpha channel; never key the RGB."
   }
 }
