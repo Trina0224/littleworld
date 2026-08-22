@@ -1,0 +1,219 @@
+{
+ "seats": [
+  {
+   "id": "counter-stool-1",
+   "group": "counter-stool",
+   "sourceComponent": 3,
+   "seat": [
+    230.4,
+    181.3
+   ],
+   "foot": [
+    229.7,
+    177.9
+   ],
+   "facingDeg": 258.2,
+   "facing": "N"
+  },
+  {
+   "id": "counter-stool-2",
+   "group": "counter-stool",
+   "sourceComponent": 5,
+   "seat": [
+    210.1,
+    187.9
+   ],
+   "foot": [
+    209.4,
+    184.5
+   ],
+   "facingDeg": 258.2,
+   "facing": "N"
+  },
+  {
+   "id": "counter-stool-3",
+   "group": "counter-stool",
+   "sourceComponent": 11,
+   "seat": [
+    182.8,
+    195.9
+   ],
+   "foot": [
+    182.1,
+    192.5
+   ],
+   "facingDeg": 258.2,
+   "facing": "N"
+  },
+  {
+   "id": "table-near-1",
+   "group": "table-near",
+   "sourceComponent": 9,
+   "seat": [
+    174.9,
+    241.7
+   ],
+   "foot": [
+    178.0,
+    240.1
+   ],
+   "facingDeg": 332.7,
+   "facing": "NE"
+  },
+  {
+   "id": "table-near-2",
+   "group": "table-near",
+   "sourceComponent": 12,
+   "seat": [
+    179.3,
+    220.5
+   ],
+   "foot": [
+    182.7,
+    221.3
+   ],
+   "facingDeg": 12.7,
+   "facing": "E"
+  },
+  {
+   "id": "table-near-3",
+   "group": "table-near",
+   "sourceComponent": 7,
+   "seat": [
+    226.8,
+    211.7
+   ],
+   "foot": [
+    223.9,
+    213.6
+   ],
+   "facingDeg": 146.3,
+   "facing": "SW"
+  },
+  {
+   "id": "table-near-4",
+   "group": "table-near",
+   "sourceComponent": 8,
+   "seat": [
+    238.7,
+    231.2
+   ],
+   "foot": [
+    235.2,
+    230.7
+   ],
+   "facingDeg": 188.3,
+   "facing": "W"
+  },
+  {
+   "id": "table-far-1",
+   "group": "table-far",
+   "sourceComponent": 2,
+   "seat": [
+    303.3,
+    168.8
+   ],
+   "foot": [
+    306.8,
+    169.0
+   ],
+   "facingDeg": 4.1,
+   "facing": "E"
+  },
+  {
+   "id": "table-far-2",
+   "group": "table-far",
+   "sourceComponent": 1,
+   "seat": [
+    344.4,
+    165.8
+   ],
+   "foot": [
+    341.4,
+    167.6
+   ],
+   "facingDeg": 147.9,
+   "facing": "SW"
+  },
+  {
+   "id": "table-far-3",
+   "group": "table-far",
+   "sourceComponent": 4,
+   "seat": [
+    360.0,
+    178.7
+   ],
+   "foot": [
+    356.7,
+    177.7
+   ],
+   "facingDeg": 197.5,
+   "facing": "W"
+  },
+  {
+   "id": "bench-slot-1",
+   "group": "bench",
+   "sourceComponent": 10,
+   "seat": [
+    529.9,
+    248.4
+   ],
+   "foot": [
+    528.7,
+    245.1
+   ],
+   "facingDeg": 249.5,
+   "facing": "N"
+  },
+  {
+   "id": "bench-slot-2",
+   "group": "bench",
+   "sourceComponent": 10,
+   "seat": [
+    502.1,
+    258.8
+   ],
+   "foot": [
+    500.8,
+    255.5
+   ],
+   "facingDeg": 249.5,
+   "facing": "N"
+  },
+  {
+   "id": "bench-slot-3",
+   "group": "bench",
+   "sourceComponent": 10,
+   "seat": [
+    474.2,
+    269.2
+   ],
+   "foot": [
+    473.0,
+    265.9
+   ],
+   "facingDeg": 249.5,
+   "facing": "N"
+  }
+ ],
+ "stations": [
+  {
+   "id": "cafe-counter",
+   "type": "work",
+   "region": [
+    106,
+    154,
+    248,
+    224
+   ],
+   "anchor": [
+    176.5,
+    160.0
+   ],
+   "facingDeg": 78.2,
+   "walkable": false,
+   "occluderPending": true,
+   "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png yet, so nothing hides the lower body; add it and no special clipping logic is needed."
+  }
+ ]
+}

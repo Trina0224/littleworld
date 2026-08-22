@@ -68,10 +68,52 @@ stray dot on the park bench (14 cells). Also removed, found while checking: a
 cells. Four components remain — the main scenery mass, the tree planter, the
 hedge in front of the right fence, and the bush by the vending machine.
 
+## Seats and stations
+
+`anchors.json` holds thirteen seats and one work station, derived from two more
+painted maps — seats in `#00FFFF`, the counter in `#0000FF`.
+
+| Group | Count | Facing derived from |
+|---|---|---|
+| `counter-stool` | 3 | the normal of the counter region's principal axis |
+| `table-near` | 4 | the shared centroid of the group, which is the table |
+| `table-far` | 3 | the same |
+| `bench` | 3 slots | the normal of the bench's long axis, toward whichever side has more walkable ground |
+
+Each seat carries a `seat` point, a `foot` point three and a half units in front
+of it, and a facing in both degrees and compass form.
+
+Facing the group centroid works for chairs around a table but gave poor results
+for the counter stools, pointing them along the counter rather than into it. The
+principal-axis normal fixes that and puts all three at 258.2 degrees.
+
+The bench is 93 world units long, so it is split into three slots rather than
+treated as one seat. Two agents sharing a bench is exactly the emergent scene
+`README.md` asks for.
+
+One painted blob merged a table chair with the stool behind it. Its row profile
+breaks at y=210, where both the width and the right edge jump, so it is split
+there into `counter-stool-3` and `table-near-2`.
+
+### The counter is a station, not walkable ground
+
+The counter region is deliberately absent from `walkable.png` — agents must not
+path through the shop — and the keeper is placed at its anchor directly rather
+than walking there.
+
+**The counter front is not in `occluder.png` yet.** Once it is painted in, the
+keeper is drawn like any other character and the counter hides the lower body by
+the same mechanism that hides an agent behind the tree trunk. No clipping
+special case is needed, so that one green stroke is the whole fix. Until then
+the keeper would render full-height in front of the counter.
+
+The station anchor sits behind the middle of the counter. Exactly where a keeper
+stands is a judgement call, so treat it as adjustable.
+
 ## Not mapped yet
 
-Seats, counter positions, interaction anchors, and seat facing directions. Those
-are what the character pose matrix will need; see `AGENTS.md` section 8, Phase 2.
+Nothing else in Phase 1. Phase 2 needs the pose matrix to consume these facings;
+see `AGENTS.md` section 8.
 
 ## Regenerating
 
