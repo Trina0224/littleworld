@@ -17,6 +17,9 @@ sprite pipeline exist (`AGENTS.md` section 8, Phase 2).
 | `grandma-01/grandma-01-sit.png` | grandma-01 | red cardigan, apron, navy skirt | seated |
 | `grandpa-01/grandpa-01-stand.png` | grandpa-01 | beige cardigan, vest, trousers | standing |
 | `grandpa-01/grandpa-01-sit.png` | grandpa-01 | beige cardigan, vest, trousers | seated |
+| `pastor-01/pastor-01-stand-a.png` | pastor-01 | dark suit, clerical collar, cross, bible | standing, take a |
+| `pastor-01/pastor-01-stand-b.png` | pastor-01 | dark suit, clerical collar, cross, bible | standing, take b |
+| `pastor-01/pastor-01-sit.png` | pastor-01 | dark suit, clerical collar, cross, bible | seated |
 
 Every sheet is 1536 x 1024 RGBA and holds **two views side by side: front on the
 left, back on the right**. There is no side view yet, which the pose matrix will
@@ -34,12 +37,17 @@ redrawn for any other reason.
 ## Naming
 
 ```
-<character-id>/<character-id>[-<outfit>]-<pose>.png
+<character-id>/<character-id>[-<outfit>]-<pose>[-<take>].png
 ```
 
-Omit the outfit segment when a character has only one. Keep character ids stable
+Omit the outfit segment when a character has only one, and the take segment
+unless there is more than one drawing of the same pose. Keep character ids stable
 once assigned; they become the key that ties art, pose data, and agent state
 together.
+
+`pastor-01` currently has two standing takes, `-a` and `-b`, because both were
+supplied. Only one should survive into the sprite pipeline. Delete the other once
+the owner picks, and drop the take segment from the winner's filename.
 
 ## Adding more
 
