@@ -9,7 +9,7 @@ look like flattened onto black, so no cut-out algorithm is needed or wanted.
 import json
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 R = '/home/user/littleworld/assets/characters'
 SPEC = json.load(open('/home/user/littleworld/docs/specs/world/world.json'))
@@ -19,8 +19,6 @@ H0 = SPEC['characterHeightRamp']['horizonY']
 W, HH, S = 640, 360, 2
 
 FOUR = {'brother-01', 'brother-02', 'dog-01'}
-from PIL import Image, ImageFilter
-import numpy as np
 from collections import deque
 
 def _label(m):
@@ -144,23 +142,105 @@ for st in A['stations']:
     if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
 place.append(('dog-01', 'stand', [455, 300], 300.0))         # in front of the bench, with the brothers
 
+FW, FH = W*4, HH*4                                   # the masks' own resolution
+
+
+def load_mask(name, full=False):
+    im = Image.open(f'/home/user/littleworld/docs/specs/world/{name}').convert('L')
+    size = (FW, FH) if full else (W, HH)
+    return np.asarray(im.resize(size, Image.BOX) if im.size != size else im) > 127
+
+
+def occluder_baselines():
+    """Depth for every occluder pixel: the floor y of the object it belongs to.
+
+    A flat always-on-top layer is wrong for anything standing in the middle of
+    the scene. A table hides someone seated behind it and must not hide someone
+    walking in front of it, and which of those is true depends on where they are.
+    So each vertical run of occluder pixels carries the y where that run meets
+    the floor, and a character is behind it exactly when its own ground y is
+    smaller.
+
+    Furniture comes free: an enclosed hole in the walkable map is an object
+    standing on the floor, which is how both cafe tables get their depth without
+    anyone painting them.
+    """
+    occ = load_mask('occluder.png', full=True)
+    walk = load_mask('walkable.png')
+
+    seen = np.zeros(walk.shape, bool)
+    holes = np.zeros(walk.shape, bool)
+    for sy, sx in zip(*np.nonzero(~walk)):
+        if seen[sy, sx]:
+            continue
+        stack = [(sy, sx)]; seen[sy, sx] = True; cells = []; touches_edge = False
+        while stack:
+            y, x = stack.pop(); cells.append((y, x))
+            if y in (0, HH-1) or x in (0, W-1):
+                touches_edge = True
+            for dy, dx in ((1,0),(-1,0),(0,1),(0,-1)):
+                ny, nx = y+dy, x+dx
+                if 0 <= ny < HH and 0 <= nx < W and not walk[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True; stack.append((ny, nx))
+        if not touches_edge:
+            for y, x in cells:
+                holes[y, x] = True
+
+    # Baselines are computed at the masks' own resolution so the bands stay
+    # clean. The holes are found at world resolution because the flood is cheap
+    # there, then snapped back onto the full-resolution walkable boundary so
+    # their edges are not blocky.
+    grown = Image.fromarray((holes*255).astype(np.uint8)).resize((FW, FH), Image.NEAREST)
+    grown = grown.filter(ImageFilter.MaxFilter(9))
+    holes_full = (np.asarray(grown) > 127) & ~load_mask('walkable.png', full=True)
+    mask = occ | holes_full
+    base = np.zeros(mask.shape, np.int16)
+    for x in range(FW):
+        col = mask[:, x]; y = 0
+        while y < FH:
+            if col[y]:
+                end = y
+                while end + 1 < FH and col[end+1]:
+                    end += 1
+                base[y:end+1, x] = end
+                y = end + 1
+            else:
+                y += 1
+    return mask, base
+
+
+OCC_MASK, OCC_BASE = occluder_baselines()
+
 bg = Image.open('/home/user/littleworld/docs/assets/showa/scene-clean-2560.webp').convert('RGBA')
 canvas = bg.resize((W*S, HH*S), Image.LANCZOS)
+scene = canvas.copy()
+def draw_occluders(lo, hi):
+    """Paint back the scenery whose floor line falls in (lo, hi]."""
+    band = OCC_MASK & (OCC_BASE > lo*4) & (OCC_BASE <= hi*4)
+    if not band.any():
+        return
+    a = Image.fromarray((band * 255).astype(np.uint8)).resize((W*S, HH*S), Image.LANCZOS)
+    front = scene.copy(); front.putalpha(a)
+    canvas.alpha_composite(front)
+
+
+drawn = []
 for cid, pose, at, deg in sorted(place, key=lambda p: p[2][1]):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
         h, w, bottom = seated_box(cid, sp.width / sp.height, at, 0.42)
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height; bottom = at[1]
-    wp = max(2, round(w * S)); hp = max(2, round(h * S))
-    sp = sp.resize((wp, hp), Image.LANCZOS)
-    canvas.alpha_composite(sp, (round(at[0]*S - wp/2), round(bottom*S - hp)))
-    print(f'  {cid:14s} {pose:5s} ({at[0]:5.1f},{at[1]:5.1f}) {deg:5.1f}°  高 {h:5.1f}u  底 {bottom:5.1f}')
-# scenery that is drawn in front of characters goes back on top
-occ = Image.open('/home/user/littleworld/docs/specs/world/occluder.png').convert('L').resize((W*S, HH*S), Image.LANCZOS)
-front = bg.resize((W*S, HH*S), Image.LANCZOS).copy()
-front.putalpha(occ)
-canvas.alpha_composite(front)
+    drawn.append((at[1], cid, pose, at, deg, h, w, bottom, sp))
 
+last = -1
+for depth, cid, pose, at, deg, h, w, bottom, sp in drawn:
+    draw_occluders(last, depth)                      # scenery nearer than the last sprite
+    last = depth
+    wp = max(2, round(w * S)); hp = max(2, round(h * S))
+    canvas.alpha_composite(sp.resize((wp, hp), Image.LANCZOS),
+                           (round(at[0]*S - wp/2), round(bottom*S - hp)))
+    print(f'  {cid:14s} {pose:5s} ({at[0]:5.1f},{at[1]:5.1f}) {deg:5.1f}°  高 {h:5.1f}u  底 {bottom:5.1f}')
+draw_occluders(last, HH)
 canvas.convert('RGB').save('populated.png')
 print('\nsaved populated.png', canvas.size)

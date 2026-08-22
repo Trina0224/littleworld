@@ -131,5 +131,10 @@
     "counter positions",
     "interaction anchors",
     "seat facing directions"
-  ]
+  ],
+  "occlusion": {
+    "model": "depth-sorted",
+    "note": "An occluder is not a layer that always draws on top. Whether a table hides someone depends on where they are: it must hide a person seated behind it and must not hide a person walking in front of it. So every vertical run of occluder pixels carries the y where that run meets the floor, and a character is behind the run exactly when its own ground y is smaller. Characters and occluder runs are drawn together in one order, sorted by that floor y.",
+    "furnitureFromWalkableHoles": "Enclosed holes in walkable.png are objects standing on the floor, so both cafe tables get a depth for free without being painted. Their world-resolution edges are snapped back onto the full-resolution walkable boundary before use."
+  }
 }
