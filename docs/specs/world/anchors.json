@@ -213,7 +213,7 @@
    "facingDeg": 78.2,
    "walkable": false,
    "occluderPending": true,
-   "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png yet, so nothing hides the lower body; add it and no special clipping logic is needed."
+   "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter."
   }
  ]
 }

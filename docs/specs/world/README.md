@@ -133,11 +133,13 @@ The counter region is deliberately absent from `walkable.png` — agents must no
 path through the shop — and the keeper is placed at its anchor directly rather
 than walking there.
 
-**The counter front is not in `occluder.png` yet.** Once it is painted in, the
-keeper is drawn like any other character and the counter hides the lower body by
-the same mechanism that hides an agent behind the tree trunk. No clipping
-special case is needed, so that one green stroke is the whole fix. Until then
-the keeper would render full-height in front of the counter.
+**The counter front is not in `occluder.png`, and that is deferred on purpose.**
+Painting it in would let the counter hide the keeper's lower body by the same
+mechanism that hides an agent behind the tree trunk. But how much of a body the
+counter actually covers depends on whether that body is standing or seated and
+on exactly where it stands, so one flat painted mask may not be the right answer.
+Revisit when sprites are really being placed here. Until then the keeper renders
+full height in front of the counter.
 
 The station anchor sits behind the middle of the counter. Exactly where a keeper
 stands is a judgement call, so treat it as adjustable.

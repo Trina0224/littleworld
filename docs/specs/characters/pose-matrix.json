@@ -1,0 +1,25 @@
+{
+  "poses": ["stand", "sit"],
+  "drawnViews": ["front", "back"],
+  "mirroring": "horizontal",
+  "statesPerCharacter": 8,
+  "walkCycle": false,
+  "selection": {
+    "input": "facingDeg, screen space, 0 = +x right, 90 = +y down toward the camera",
+    "view": "front when 0 <= deg < 180, back otherwise",
+    "mirror": "true when 90 <= deg < 270",
+    "note": "The four quadrants give four orientations per pose. Mirroring reads as a turn because the drawn views already have the head and body angled off-axis."
+  },
+  "sourceSheets": {
+    "layout": "1536 x 1024 RGBA, front view in the left half, back view in the right half",
+    "location": "assets/characters/<id>/<id>[-<outfit>]-<pose>.png"
+  },
+  "scale": {
+    "from": "docs/specs/world/world.json characterHeightRamp",
+    "adultMetres": 1.65,
+    "childMetres": 1.35
+  },
+  "unused": {
+    "boy-01-shorts-stand.png": "kept but not expected to be used; boy-01 has a second outfit that is already covered"
+  }
+}
