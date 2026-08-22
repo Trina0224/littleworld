@@ -1,0 +1,104 @@
+{
+  "coordinateSystem": {
+    "width": 640,
+    "height": 360,
+    "origin": "top-left, +x right, +y down",
+    "backgroundAsset": "docs/assets/showa/scene-clean-2560.webp",
+    "backgroundScale": 4,
+    "note": "World units match the Phaser world in docs/showa-scene-clean.js. The background texture is 4x these units and is drawn with setDisplaySize(640, 360)."
+  },
+  "layers": {
+    "walkable": {
+      "file": "walkable.png",
+      "resolution": [
+        2560,
+        1440
+      ],
+      "white": "walkable"
+    },
+    "occluder": {
+      "file": "occluder.png",
+      "resolution": [
+        2560,
+        1440
+      ],
+      "white": "drawn in front of characters"
+    },
+    "backstage": {
+      "file": "backstage.png",
+      "resolution": [
+        640,
+        360
+      ],
+      "white": "walkable but effectively hidden",
+      "derived": true
+    }
+  },
+  "stats": {
+    "walkableCells": 66755,
+    "walkableFraction": 0.2897,
+    "connectedComponents": 1,
+    "stageCells": 38391,
+    "partiallyOccludedCells": 21012,
+    "backstageCells": 7352,
+    "occluderCells": 68104
+  },
+  "entrances": [
+    {
+      "id": "south-west",
+      "edge": "bottom",
+      "from": 138,
+      "to": 277
+    },
+    {
+      "id": "south-east",
+      "edge": "bottom",
+      "from": 279,
+      "to": 368
+    },
+    {
+      "id": "south-corner",
+      "edge": "bottom",
+      "from": 568,
+      "to": 619
+    },
+    {
+      "id": "west-upper",
+      "edge": "left",
+      "from": 128,
+      "to": 167
+    },
+    {
+      "id": "west-lower",
+      "edge": "left",
+      "from": 231,
+      "to": 292
+    },
+    {
+      "id": "east",
+      "edge": "right",
+      "from": 169,
+      "to": 208
+    }
+  ],
+  "backstagePolicy": {
+    "occlusionThreshold": 0.9,
+    "movementCostMultiplier": 4,
+    "rationale": "Backstage cells stay traversable so agents can enter, leave and pass behind scenery, but cost enough that pathfinding does not route through them as a shortcut and make agents vanish mid-journey."
+  },
+  "characterHeightRamp": {
+    "provisional": true,
+    "worldUnitsAtY": {
+      "120": 32,
+      "340": 55
+    },
+    "interpolation": "linear in y",
+    "warning": "These two numbers are an eyeball estimate, not a measurement. They decide the backstage classification and every future sprite scale. Replace them with values measured from a real sprite standing in the scene before anything depends on them."
+  },
+  "notMappedYet": [
+    "seats",
+    "counter positions",
+    "interaction anchors",
+    "seat facing directions"
+  ]
+}
