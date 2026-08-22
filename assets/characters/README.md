@@ -13,10 +13,23 @@ sprite pipeline exist (`AGENTS.md` section 8, Phase 2).
 | `boy-01/boy-01-trousers-sit.png` | boy-01 | plaid shirt, tee, dark trousers, belt, watch | seated |
 | `girl-01/girl-01-stand.png` | girl-01 | cardigan, blouse, skirt | standing |
 | `girl-01/girl-01-sit.png` | girl-01 | cardigan, blouse, skirt | seated |
+| `grandma-01/grandma-01-stand.png` | grandma-01 | red cardigan, apron, navy skirt | standing |
+| `grandma-01/grandma-01-sit.png` | grandma-01 | red cardigan, apron, navy skirt | seated |
+| `grandpa-01/grandpa-01-stand.png` | grandpa-01 | beige cardigan, vest, trousers | standing |
+| `grandpa-01/grandpa-01-sit.png` | grandpa-01 | beige cardigan, vest, trousers | seated |
 
 Every sheet is 1536 x 1024 RGBA and holds **two views side by side: front on the
 left, back on the right**. There is no side view yet, which the pose matrix will
 need.
+
+## Known inconsistency
+
+`grandpa-01/grandpa-01-sit.png` was generated in a different batch from the rest.
+It sits on a light grey backdrop (corner pixels around 110) while every other
+sheet uses a black vignette (corner pixels at 0), and its linework is lighter and
+less saturated. Cutting the figure out and colour-matching it will need separate
+handling from the others. Worth regenerating to match if the character is
+redrawn for any other reason.
 
 ## Naming
 
