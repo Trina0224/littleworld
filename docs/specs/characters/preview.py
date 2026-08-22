@@ -115,28 +115,31 @@ CAST = {'cafe-counter': 'shopkeeper-01',
 PM = json.load(open('/home/user/littleworld/docs/specs/characters/pose-matrix.json'))
 SA = PM['seatedAnchoring']
 HIP = SA['hipFraction']
+KNEE = SA['kneeFraction']
 SITH = SA['sittingHeightMetres']
 
-def seated_box(cid, sprite_ratio, seat_xy, seat_h):
-    """Height and top-left for a seated sprite, anchored by the hip.
+def seated_box(cid, sprite_ratio, seat):
+    """Size and placement for a seated sprite: knee on the seat's front lip.
 
-    The part of a body above the seat is anatomically stable; the legs below it
-    are whatever the drawing chose. So scale by sitting height and hang the
-    sprite off its own hip line.
+    Scale still comes from sitting height, hip to head, which is stable across
+    poses. Placement comes from the knee, because that is the contact the eye
+    reads as sitting in a chair — feet and hip both land differently on every
+    character, since each pose is drawn on its own implied seat.
     """
-    scale = K * (seat_xy[1] - H0)
+    fx, fy = seat['frontEdge']
+    scale = K * (seat['frontLegY'] - H0)
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
-    above = SITH[kind] * scale                      # hip to head, in world units
-    f = HIP.get(cid, 0.45)
-    h = above / (1.0 - f)
+    h = SITH[kind] * scale / (1.0 - HIP.get(cid, 0.45))
     w = h * sprite_ratio
-    bottom = seat_xy[1] + f * h
-    return h, w, bottom
+    kx, ky = KNEE.get(cid, [0.5, 0.41])
+    left = fx - kx * w
+    bottom = fy + ky * h
+    return h, w, left, bottom
 
 place = []
 for s in A['seats']:
     cid = CAST.get(s['id'])
-    if cid: place.append((cid, 'sit', s['seat'], s['facingDeg']))
+    if cid: place.append((cid, 'sit', s, s['facingDeg']))
 for st in A['stations']:
     cid = CAST.get(st['id'])
     if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
@@ -225,22 +228,24 @@ def draw_occluders(lo, hi):
 
 
 drawn = []
-for cid, pose, at, deg in sorted(place, key=lambda p: p[2][1]):
+for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontLegY'] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
-        h, w, bottom = seated_box(cid, sp.width / sp.height, at, 0.42)
+        h, w, left, bottom = seated_box(cid, sp.width / sp.height, at)
+        depth = at['frontLegY']
     else:
-        h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height; bottom = at[1]
-    drawn.append((at[1], cid, pose, at, deg, h, w, bottom, sp))
+        h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
+        left = at[0] - w/2; bottom = at[1]; depth = at[1]
+    drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, sp))
 
 last = -1
-for depth, cid, pose, at, deg, h, w, bottom, sp in drawn:
+for depth, cid, pose, at, deg, h, w, left, bottom, sp in drawn:
     draw_occluders(last, depth)                      # scenery nearer than the last sprite
     last = depth
     wp = max(2, round(w * S)); hp = max(2, round(h * S))
     canvas.alpha_composite(sp.resize((wp, hp), Image.LANCZOS),
-                           (round(at[0]*S - wp/2), round(bottom*S - hp)))
-    print(f'  {cid:14s} {pose:5s} ({at[0]:5.1f},{at[1]:5.1f}) {deg:5.1f}°  高 {h:5.1f}u  底 {bottom:5.1f}')
+                           (round(left*S), round(bottom*S - hp)))
+    print(f'  {cid:14s} {pose:5s} {deg:5.1f}°  高 {h:5.1f}u  左 {left:5.1f}  底 {bottom:5.1f}')
 draw_occluders(last, HH)
 canvas.convert('RGB').save('populated.png')
 print('\nsaved populated.png', canvas.size)

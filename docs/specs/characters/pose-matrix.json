@@ -83,8 +83,8 @@
     "note": "Below about 24 world units a figure loses its distinguishing detail: a seated child at table-far is 20 units, roughly 13 x 20 px, and a backpack becomes four blue pixels. Anchors near the horizon are small — cafe-counter 18.5, table-far 20 to 22, counter stools 22 to 25 for a child — while table-near gives 29 to 35 and the bench 36 to 40. Put the characters whose detail matters near the camera."
   },
   "seatedAnchoring": {
-    "method": "hip",
-    "note": "Seated sprites are anchored by the hip, not the feet. Each sit pose is drawn on its own implied seat with its own leg extension — man-01 stretches his legs forward and his hip sits 52% up the sprite, gentleman-01 and grandpa-01 about 45%, the children 35 to 40% — so anchoring every one of them at the floor puts each hip somewhere different. Put the hip on the chair surface and let the legs fall where the drawing puts them.",
+    "method": "knee",
+    "note": "Seated sprites are anchored by the knee onto the front edge of the seat surface, which is the constraint that actually reads as sitting in a chair. Anchoring by hip or by feet does not: each sit pose is drawn on its own implied seat with its own leg extension, so those points land differently on every character. The seat front edge is measurable — it sits one seat height directly above where the chair's front legs meet the floor, which is the bottom of the painted seat blob in that column.",
     "sittingHeightMetres": {
       "adult": 0.85,
       "child": 0.7,
@@ -105,6 +105,57 @@
       "brother-01": 0.4,
       "brother-02": 0.4,
       "dog-01": 0.35
+    },
+    "kneeFraction": {
+      "_note": "read off the art: (x from left, y from bottom) as fractions of the sprite box",
+      "gentleman-01": [
+        0.5,
+        0.42
+      ],
+      "grandpa-01": [
+        0.5,
+        0.42
+      ],
+      "grandma-01": [
+        0.5,
+        0.4
+      ],
+      "pastor-01": [
+        0.55,
+        0.45
+      ],
+      "man-01": [
+        0.38,
+        0.45
+      ],
+      "woman-01": [
+        0.45,
+        0.4
+      ],
+      "shopkeeper-01": [
+        0.48,
+        0.42
+      ],
+      "boy-01": [
+        0.5,
+        0.4
+      ],
+      "girl-01": [
+        0.48,
+        0.4
+      ],
+      "brother-01": [
+        0.5,
+        0.42
+      ],
+      "brother-02": [
+        0.5,
+        0.4
+      ],
+      "dog-01": [
+        0.5,
+        0.35
+      ]
     }
   }
 }

@@ -14,6 +14,11 @@
    "ground": [
     230.4,
     199.7
+   ],
+   "frontLegY": 196,
+   "frontEdge": [
+    230.4,
+    178.1
    ]
   },
   {
@@ -30,6 +35,11 @@
    "ground": [
     210.1,
     207.4
+   ],
+   "frontLegY": 202,
+   "frontEdge": [
+    210.1,
+    183.3
    ]
   },
   {
@@ -46,6 +56,11 @@
    "ground": [
     182.8,
     216.7
+   ],
+   "frontLegY": 209,
+   "frontEdge": [
+    182.8,
+    189.3
    ]
   },
   {
@@ -62,6 +77,11 @@
    "ground": [
     174.9,
     257.7
+   ],
+   "frontLegY": 253,
+   "frontEdge": [
+    174.9,
+    237.4
    ]
   },
   {
@@ -78,6 +98,11 @@
    "ground": [
     179.3,
     234.5
+   ],
+   "frontLegY": 230,
+   "frontEdge": [
+    179.3,
+    216.4
    ]
   },
   {
@@ -94,6 +119,11 @@
    "ground": [
     226.8,
     224.9
+   ],
+   "frontLegY": 226,
+   "frontEdge": [
+    226.8,
+    212.7
    ]
   },
   {
@@ -110,6 +140,11 @@
    "ground": [
     238.7,
     246.2
+   ],
+   "frontLegY": 240,
+   "frontEdge": [
+    238.7,
+    225.5
    ]
   },
   {
@@ -126,6 +161,11 @@
    "ground": [
     303.3,
     178.0
+   ],
+   "frontLegY": 179,
+   "frontEdge": [
+    303.3,
+    169.7
    ]
   },
   {
@@ -142,6 +182,11 @@
    "ground": [
     344.4,
     174.7
+   ],
+   "frontLegY": 177,
+   "frontEdge": [
+    344.4,
+    167.9
    ]
   },
   {
@@ -158,6 +203,11 @@
    "ground": [
     360.0,
     188.8
+   ],
+   "frontLegY": 186,
+   "frontEdge": [
+    360.0,
+    176.1
    ]
   },
   {
@@ -174,6 +224,11 @@
    "ground": [
     529.9,
     265.0
+   ],
+   "frontLegY": 260,
+   "frontEdge": [
+    529.9,
+    243.8
    ]
   },
   {
@@ -190,6 +245,11 @@
    "ground": [
     502.1,
     276.3
+   ],
+   "frontLegY": 271,
+   "frontEdge": [
+    502.1,
+    253.9
    ]
   },
   {
@@ -206,6 +266,11 @@
    "ground": [
     474.2,
     287.7
+   ],
+   "frontLegY": 280,
+   "frontEdge": [
+    474.2,
+    262.1
    ]
   }
  ],
@@ -229,5 +294,5 @@
    "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter."
   }
  ],
- "seatAnchorNote": "seat is the painted cyan point: the surface a person sits ON, which is seatHeightMetres above the floor. ground is the floor directly below it, solved from the height ramp, and it is where a seated sprite's feet belong. Anchoring the sprite at seat instead left everyone squatting in mid-air. The earlier foot field, seat nudged toward the facing, is removed: it was solving the wrong problem."
+ "seatAnchorNote": "seat is the painted cyan centroid. frontLegY is where that chair's front legs meet the floor, taken from the bottom of its blob in that column, so the bench's three slots each get their own because it runs diagonally. frontEdge is the front lip of the seat surface, one seat height above the legs, and it is where a seated sprite's knee belongs. ground stays for reference but nothing anchors to it: a sit pose's feet are wherever the drawing put them."
 }
