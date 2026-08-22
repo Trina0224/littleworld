@@ -112,16 +112,16 @@ CAST = {'cafe-counter': 'shopkeeper-01',
         'table-near-1': 'gentleman-01', 'table-near-2': 'pastor-01',
         'table-near-3': 'grandma-01', 'table-near-4': 'grandpa-01',
         'table-far-1': 'boy-01',
-        'bench-slot-1': 'brother-01', 'bench-slot-2': 'brother-02'}
+        'bench-slot-2': 'brother-01', 'bench-slot-3': 'brother-02'}
 
 place = []
 for s in A['seats']:
     cid = CAST.get(s['id'])
-    if cid: place.append((cid, 'sit', s['foot'], s['facingDeg']))
+    if cid: place.append((cid, 'sit', s['ground'], s['facingDeg']))
 for st in A['stations']:
     cid = CAST.get(st['id'])
     if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
-place.append(('dog-01', 'stand', [472, 288], 300.0))         # in front of the bench, with the brothers
+place.append(('dog-01', 'stand', [455, 300], 300.0))         # in front of the bench, with the brothers
 
 bg = Image.open('/home/user/littleworld/docs/assets/showa/scene-clean-2560.webp').convert('RGBA')
 canvas = bg.resize((W*S, HH*S), Image.LANCZOS)
@@ -133,5 +133,11 @@ for cid, pose, foot, deg in sorted(place, key=lambda p: p[2][1]):
     canvas.alpha_composite(sp, (round(foot[0]*S - w/2), round(foot[1]*S - hp)))
     r = sit_ratio(cid) if pose == 'sit' else 1.0
     print(f'  {cid:14s} {pose:5s} ({foot[0]:5.1f},{foot[1]:5.1f}) {deg:5.1f}°  坐姿比 {r:.2f}  高 {h:5.1f}u')
+# scenery that is drawn in front of characters goes back on top
+occ = Image.open('/home/user/littleworld/docs/specs/world/occluder.png').convert('L').resize((W*S, HH*S), Image.LANCZOS)
+front = bg.resize((W*S, HH*S), Image.LANCZOS).copy()
+front.putalpha(occ)
+canvas.alpha_composite(front)
+
 canvas.convert('RGB').save('populated.png')
 print('\nsaved populated.png', canvas.size)

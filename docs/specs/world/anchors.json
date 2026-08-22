@@ -8,12 +8,13 @@
     230.4,
     181.3
    ],
-   "foot": [
-    229.7,
-    177.9
-   ],
    "facingDeg": 258.2,
-   "facing": "N"
+   "facing": "N",
+   "seatHeightMetres": 0.7,
+   "ground": [
+    230.4,
+    199.7
+   ]
   },
   {
    "id": "counter-stool-2",
@@ -23,12 +24,13 @@
     210.1,
     187.9
    ],
-   "foot": [
-    209.4,
-    184.5
-   ],
    "facingDeg": 258.2,
-   "facing": "N"
+   "facing": "N",
+   "seatHeightMetres": 0.7,
+   "ground": [
+    210.1,
+    207.4
+   ]
   },
   {
    "id": "counter-stool-3",
@@ -38,12 +40,13 @@
     182.8,
     195.9
    ],
-   "foot": [
-    182.1,
-    192.5
-   ],
    "facingDeg": 258.2,
-   "facing": "N"
+   "facing": "N",
+   "seatHeightMetres": 0.7,
+   "ground": [
+    182.8,
+    216.7
+   ]
   },
   {
    "id": "table-near-1",
@@ -53,12 +56,13 @@
     174.9,
     241.7
    ],
-   "foot": [
-    178.0,
-    240.1
-   ],
    "facingDeg": 332.7,
-   "facing": "NE"
+   "facing": "NE",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    174.9,
+    257.7
+   ]
   },
   {
    "id": "table-near-2",
@@ -68,12 +72,13 @@
     179.3,
     220.5
    ],
-   "foot": [
-    182.7,
-    221.3
-   ],
    "facingDeg": 12.7,
-   "facing": "E"
+   "facing": "E",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    179.3,
+    234.5
+   ]
   },
   {
    "id": "table-near-3",
@@ -83,12 +88,13 @@
     226.8,
     211.7
    ],
-   "foot": [
-    223.9,
-    213.6
-   ],
    "facingDeg": 146.3,
-   "facing": "SW"
+   "facing": "SW",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    226.8,
+    224.9
+   ]
   },
   {
    "id": "table-near-4",
@@ -98,12 +104,13 @@
     238.7,
     231.2
    ],
-   "foot": [
-    235.2,
-    230.7
-   ],
    "facingDeg": 188.3,
-   "facing": "W"
+   "facing": "W",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    238.7,
+    246.2
+   ]
   },
   {
    "id": "table-far-1",
@@ -113,12 +120,13 @@
     303.3,
     168.8
    ],
-   "foot": [
-    306.8,
-    169.0
-   ],
    "facingDeg": 4.1,
-   "facing": "E"
+   "facing": "E",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    303.3,
+    178.0
+   ]
   },
   {
    "id": "table-far-2",
@@ -128,12 +136,13 @@
     344.4,
     165.8
    ],
-   "foot": [
-    341.4,
-    167.6
-   ],
    "facingDeg": 147.9,
-   "facing": "SW"
+   "facing": "SW",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    344.4,
+    174.7
+   ]
   },
   {
    "id": "table-far-3",
@@ -143,12 +152,13 @@
     360.0,
     178.7
    ],
-   "foot": [
-    356.7,
-    177.7
-   ],
    "facingDeg": 197.5,
-   "facing": "W"
+   "facing": "W",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    360.0,
+    188.8
+   ]
   },
   {
    "id": "bench-slot-1",
@@ -158,12 +168,13 @@
     529.9,
     248.4
    ],
-   "foot": [
-    528.7,
-    245.1
-   ],
    "facingDeg": 249.5,
-   "facing": "N"
+   "facing": "N",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    529.9,
+    265.0
+   ]
   },
   {
    "id": "bench-slot-2",
@@ -173,12 +184,13 @@
     502.1,
     258.8
    ],
-   "foot": [
-    500.8,
-    255.5
-   ],
    "facingDeg": 249.5,
-   "facing": "N"
+   "facing": "N",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    502.1,
+    276.3
+   ]
   },
   {
    "id": "bench-slot-3",
@@ -188,12 +200,13 @@
     474.2,
     269.2
    ],
-   "foot": [
-    473.0,
-    265.9
-   ],
    "facingDeg": 249.5,
-   "facing": "N"
+   "facing": "N",
+   "seatHeightMetres": 0.42,
+   "ground": [
+    474.2,
+    287.7
+   ]
   }
  ],
  "stations": [
@@ -215,5 +228,6 @@
    "occluderPending": true,
    "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter."
   }
- ]
+ ],
+ "seatAnchorNote": "seat is the painted cyan point: the surface a person sits ON, which is seatHeightMetres above the floor. ground is the floor directly below it, solved from the height ramp, and it is where a seated sprite's feet belong. Anchoring the sprite at seat instead left everyone squatting in mid-air. The earlier foot field, seat nudged toward the facing, is removed: it was solving the wrong problem."
 }
