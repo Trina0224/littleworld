@@ -55,9 +55,17 @@ def main():
             total += integral[y0 - 1, x0 - 1]
         return total / ((x1 - x0 + 1) * (y1 - y0 + 1))
 
+    horizon = SPEC['characterHeightRamp']['horizonY']
+
     backstage = np.zeros((H, W), bool)
     for y, x in zip(*np.nonzero(walk)):
-        h = max(character_height(y), 8.0)
+        if y <= horizon + 8:
+            # At or above the horizon the ground-plane ramp has no meaningful
+            # scale left, so no character can be placed here sensibly. Those
+            # cells are backstage by definition, whatever the occluders say.
+            backstage[y, x] = True
+            continue
+        h = character_height(y)
         w = max(h * 0.40, 4.0)
         backstage[y, x] = occluded_fraction(int(x - w / 2), int(y - h),
                                             int(x + w / 2), int(y)) > THRESHOLD

@@ -38,10 +38,11 @@
     "walkableCells": 66755,
     "walkableFraction": 0.2897,
     "connectedComponents": 1,
-    "stageCells": 38391,
-    "partiallyOccludedCells": 21012,
-    "backstageCells": 7352,
-    "occluderCells": 68104
+    "stageCells": 37647,
+    "partiallyOccludedCells": 18640,
+    "backstageCells": 10468,
+    "occluderCells": 68104,
+    "aboveHorizonCells": 2950
   },
   "entrances": [
     {
@@ -87,13 +88,43 @@
     "rationale": "Backstage cells stay traversable so agents can enter, leave and pass behind scenery, but cost enough that pathfinding does not route through them as a shortcut and make agents vanish mid-journey."
   },
   "characterHeightRamp": {
-    "provisional": true,
+    "measured": true,
+    "model": "worldUnitsPerMetre(y) = 0.2023 * (y - 69.9)",
+    "horizonY": 69.9,
+    "unitsPerMetrePerY": 0.2023,
     "worldUnitsAtY": {
-      "120": 32,
-      "340": 55
+      "120": 16.7,
+      "340": 90.2
     },
-    "interpolation": "linear in y",
-    "warning": "These two numbers are an eyeball estimate, not a measurement. They decide the backstage classification and every future sprite scale. Replace them with values measured from a real sprite standing in the scene before anything depends on them."
+    "referenceHeightMetres": 1.65,
+    "note": "Fitted by least squares to four objects of known real height measured in the background. Residuals: postbox -3.9%, vending machine -3.0%, phone booth +12.3%, litter bin -5.8%. The booth is the loosest because its assumed 2.2 m is the least certain. Validated by compositing man-01 and boy-01 into the scene at six depths.",
+    "references": [
+      {
+        "object": "round postbox (郵便差出箱1号丸型)",
+        "metres": 1.35,
+        "baseY": 253.8,
+        "worldUnits": 48.2
+      },
+      {
+        "object": "drinks vending machine",
+        "metres": 1.83,
+        "baseY": 327.5,
+        "worldUnits": 92.5
+      },
+      {
+        "object": "phone booth",
+        "metres": 2.2,
+        "baseY": 322.5,
+        "worldUnits": 126.2
+      },
+      {
+        "object": "litter bin",
+        "metres": 0.75,
+        "baseY": 350.0,
+        "worldUnits": 40.0
+      }
+    ],
+    "supersedes": "an eyeball estimate of 32 units at y=120 and 55 at y=340, wrong by 2x at the far end and 1.6x at the near end"
   },
   "notMappedYet": [
     "seats",

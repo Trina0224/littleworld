@@ -50,15 +50,47 @@ So backstage cells stay traversable and carry the movement cost multiplier in
 `world.json`. Agents use them to enter, leave and pass behind scenery, not to
 cut corners.
 
-Current split of the 66,755 walkable cells: 57.5% stage, 31.5% partly occluded,
-11.0% backstage.
+Current split of the 66,755 walkable cells: 56.4% stage, 27.9% partly occluded,
+15.7% backstage.
 
-## The height ramp is a guess
+## The height ramp, measured
 
-`characterHeightRamp` in `world.json` is an eyeball estimate — 32 world units
-tall at y=120, 55 at y=340. It decides the backstage classification and it will
-decide every sprite scale later. **Measure it from a real sprite standing in the
-scene and replace those two numbers before anything depends on them.**
+```
+worldUnitsPerMetre(y) = 0.2023 * (y - 69.9)
+```
+
+Fitted by least squares to four objects of known real height, measured off the
+background itself:
+
+| Object | Real height | Base y | World units | Residual |
+|---|---|---|---|---|
+| round postbox (郵便差出箱1号丸型) | 1.35 m | 253.8 | 48.2 | -3.9% |
+| drinks vending machine | 1.83 m | 327.5 | 92.5 | -3.0% |
+| phone booth | 2.20 m | 322.5 | 126.2 | +12.3% |
+| litter bin | 0.75 m | 350.0 | 40.0 | -5.8% |
+
+The booth carries the loosest residual because its assumed 2.2 m is the least
+certain of the four. Validated afterwards by compositing `man-01` and `boy-01`
+into the scene at six depths, where they sit correctly against the counter, the
+tables, the bench and the standing sign.
+
+A 1.65 m adult is therefore **16.7 world units tall at y=120 and 90.2 at y=340**.
+The earlier eyeball estimate said 32 and 55 — too big by 2x at the far end and
+too small by 1.6x at the near end, in opposite directions, which is why nothing
+was allowed to depend on it.
+
+### The horizon falls inside the walkable area
+
+The fit puts the horizon at **y = 69.9**, and the painted walkable area reaches
+up to y=45. Above the horizon the ground-plane ramp has no scale left to give,
+so no character can be placed there at any size. `derive.py` marks every
+walkable cell at or above the horizon as backstage unconditionally, whatever the
+occluders say — 2,950 cells.
+
+This is the concrete form of the concern raised when backstage was introduced:
+the band behind the roof is high on screen because the building is tall, not
+because the ground is far away. The measurement confirms it and the rule handles
+it.
 
 ## Corrections applied to the painted occluder map
 
