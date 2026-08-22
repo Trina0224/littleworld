@@ -19,18 +19,18 @@ sprite pipeline exist (`AGENTS.md` section 8, Phase 2).
 | `grandpa-01/grandpa-01-sit.png` | grandpa-01 | beige cardigan, vest, trousers | seated |
 | `pastor-01/pastor-01-stand.png` | pastor-01 | dark suit, clerical collar, cross, bible | standing |
 | `pastor-01/pastor-01-sit.png` | pastor-01 | dark suit, clerical collar, cross, bible | seated |
-| `woman-01/woman-01-stand.png` | woman-01 | white knit top, rose midi skirt, heels | standing |
-| `woman-01/woman-01-sit.png` | woman-01 | white knit top, rose midi skirt, heels | seated |
-| `man-01/man-01-stand.png` | man-01 | white shirt, striped tie, navy trousers | standing |
-| `man-01/man-01-sit.png` | man-01 | white shirt, striped tie, navy trousers | seated |
+| `woman-01/woman-01-stand.png` | woman-01, office worker | white knit top, rose midi skirt, heels | standing |
+| `woman-01/woman-01-sit.png` | woman-01, office worker | white knit top, rose midi skirt, heels | seated |
+| `man-01/man-01-stand.png` | man-01, office worker | white shirt, striped tie, navy trousers | standing |
+| `man-01/man-01-sit.png` | man-01, office worker | white shirt, striped tie, navy trousers | seated |
 
 Every sheet is 1536 x 1024 RGBA and holds **two views side by side**. For the
-first five characters that is front on the left, back on the right.
+first five characters that is front on the left, back on the right. `woman-01`
+and `man-01` are drawn turned further toward the side; that is simply how those
+two were drawn, not an attempt at a side view.
 
-The `woman-01` and `man-01` sheets are turned further than that: the heads are in
-profile and the bodies are rotated toward the side. They are not a clean 90
-degree profile either, so what view they actually represent needs the owner to
-confirm before the pose matrix treats them as the side view it still lacks.
+**No character has a true side view.** The pose matrix needs one before walking
+animation is possible, and mirroring cannot generate it from front and back.
 
 ## Known inconsistency
 
