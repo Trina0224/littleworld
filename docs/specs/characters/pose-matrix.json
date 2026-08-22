@@ -70,9 +70,15 @@
     "adultMetres": 1.65,
     "childMetres": 1.35,
     "dogMetres": 0.55,
-    "note": "dog-01 is a shetland sheepdog; 0.55 m is head-up standing height, approximate."
+    "note": "dog-01 is a shetland sheepdog; 0.55 m is head-up standing height, approximate.",
+    "seatedRatio": 0.75,
+    "seatedNote": "A seated adult is about 1.25 m against 1.65 m standing. This cannot be measured off the art: the stand and sit sheets are each framed to fill their own canvas, so their pixel heights share no scale. Every pose height has to be set explicitly."
   },
   "unused": {
     "boy-01-shorts-stand.png": "kept but not expected to be used; boy-01 has a second outfit that is already covered"
+  },
+  "alpha": {
+    "source": "native",
+    "note": "Every reference sheet except none is RGBA and already carries a clean matte. The black vignette is only how a sheet looks flattened onto black; reading the RGB and trying to key it out fails on dark hair and dark clothing, which sit in the same value range as the backdrop and its halo. Use the alpha channel."
   }
 }

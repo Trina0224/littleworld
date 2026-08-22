@@ -77,7 +77,39 @@ Sprite height comes from `characterHeightRamp` in `docs/specs/world/world.json`,
 which is measured rather than guessed. Adults are treated as 1.65 m and children
 as 1.35 m; `boy-01` and `girl-01` are the children.
 
+## Sprites need no cutting out
+
+Every reference sheet is RGBA and **already carries a clean matte**. The black
+vignette is only what a sheet looks like flattened onto black. Reading the RGB
+and keying the backdrop out is not just unnecessary, it cannot work: dark hair
+and dark clothing occupy the same value range as the backdrop and the halo drawn
+around each figure, so brightness, local detail, chroma and gradient-limited
+flooding all eat parts of the figure. Five approaches were tried and all failed
+before anyone checked the alpha channel. Use the alpha channel.
+
+Splitting a sheet into views is a crop at the recorded column cuts, then a trim
+to the alpha bounding box.
+
+## Pose heights are set, not measured
+
+A seated adult is about 1.25 m against 1.65 m standing, so seated sprites take
+`seatedRatio` 0.75 from `pose-matrix.json`.
+
+This cannot be read off the art. Each sheet is framed to fill its own canvas, so
+a character's standing and seated drawings share no scale — measuring their pixel
+heights returns a ratio near 1.0 for everyone, which is a fact about framing, not
+about anatomy. Every pose height has to be stated explicitly.
+
+## Preview
+
+```bash
+python3 docs/specs/characters/preview.py
+```
+
+Places all twelve characters at their anchors from `docs/specs/world/anchors.json`,
+picks each one's view and mirror from the rules above, scales by the measured
+height ramp, sorts by foot y and writes `populated.png`.
+
 ## Still to build
 
-Cutting the two views out of each sheet as transparent PNGs, packing them, and
-wiring depth sorting and the occluder mask. All programming, no drawing.
+Packing, and wiring depth sorting and the occluder mask into the live scene.
