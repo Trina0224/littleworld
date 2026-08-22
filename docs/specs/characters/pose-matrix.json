@@ -37,15 +37,35 @@
       "path": "assets/characters/<id>/<id>.png",
       "characters": [
         "brother-01",
-        "brother-02"
+        "brother-02",
+        "dog-01"
       ],
-      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters."
+      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters. dog-01 does not separate automatically — its cuts were read by eye and verified.",
+      "columnCuts": {
+        "brother-01": [
+          355,
+          735,
+          1098
+        ],
+        "brother-02": [
+          367,
+          707,
+          1060
+        ],
+        "dog-01": [
+          515,
+          836,
+          1262
+        ]
+      }
     }
   },
   "scale": {
     "from": "docs/specs/world/world.json characterHeightRamp",
     "adultMetres": 1.65,
-    "childMetres": 1.35
+    "childMetres": 1.35,
+    "dogMetres": 0.55,
+    "note": "dog-01 is a shetland sheepdog; 0.55 m is head-up standing height, approximate."
   },
   "unused": {
     "boy-01-shorts-stand.png": "kept but not expected to be used; boy-01 has a second outfit that is already covered"
