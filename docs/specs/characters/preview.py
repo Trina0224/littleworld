@@ -18,23 +18,74 @@ K = SPEC['characterHeightRamp']['unitsPerMetrePerY']
 H0 = SPEC['characterHeightRamp']['horizonY']
 W, HH, S = 640, 360, 2
 
-FOUR = {'brother-01': [412, 751, 1156], 'brother-02': [406, 734, 1135], 'dog-01': [502, 819, 1235]}
+FOUR = {'brother-01', 'brother-02', 'dog-01'}
+from PIL import Image, ImageFilter
+import numpy as np
+from collections import deque
 
+def _label(m):
+    lab = np.zeros(m.shape, np.int32); n = 0
+    H, W = m.shape
+    for sy, sx in zip(*np.nonzero(m)):
+        if lab[sy, sx]: continue
+        n += 1; q = deque([(sy, sx)]); lab[sy, sx] = n
+        while q:
+            y, x = q.popleft()
+            for dy, dx in ((1,0),(-1,0),(0,1),(0,-1)):
+                ny, nx = y+dy, x+dx
+                if 0 <= ny < H and 0 <= nx < W and m[ny, nx] and not lab[ny, nx]:
+                    lab[ny, nx] = n; q.append((ny, nx))
+    return lab, n
+
+def split_views(path, want, break_px=9, min_px=3000):
+    im = Image.open(path).convert('RGBA')
+    a = np.asarray(im)[..., 3]
+    mask = a > 16
+    # erode to snap the thin bridges where two figures touch
+    core = np.asarray(Image.fromarray((mask*255).astype(np.uint8))
+                      .filter(ImageFilter.MinFilter(break_px))) > 127
+    lab, n = _label(core)
+    keep = [i for i in range(1, n+1) if (lab == i).sum() >= min_px]
+    keep.sort(key=lambda i: np.nonzero(lab == i)[1].mean())
+    if len(keep) != want:
+        raise SystemExit(f'{path}: found {len(keep)} components, wanted {want}')
+
+    # grow each core back over the full mask, so every pixel joins its own figure
+    own = np.zeros(mask.shape, np.int32)
+    for k, i in enumerate(keep, 1): own[lab == i] = k
+    for _ in range(break_px * 3):
+        for d, ax in ((1,0),(-1,0),(1,1),(-1,1)):
+            cand = np.roll(own, d, ax)
+            fill = (own == 0) & mask & (cand > 0)
+            own[fill] = cand[fill]
+        if not ((own == 0) & mask).any(): break
+
+    out = []
+    for k in range(1, want+1):
+        m = own == k
+        ys, xs = np.nonzero(m)
+        box = (xs.min(), ys.min(), xs.max()+1, ys.max()+1)
+        rgba = np.asarray(im).copy()
+        rgba[..., 3] = np.where(m, rgba[..., 3], 0)
+        out.append(Image.fromarray(rgba, 'RGBA').crop(box))
+    return out
+
+_cache = {}
 def views(cid, pose):
     """(front, back) RGBA crops for a character and pose."""
     if cid in FOUR:
-        im = Image.open(f'{R}/{cid}/{cid}.png').convert('RGBA')
-        c = [0] + FOUR[cid] + [im.width]
-        i = 0 if pose == 'stand' else 2
-        return im.crop((c[i], 0, c[i+1], im.height)), im.crop((c[i+1], 0, c[i+2], im.height))
+        if cid not in _cache:
+            _cache[cid] = split_views(f'{R}/{cid}/{cid}.png', 4)
+        v = _cache[cid]
+        return (v[0], v[1]) if pose == 'stand' else (v[2], v[3])
     stem = {'boy-01': 'boy-01-trousers'}.get(cid, cid)
-    im = Image.open(f'{R}/{cid}/{stem}-{pose}.png').convert('RGBA')
-    return im.crop((0, 0, im.width//2, im.height)), im.crop((im.width//2, 0, im.width, im.height))
+    key = (cid, pose)
+    if key not in _cache:
+        _cache[key] = split_views(f'{R}/{cid}/{stem}-{pose}.png', 2)
+    return tuple(_cache[key])
 
 def trim(im):
-    a = np.asarray(im)[..., 3]
-    ys, xs = np.nonzero(a > 20)
-    return im.crop((xs.min(), ys.min(), xs.max()+1, ys.max()+1))
+    return im
 
 def sprite(cid, pose, deg):
     f, b = views(cid, pose)
@@ -53,13 +104,15 @@ SIT_RATIO = 0.75
 def sit_ratio(cid):
     return 1.0 if cid == 'dog-01' else SIT_RATIO
 
+# Anchors near the horizon render very small — a seated child at table-far is
+# only about 20 world units — so the characters whose detail matters most sit
+# near the camera. See the legibility note in README.md.
 CAST = {'cafe-counter': 'shopkeeper-01',
         'counter-stool-1': 'girl-01', 'counter-stool-2': 'man-01', 'counter-stool-3': 'woman-01',
         'table-near-1': 'gentleman-01', 'table-near-2': 'pastor-01',
-        'table-near-3': 'boy-01', 'table-near-4': 'girl-01',
-        'table-far-1': 'brother-01', 'table-far-2': 'brother-02',
-        'bench-slot-1': 'grandma-01', 'bench-slot-2': 'grandpa-01'}
-del CAST['table-near-4']
+        'table-near-3': 'grandma-01', 'table-near-4': 'grandpa-01',
+        'table-far-1': 'boy-01',
+        'bench-slot-1': 'brother-01', 'bench-slot-2': 'brother-02'}
 
 place = []
 for s in A['seats']:
@@ -68,7 +121,7 @@ for s in A['seats']:
 for st in A['stations']:
     cid = CAST.get(st['id'])
     if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
-place.append(('dog-01', 'stand', [378, 196], 30.0))          # by the far table, with the brothers
+place.append(('dog-01', 'stand', [472, 288], 300.0))         # in front of the bench, with the brothers
 
 bg = Image.open('/home/user/littleworld/docs/assets/showa/scene-clean-2560.webp').convert('RGBA')
 canvas = bg.resize((W*S, HH*S), Image.LANCZOS)

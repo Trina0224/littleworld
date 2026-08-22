@@ -42,6 +42,7 @@
       ],
       "note": "One sheet is the complete source for all eight states. Preferred layout for new characters. Cuts are measured from the alpha channel, not from the RGB: brother-01 view 3 and view 4 actually touch, joined across five rows at x=1156, so its third cut is the narrowest waist rather than a gap.",
       "columnCuts": {
+        "note": "informational only; splitting is by component",
         "brother-01": [
           412,
           751,
@@ -57,7 +58,8 @@
           819,
           1235
         ]
-      }
+      },
+      "splitting": "By alpha connected component, not by column. brother-01 view 3 and view 4 overlap horizontally — one boy's backpack reaches past the other's left edge — so any vertical cut slices a figure. Erode to break the bridge, label, then grow each label back over the full alpha so each view carries only its own figure."
     }
   },
   "scale": {
@@ -75,5 +77,9 @@
   "alpha": {
     "source": "native",
     "note": "Every sheet is RGBA with a transparent background — all 22 have fully transparent borders. There is no backdrop to remove. Anything that looks like a black vignette or a warm gradient is the RGB left under transparent pixels, visible only when a viewer flattens the image onto black. Read the alpha channel; never key the RGB."
+  },
+  "legibility": {
+    "minWorldUnits": 24,
+    "note": "Below about 24 world units a figure loses its distinguishing detail: a seated child at table-far is 20 units, roughly 13 x 20 px, and a backpack becomes four blue pixels. Anchors near the horizon are small — cafe-counter 18.5, table-far 20 to 22, counter stools 22 to 25 for a child — while table-near gives 29 to 35 and the bench 36 to 40. Put the characters whose detail matters near the camera."
   }
 }

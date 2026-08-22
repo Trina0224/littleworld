@@ -94,8 +94,29 @@ were out by up to 75 px, and `grandpa-01-sit.png` was recorded as needing specia
 handling on the strength of RGB values under transparent pixels. Read the alpha
 channel, for mattes and for measurements alike.
 
-Splitting a sheet into views is a crop at the recorded column cuts, then a trim
-to the alpha bounding box.
+Splitting a sheet into views goes by **alpha connected component**, not by
+column. `brother-01`'s two seated views overlap horizontally — one boy's backpack
+reaches past the other's left edge — so any vertical cut slices a figure. Erode
+the alpha to break the bridge where they touch, label, then grow each label back
+over the full alpha, and each view carries only its own figure.
+
+## How small is too small
+
+Below about **24 world units** a figure loses whatever makes it recognisable. A
+seated child at `table-far` is 20 units, about 13 x 20 px, and a backpack becomes
+four blue pixels.
+
+| Anchor group | Seated child |
+|---|---|
+| `cafe-counter` | 18.5 |
+| `table-far` | 20 - 22 |
+| `counter-stool` | 22 - 25 |
+| `table-near` | 29 - 35 |
+| `bench` | 36 - 40 |
+
+This is the height ramp being honest, not a bug: those anchors really are close
+to the horizon. It just means the characters whose detail matters — the brothers
+and the dog, the first LLM scenario — belong near the camera.
 
 ## Pose heights are set, not measured
 
