@@ -40,7 +40,7 @@
         "brother-02",
         "dog-01"
       ],
-      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters. dog-01 does not separate automatically — its cuts were read by eye and verified.",
+      "note": "One sheet is the complete source for all eight states. Preferred layout for new characters. dog-01 is on a white backdrop, which let its columns be measured exactly; the black vignette on every other sheet carries a glow that hides where a figure ends, so ask for white on anything new.",
       "columnCuts": {
         "brother-01": [
           355,
@@ -53,10 +53,15 @@
           1060
         ],
         "dog-01": [
-          515,
-          836,
-          1262
+          502,
+          820,
+          1235
         ]
+      },
+      "backdrop": {
+        "brother-01": "black vignette",
+        "brother-02": "black vignette",
+        "dog-01": "white"
       }
     }
   },

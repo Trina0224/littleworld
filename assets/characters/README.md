@@ -49,11 +49,20 @@ four figures separate cleanly on a column-mass cut:
 | `brother-01.png` | 22-355, 467-735, 796-1098, 1220-1498 |
 | `brother-02.png` | 82-341, 468-707, 777-1060, 1169-1461 |
 
-`dog-01.png` does **not** split this way. The standing dog is drawn in profile
-and reaches within 29 px of the next view, and the glow around each figure
-bridges them, so neither a column cut nor connected components separates all
-four. Its boundaries were read by eye and verified: cut at **515, 836 and
-1262**. Expect the extraction step to need per-sheet overrides like this one.
+| `dog-01.png` | 11-496, 509-787, 853-1230, 1241-1507 |
+
+`dog-01.png` is the one sheet on a **white** backdrop rather than the black
+vignette, which is why its columns could be measured exactly instead of
+estimated. Its gaps are only 12 px and 10 px wide, the tightest in the set.
+
+An earlier pass recorded 515, 836 and 1262 for this sheet, read off the black
+version. All three were too far right — by 13, 16 and 27 px — and would have
+clipped two tails. The glow baked into the black backdrop hides where a figure
+actually ends, so checking the cuts against that render could not have caught
+it. **Measure boundaries on a clean backdrop, never on a glowing one.**
+
+White backdrops also make the eventual cut-out far better: no halo to threshold
+around, and the silhouette is exact. Worth asking for on future sheets.
 
 Filenames in this layout carry no pose segment, since one file holds them all.
 
