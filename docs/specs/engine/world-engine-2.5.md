@@ -547,4 +547,98 @@ A pet may use a small state machine such as wander, approach, follow, rest and r
 2. A meaningful decision point creates a Brain request.
 3. Perception Engine derives A's subjective observations.
 4. Memory Engine retrieves relevant private memories.
-5. Active Activity / Conversation
+5. Active Activity / Conversation Session contributes current session state.
+6. Server assembles A's isolated stable-prefix + dynamic-suffix context.
+7. LLM Scheduler accepts, delays, drops or dispatches the request according to priority and budget.
+8. World Engine keeps ticking while the request is in flight.
+9. If the response arrives, scheduler checks that the request generation is still current.
+10. Structured output is validated; invalid output is treated as inference failure.
+11. Activity Runtime interprets the valid proposal.
+12. World Engine validates the next operation against current world truth.
+13. World Engine executes or rejects it without rewinding time.
+14. Objective event enters the Event Store.
+15. Perception Engine distributes subjective consequences to eligible observers.
+16. Private memory candidates may be consolidated.
+17. On timeout/failure/drop, the agent simply remains in its safe deterministic current activity or fallback.
+```
+
+## 16. Phaser boundary
+
+Phaser is a renderer, not the authority for agent state, memory, social knowledge, reservations, conversation ownership, or LLM behavior.
+
+The presentation layer should consume the same event/state representation whether the source is:
+
+```text
+LIVE World Engine
+REPLAY Event Store
+MOCK / SCRIPTED run
+```
+
+This boundary is required so replay behaves like the live world rather than as a separate animation system.
+
+## 17. Phase 3A — first implementation slice
+
+Do **not** begin implementation by connecting an LLM.
+
+The first slice is entirely deterministic:
+
+1. world clock;
+2. Activity Runtime state machine;
+3. load canonical seats/stations from `docs/specs/world/anchors.json`;
+4. atomic seat reservation (`available / reserved / occupied`);
+5. one scripted agent that goes from the cafe area to a bench, reserves it, sits, waits, stands and releases it;
+6. objective event log for every visible state transition;
+7. replay that reproduces the scripted run through the normal renderer path;
+8. a second scripted agent attempting to claim the same seat, proving reservation conflict handling.
+
+Success criteria for Phase 3A:
+
+```text
+- the world continues running with no LLM at all;
+- two agents cannot occupy the same exclusive seat;
+- every visible transition is represented in the event stream;
+- a recorded run replays to the same visible sequence;
+- intention source can later be swapped from script/mock to LLM without changing World Engine mechanics.
+```
+
+Only after Phase 3A is stable should implementation add Mock Brain / scheduler integration, then a real provider adapter.
+
+## 18. Decisions closed by this review
+
+The following are no longer open questions for the MVP:
+
+| Topic | Decision |
+|---|---|
+| World loop and LLM latency | World time never waits for inference. |
+| LLM timeout/failure support | Required; deterministic fallback always exists. |
+| Seat/station definitions | `docs/specs/world/anchors.json` is canonical. |
+| MVP visual perception | Semantic zones + distance; do not use render occlusion as LOS. |
+| Replay | First-class runtime and demo reliability requirement. |
+| Conversation scheduling | Strict turn-taking + timeout, owned by Conversation Session. |
+| Machine action output | Provider-supported structured output/schema; validation failure = inference failure. |
+| Stale plan | Cancel remaining steps; replan only when scheduler permits. |
+| Pets | Same perception/event/world-action interfaces, deterministic/probabilistic brain. |
+| Provider coupling | Agent Brain uses an adapter; World Engine is provider-agnostic. |
+| Prompt organization | Stable cache-friendly prefix + dynamic suffix. |
+
+## 19. Open questions before later implementation
+
+These remain intentionally unresolved:
+
+- simulation time model and speed;
+- exact semantic-zone boundaries;
+- distance and hearing thresholds;
+- salience scoring and maximum observation package size;
+- memory importance, consolidation and forgetting;
+- contradiction handling in private memory;
+- exact activity interruption thresholds;
+- exact scheduler concurrency/RPM/token budgets per provider;
+- limited retry counts and timeout durations;
+- token/window thresholds for conversation rolling summaries;
+- multi-party conversation join/leave etiquette beyond strict turn ownership;
+- exact structured-output schemas for `decide`, `converse`, and `summarize`;
+- needs model (hunger, energy, boredom, social drive) and how strongly it influences intention generation;
+- persistence backend for long-running memory and event history;
+- server deployment location and credential strategy for LIVE mode.
+
+These should be decided incrementally after Phase 3A proves the deterministic runtime and replay path.
