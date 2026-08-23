@@ -1,0 +1,11 @@
+{
+  "id": "brother-02",
+  "brain": "llm",
+  "appearance": "瘦瘦的小男孩，白色圓領上衣配深綠短褲，頭髮蓬蓬的",
+  "sprite": "brother-02",
+  "knows": [
+    { "who": "brother-01", "as": "タツ" },
+    { "who": "dog-01", "as": "ハナ" }
+  ],
+  "_note": "草稿。個性還沒定，見 bible.md。"
+}
