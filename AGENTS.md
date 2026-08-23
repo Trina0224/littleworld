@@ -12,6 +12,12 @@ The current MVP is:
 
 > **A Showa-era Japanese pocket park integrated with a semi-open kissaten / light-meal café, using the visual language of roughly 1965–1985.**
 
+The place has a name: **ひだまり町** — *the sunny corner*. It is a district
+within a city, in the sense that 濱田町 and 森合 are districts of 福島市, and
+that city is deliberately never named. Naming the block rather than the
+municipality gives the cast somewhere to say they live without pinning the world
+to a point on a map. See `characters/README.md`.
+
 **This place is imagined, not reconstructed.** The character prototype who lived
 in that era looked at the scene and said he could not recognise it as Japan — he
 had never seen a cafe and a park put together like this. So the world is *built
