@@ -181,6 +181,77 @@
     "seatCoverage": {
       "_note": "multiplier on the ramp-derived seated height, per character; 1.0 is the anatomical size",
       "default": 1.0
-    }
+    },
+    "sitMarks": {
+      "gentleman-01": {
+        "front": {
+          "hip": 0.452,
+          "hipX": 0.559,
+          "knee": 0.355,
+          "kneeX": 0.673
+        },
+        "back": {
+          "hip": 0.31,
+          "hipX": 0.438,
+          "knee": 0.325,
+          "kneeX": 0.791
+        }
+      },
+      "grandma-01": {
+        "front": {
+          "hip": 0.304,
+          "hipX": 0.173,
+          "knee": 0.348,
+          "kneeX": 0.73
+        },
+        "back": {
+          "hip": 0.234,
+          "hipX": 0.336,
+          "knee": 0.301,
+          "kneeX": 0.754
+        }
+      },
+      "grandpa-01": {
+        "front": {
+          "hip": 0.43,
+          "hipX": 0.443,
+          "knee": 0.334,
+          "kneeX": 0.503
+        },
+        "back": {
+          "hip": 0.319,
+          "hipX": 0.389
+        }
+      },
+      "man-01": {
+        "front": {
+          "hip": 0.388,
+          "hipX": 0.274,
+          "knee": 0.352,
+          "kneeX": 0.587
+        },
+        "back": {
+          "hip": 0.344,
+          "hipX": 0.29,
+          "knee": 0.36,
+          "kneeX": 0.629
+        }
+      },
+      "pastor-01": {
+        "front": {
+          "hip": 0.408,
+          "hipX": 0.371,
+          "knee": 0.394,
+          "kneeX": 0.735
+        },
+        "back": {
+          "hip": 0.308,
+          "hipX": 0.359,
+          "knee": 0.331,
+          "kneeX": 0.732
+        }
+      }
+    },
+    "sitMarksNote": "Measured off the owner-marked sheets in marks/, by read-marks.py. Fractions of sprite height above the sprite bottom; hipX/kneeX are fractions of sprite width from its left. hip is where the buttocks meet the seat and is the anchor; knee is the check that the sitter is not floating off the front of the chair. Characters with no sheet yet fall back to hipFraction, which is eyeballed."
   }
 }

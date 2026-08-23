@@ -118,15 +118,46 @@ This is the height ramp being honest, not a bug: those anchors really are close
 to the horizon. It just means the characters whose detail matters — the brothers
 and the dog, the first LLM scenario — belong near the camera.
 
-## Pose heights are set, not measured
+## Seated size and placement
 
-A seated adult is about 1.25 m against 1.65 m standing, so seated sprites take
-`seatedRatio` 0.75 from `pose-matrix.json`.
+Seated size cannot be read off the art. Each sheet is framed to fill its own
+canvas, so a character's standing and seated drawings share no scale — measuring
+their pixel heights returns a ratio near 1.0 for everyone, which is a fact about
+framing, not anatomy.
 
-This cannot be read off the art. Each sheet is framed to fill its own canvas, so
-a character's standing and seated drawings share no scale — measuring their pixel
-heights returns a ratio near 1.0 for everyone, which is a fact about framing, not
-about anatomy. Every pose height has to be stated explicitly.
+So seated size comes from **sitting height**, seat surface to the top of the
+head: 0.85 m for a 1.65 m adult, scaled by stature. That is the one body measure
+that survives the framing difference, and it is the measure taken from the seat,
+which is exactly where the sprite is anchored.
+
+### The marked sheets
+
+`marks/` holds the boards the owner drew on: the sit sprite at 760 px tall with a
+percentage grid, front and back side by side. Two magenta strokes per view — a
+long one along the buttocks where they meet the seat, a short one at the knee.
+`read-marks.py` reads them into `pose-matrix.json` as `sitMarks`, as fractions of
+sprite height. The long stroke is the anchor; the knee is the check.
+
+Guessing these was the single biggest source of characters that looked wrong.
+The measured values are nothing like the eyeballed ones — `grandma-01`'s buttock
+line is at 0.30 of her sprite height, not the 0.42 that was guessed.
+
+### Where the sprite goes
+
+The buttock line goes on the painted seat top, 30% back from its front edge.
+Note that the seat's **depth** is one column of the painted quad, not the quad's
+bounding box: these seats run diagonally, so most of that box's height is the
+seat's length. Sizing a sitter to cover the whole quad is wrong for the same
+reason and worse — the quad lies on the ground plane and gets stretched sideways
+to about 1.8x the chair's real width, while shoulders stand upright and get no
+such stretch, so matching them made a 1.65 m man read 2.4 m tall.
+
+Feet are not corrected. Rising 0.42 m onto a seat and stepping 0.45 m back off
+the chair reach nearly the same screen row here, so no single placement puts both
+the buttocks and the soles where they belong. The buttocks win.
+
+`preview.py` prints, per sitter, whether the marked buttock line and knee both
+land inside the painted seat. All five marked characters currently do.
 
 ## Preview
 
@@ -136,8 +167,13 @@ python3 docs/specs/characters/preview.py
 
 Places all twelve characters at their anchors from `docs/specs/world/anchors.json`,
 picks each one's view and mirror from the rules above, scales by the measured
-height ramp, sorts by foot y and writes `populated.png`.
+height ramp, sorts by depth, draws the scenery occluders in between, and writes
+`populated.png`.
 
 ## Still to build
 
-Packing, and wiring depth sorting and the occluder mask into the live scene.
+Seven of the twelve sit sheets are not marked yet — `woman-01`, `shopkeeper-01`,
+`boy-01`, `girl-01`, `brother-01`, `brother-02`, `dog-01`. They fall back to the
+eyeballed `hipFraction` until they are.
+
+Then packing, and wiring depth sorting and the occluder mask into the live scene.

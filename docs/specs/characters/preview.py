@@ -116,37 +116,66 @@ HIP = SA['hipFraction']
 HIP_BACK = SA['hipFractionBack']
 COVER = SA['seatCoverage']
 SITH = SA['sittingHeightMetres']
+MARKS = SA.get('sitMarks', {})
+
+SEAT_TOP = np.asarray(Image.open('/home/user/littleworld/docs/specs/world/seatsurfaces.png')
+                      .convert('L').resize((W, HH), Image.BOX)) > 127
+
+def seat_band(cx, cy, h):
+    """The painted seat's near and far edge in the column the sitter occupies.
+
+    The quad's bounding box is no good for this: these seats run diagonally, so
+    most of the box height is the seat's length, not its depth. One column of it
+    is the depth, which is the thing a hip and a knee have to fit between."""
+    col = np.nonzero(SEAT_TOP[:, int(round(cx))] & (np.abs(np.arange(HH) - cy) <= h))[0]
+    return (col.min(), col.max()) if len(col) else (cy - 1, cy + 1)
 
 
-def seated_box(cid, sprite_ratio, seat, facing):
+HIP_INTO_SEAT = 0.30      # how far back on the seat the buttocks land
+
+
+def seated_box(cid, sprite, seat, facing):
     """Size and placement for a seated sprite.
 
-    Where: the hip goes on the painted seat top. The owner painted those, so
-    the chair's height and its floor line stop being guessed at.
+    Where: the owner marked, on every sit sheet, the line where the buttocks
+    meet the seat and where the knee is. That line goes on the painted seat,
+    a third of the way back from its front edge, and the sprite hangs from it.
+    The knee then falls where the drawing puts it, and the check that matters
+    is whether it still lands on the painted seat.
 
     How big: from the ramp and sitting height, hip to head, which is the one
     body measure that survives the difference between the stand and sit sheets.
-    Sizing off the painted seat's width instead does not work, and it is worth
-    saying why: that quad is the seat lying on the ground plane, so the
-    projection stretches it to about 1.8x its real width, while a sitter's
-    shoulders stand upright and get no such stretch. Asking a body to be as
-    wide as its seat looks made a 1.65 m man 2.4 m tall. He covers the middle
-    of the seat and the front edge stays visible, which is what sitting on a
-    chair looks like from here.
+    Sizing off the painted seat instead does not work: that quad lies on the
+    ground plane and the projection stretches it sideways to roughly 1.8x the
+    chair's real width, while shoulders stand upright and get no such stretch.
+    Matching the two made a 1.65 m man read 2.4 m tall.
     """
     surf = seat['seatSurface']
     cx, cy = surf['centre']
-    back = 180 <= facing % 360 < 360
-    hip = (HIP_BACK if back else HIP).get(cid, 0.30 if back else 0.45)
+    d = facing % 360
+    view = 'front' if d < 180 else 'back'
+    mirror = 90 <= d < 270
+    m = MARKS.get(cid, {}).get(view, {})
+    back = view == 'back'
+    hip = m.get('hip') or (HIP_BACK if back else HIP).get(cid, 0.30 if back else 0.45)
+    hip_x = m.get('hipX', 0.5)
+    if mirror:
+        hip_x = 1.0 - hip_x
+
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
     # the brothers are not the same size, and sitting must not hide that
     sit_m = SITH[kind] * (metres(cid) / (1.35 if kind == 'child' else 1.65)
                           if kind != 'dog' else 1.0)
     h = sit_m * K * (cy - H0) / (1.0 - hip) * COVER.get(cid, COVER['default'])
-    w = h * sprite_ratio
-    left = cx - w / 2
-    bottom = cy + hip * h
-    return h, w, left, bottom, None
+    w = h * sprite.width / sprite.height
+
+    far, near = seat_band(cx, cy, surf['h'])
+    hip_y = far + HIP_INTO_SEAT * (near - far)
+    left = cx - hip_x * w
+    bottom = hip_y + hip * h
+    knee = m.get('knee')
+    knee_y = bottom - knee * h if knee is not None else None
+    return h, w, left, bottom, None, (hip_y, knee_y, far, near)
 
 
 place = []
@@ -261,17 +290,20 @@ drawn = []
 for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['centre'][1] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
-        h, w, left, bottom, clip = seated_box(cid, sp.width / sp.height, at, deg)
+        h, w, left, bottom, clip, chk = seated_box(cid, sp, at, deg)
+        hy, ky, far, near = chk
+        ok = lambda y: '' if y is None else ('OK' if far - 0.5 <= y <= near + 0.5 else '離開椅面')
+        note = f'  臀 {hy:5.1f} {ok(hy):4s}' + (f'  膝 {ky:5.1f} {ok(ky)}' if ky is not None else '')
         # facing away puts the chair back in front of the sitter, facing the
         # camera puts the sitter in front of it
         depth = at['seatSurface']['centre'][1]
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
-        left = at[0] - w/2; bottom = at[1]; depth = at[1]; clip = None
-    drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp))
+        left = at[0] - w/2; bottom = at[1]; depth = at[1]; clip = None; note = ''
+    drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note))
 
 last = -1
-for depth, cid, pose, at, deg, h, w, left, bottom, clip, sp in drawn:
+for depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note in drawn:
     draw_occluders(last, depth)                      # scenery nearer than the last sprite
     last = depth
     wp = max(2, round(w * S)); hp = max(2, round(h * S))
@@ -282,7 +314,7 @@ for depth, cid, pose, at, deg, h, w, left, bottom, clip, sp in drawn:
         if keep < hp:
             img = img.crop((0, 0, wp, keep))
     canvas.alpha_composite(img, (round(left*S), top))
-    print(f'  {cid:14s} {pose:5s} {deg:5.1f}°  高 {h:5.1f}u  左 {left:5.1f}  底 {bottom:5.1f}')
+    print(f'  {cid:14s} {pose:5s} {deg:5.1f}°  高 {h:5.1f}u  左 {left:5.1f}  底 {bottom:5.1f}{note}')
 draw_occluders(last, HH)
 canvas.convert('RGB').save('populated.png')
 print('\nsaved populated.png', canvas.size)
