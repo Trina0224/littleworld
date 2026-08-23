@@ -85,6 +85,26 @@ def furniture_centres():
     return out
 
 
+# Any painted seat top with no anchor of its own becomes one. The owner counts
+# four counter stools and painted four; the anchor file, derived earlier from the
+# cyan seat map, only had three.
+for i, c in sorted(SU.items()):
+    if i in taken or c['n'] < 25:
+        continue
+    near = min(seats, key=lambda s: (s['seatSurface']['centre'][0]-c['cx'])**2
+                                  + (s['seatSurface']['centre'][1]-c['cy'])**2)
+    g = near['id'].rsplit('-', 1)[0]
+    k = 1 + max(int(t['id'].rsplit('-', 1)[1]) for t in A['seats']
+                if t['id'].rsplit('-', 1)[0] == g)
+    new = {'id': f'{g}-{k}', 'group': g, 'seat': [round(c['cx'],1), round(c['cy'],1)],
+           'seatSurface': {'centre': [round(c['cx'],1), round(c['cy'],1)],
+                           'w': c['x1']-c['x0']+1, 'h': c['y1']-c['y0']+1},
+           'fromUnmatchedPaint': True}
+    seats.append(new)                     # seats IS A['seats']
+    print(f'added {new["id"]:16s} from unmatched paint at ({c["cx"]:.1f},{c["cy"]:.1f})')
+A['seats'].sort(key=lambda s: s['seatSurface']['centre'][1] if 'seatSurface' in s else 0)
+
+
 def face(bx, by, cx, cy):
     return round(math.degrees(math.atan2(cy - by, cx - bx)) % 360, 1)
 
@@ -156,11 +176,17 @@ for s in seats:
     s['backrestTopY'] = BK[i]['y0']
     s.pop('facing', None)
 
-A['facingNote']=("facingDeg is measured, not chosen: it is the direction from the "
-  "painted chair back to the painted seat top, which is where the occupant looks. "
-  "Every chair in this art turns out to have its back up-screen, so every sitter "
-  "is a front view. backrestTopY is the top row of that painted back; the renderer "
-  "gives the back that depth so a chair never covers its own occupant.")
+A['facingNote']=("facingDeg comes from what the seat is drawn up to, not from the "
+  "painted chair back. A table chair faces its table, a counter stool faces the counter, "
+  "the park bench faces the open ground. Two attempts at reading it off the chair-back "
+  "paint both failed: the back is an upright panel, so its centroid sits above its seat "
+  "and reported every chair as facing the camera, and moving to the back's bottom edge "
+  "fixed the sign but not the spread, because a hand-painted patch a few pixels across "
+  "cannot pin an angle. The table is the better instrument - every seat around it agrees "
+  "on where it is. backrestTopY is the top row of the nearest painted back; the renderer "
+  "uses it as that back's depth so a chair does not cover its own occupant, which is a "
+  "deliberate stopgap - some backs really do stand in front of their sitter, and "
+  "occlusion is deferred.")
 json.dump(A,open(p,'w'),indent=2,ensure_ascii=False)
 print()
 for s in seats:

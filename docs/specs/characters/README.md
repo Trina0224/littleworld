@@ -171,7 +171,26 @@ centred, with nothing to align. Everyone else's feet reach past the front of the
 chair, which is what forces the choice.
 
 `preview.py` prints, per sitter, whether the marked buttock line and knee both
-land inside the painted seat. All five marked characters currently do.
+land inside the painted seat.
+
+### The drop
+
+`dropUnits` shifts every placed character down by a flat amount — 6 world units,
+which is 12 px in the preview and 24 px against the full-size background. It is
+the owner's call, made by eye, and it is a knob rather than a measurement.
+
+It is applied after the seat check, not before, so the check keeps telling the
+truth: at 6 units the three counter stools now report their sitters' buttocks
+off the painted seat, because those stool tops are only 5 units deep. The round
+table, the far table and the bench all still land on the paint.
+
+### Which way a sheet is drawn
+
+Mirroring assumes a sheet is drawn facing screen right, and flips it when the
+character should look left. `brother-01`'s back view is drawn the other way, so
+it needs the opposite condition — without that he sat looking away from his
+brother and away from the open ground. `drawnFacing` in `pose-matrix.json`
+records the exceptions.
 
 ## Preview
 

@@ -86,8 +86,12 @@ def views(cid, pose):
 def sprite(cid, pose, deg):
     f, b = views(cid, pose)
     d = deg % 360
-    im = f if d < 180 else b
-    return im.transpose(Image.FLIP_LEFT_RIGHT) if 90 <= d < 270 else im
+    view = 'front' if d < 180 else 'back'
+    im = f if view == 'front' else b
+    # mirroring assumes the sheet is drawn facing screen right; a sheet drawn the
+    # other way has to flip on the opposite condition
+    drawn_left = DRAWN.get(cid, {}).get(view, DRAWN['default']) == 'left'
+    return im.transpose(Image.FLIP_LEFT_RIGHT) if (90 <= d < 270) != drawn_left else im
 
 CHILD = {'boy-01', 'girl-01', 'brother-01', 'brother-02'}
 # stature, standing. brother-01 is the elder of the pair and reads bulkier, so he
@@ -117,6 +121,8 @@ HIP_BACK = SA['hipFractionBack']
 COVER = SA['seatCoverage']
 SITH = SA['sittingHeightMetres']
 MARKS = SA.get('sitMarks', {})
+DROP = SA.get('dropUnits', 0.0)
+DRAWN = PM.get('drawnFacing', {'default': 'right'})
 WHOLE = set(SA.get('wholeOnSeat', []))
 
 SEAT_TOP = np.asarray(Image.open('/home/user/littleworld/docs/specs/world/seatsurfaces.png')
@@ -177,11 +183,11 @@ def seated_box(cid, sprite, seat, facing):
     if cid in WHOLE:
         # small enough to sit on the seat entire, feet and all, so the sprite's
         # own bottom goes on the seat's front edge and nothing needs aligning
-        bottom = near
+        bottom = near + DROP
         left = cx - w / 2
         hip_y = bottom - hip * h
     else:
-        hip_y = far + HIP_INTO_SEAT * (near - far)
+        hip_y = far + HIP_INTO_SEAT * (near - far) + DROP
         left = cx - hip_x * w
         bottom = hip_y + hip * h
     knee = m.get('knee')
@@ -310,7 +316,7 @@ for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['cent
         depth = at['seatSurface']['centre'][1]
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
-        left = at[0] - w/2; bottom = at[1]; depth = at[1]; clip = None; note = ''
+        left = at[0] - w/2; bottom = at[1] + DROP; depth = at[1]; clip = None; note = ''
     drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note))
 
 last = -1

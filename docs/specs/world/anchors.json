@@ -1,171 +1,27 @@
 {
   "seats": [
     {
-      "id": "counter-stool-1",
-      "group": "counter-stool",
-      "sourceComponent": 3,
+      "id": "table-far-2",
+      "group": "table-far",
+      "sourceComponent": 1,
       "seat": [
-        230.4,
-        181.3
+        344.4,
+        165.8
       ],
-      "facingDeg": 251.7,
+      "facingDeg": 140.1,
       "frontEdge": [
-        227.5,
-        177.8
+        337.7,
+        174.6
       ],
       "seatSurface": {
         "centre": [
-          230.1,
-          178.7
+          340.4,
+          171.4
         ],
-        "w": 14,
-        "h": 6
+        "w": 18,
+        "h": 10
       },
-      "backrestTopY": 168,
-      "facingFrom": "the counter it is drawn up to"
-    },
-    {
-      "id": "counter-stool-2",
-      "group": "counter-stool",
-      "sourceComponent": 5,
-      "seat": [
-        210.1,
-        187.9
-      ],
-      "facingDeg": 251.7,
-      "frontEdge": [
-        207.5,
-        184.1
-      ],
-      "seatSurface": {
-        "centre": [
-          209.7,
-          185.5
-        ],
-        "w": 14,
-        "h": 6
-      },
-      "backrestTopY": 174,
-      "facingFrom": "the counter it is drawn up to"
-    },
-    {
-      "id": "counter-stool-3",
-      "group": "counter-stool",
-      "sourceComponent": 11,
-      "seat": [
-        182.8,
-        195.9
-      ],
-      "facingDeg": 251.7,
-      "frontEdge": [
-        185.9,
-        191.0
-      ],
-      "seatSurface": {
-        "centre": [
-          189.2,
-          192.2
-        ],
-        "w": 15,
-        "h": 6
-      },
-      "backrestTopY": 181,
-      "facingFrom": "the counter it is drawn up to"
-    },
-    {
-      "id": "table-near-1",
-      "group": "table-near",
-      "sourceComponent": 9,
-      "seat": [
-        174.9,
-        241.7
-      ],
-      "facingDeg": 338.7,
-      "frontEdge": [
-        187.6,
-        240.8
-      ],
-      "seatSurface": {
-        "centre": [
-          179.4,
-          244.8
-        ],
-        "w": 28,
-        "h": 14
-      },
-      "backrestTopY": 228,
-      "facingFrom": "the table it is drawn up to"
-    },
-    {
-      "id": "table-near-2",
-      "group": "table-near",
-      "sourceComponent": 12,
-      "seat": [
-        179.3,
-        220.5
-      ],
-      "facingDeg": 15.6,
-      "frontEdge": [
-        191.2,
-        227.1
-      ],
-      "seatSurface": {
-        "centre": [
-          184.9,
-          225.4
-        ],
-        "w": 24,
-        "h": 12
-      },
-      "backrestTopY": 204,
-      "facingFrom": "the table it is drawn up to"
-    },
-    {
-      "id": "table-near-3",
-      "group": "table-near",
-      "sourceComponent": 7,
-      "seat": [
-        226.8,
-        211.7
-      ],
-      "facingDeg": 128.3,
-      "frontEdge": [
-        216.9,
-        222.3
-      ],
-      "seatSurface": {
-        "centre": [
-          222.2,
-          218.0
-        ],
-        "w": 26,
-        "h": 16
-      },
-      "backrestTopY": 198,
-      "facingFrom": "the table it is drawn up to"
-    },
-    {
-      "id": "table-near-4",
-      "group": "table-near",
-      "sourceComponent": 8,
-      "seat": [
-        238.7,
-        231.2
-      ],
-      "facingDeg": 183.5,
-      "frontEdge": [
-        229.2,
-        232.9
-      ],
-      "seatSurface": {
-        "centre": [
-          236.6,
-          234.2
-        ],
-        "w": 29,
-        "h": 14
-      },
-      "backrestTopY": 218,
+      "backrestTopY": 155,
       "facingFrom": "the table it is drawn up to"
     },
     {
@@ -193,28 +49,28 @@
       "facingFrom": "the table it is drawn up to"
     },
     {
-      "id": "table-far-2",
-      "group": "table-far",
-      "sourceComponent": 1,
+      "id": "counter-stool-1",
+      "group": "counter-stool",
+      "sourceComponent": 3,
       "seat": [
-        344.4,
-        165.8
+        230.4,
+        181.3
       ],
-      "facingDeg": 140.1,
+      "facingDeg": 252.1,
       "frontEdge": [
-        337.7,
-        174.6
+        227.5,
+        177.8
       ],
       "seatSurface": {
         "centre": [
-          340.4,
-          171.4
+          230.1,
+          178.7
         ],
-        "w": 18,
-        "h": 10
+        "w": 14,
+        "h": 6
       },
-      "backrestTopY": 155,
-      "facingFrom": "the table it is drawn up to"
+      "backrestTopY": 168,
+      "facingFrom": "the counter it is drawn up to"
     },
     {
       "id": "table-far-3",
@@ -238,6 +94,170 @@
         "h": 10
       },
       "backrestTopY": 168,
+      "facingFrom": "the table it is drawn up to"
+    },
+    {
+      "id": "counter-stool-2",
+      "group": "counter-stool",
+      "sourceComponent": 5,
+      "seat": [
+        210.1,
+        187.9
+      ],
+      "facingDeg": 252.1,
+      "frontEdge": [
+        207.5,
+        184.1
+      ],
+      "seatSurface": {
+        "centre": [
+          209.7,
+          185.5
+        ],
+        "w": 14,
+        "h": 6
+      },
+      "backrestTopY": 174,
+      "facingFrom": "the counter it is drawn up to"
+    },
+    {
+      "id": "counter-stool-3",
+      "group": "counter-stool",
+      "sourceComponent": 11,
+      "seat": [
+        182.8,
+        195.9
+      ],
+      "facingDeg": 252.1,
+      "frontEdge": [
+        185.9,
+        191.0
+      ],
+      "seatSurface": {
+        "centre": [
+          189.2,
+          192.2
+        ],
+        "w": 15,
+        "h": 6
+      },
+      "backrestTopY": 181,
+      "facingFrom": "the counter it is drawn up to"
+    },
+    {
+      "id": "counter-stool-4",
+      "group": "counter-stool",
+      "seat": [
+        172.2,
+        197.4
+      ],
+      "seatSurface": {
+        "centre": [
+          172.2,
+          197.4
+        ],
+        "w": 14,
+        "h": 6
+      },
+      "fromUnmatchedPaint": true,
+      "facingDeg": 252.1,
+      "facingFrom": "the counter it is drawn up to",
+      "backrestTopY": 187
+    },
+    {
+      "id": "table-near-3",
+      "group": "table-near",
+      "sourceComponent": 7,
+      "seat": [
+        226.8,
+        211.7
+      ],
+      "facingDeg": 128.3,
+      "frontEdge": [
+        216.9,
+        222.3
+      ],
+      "seatSurface": {
+        "centre": [
+          222.2,
+          218.0
+        ],
+        "w": 26,
+        "h": 16
+      },
+      "backrestTopY": 198,
+      "facingFrom": "the table it is drawn up to"
+    },
+    {
+      "id": "table-near-2",
+      "group": "table-near",
+      "sourceComponent": 12,
+      "seat": [
+        179.3,
+        220.5
+      ],
+      "facingDeg": 15.6,
+      "frontEdge": [
+        191.2,
+        227.1
+      ],
+      "seatSurface": {
+        "centre": [
+          184.9,
+          225.4
+        ],
+        "w": 24,
+        "h": 12
+      },
+      "backrestTopY": 204,
+      "facingFrom": "the table it is drawn up to"
+    },
+    {
+      "id": "table-near-4",
+      "group": "table-near",
+      "sourceComponent": 8,
+      "seat": [
+        238.7,
+        231.2
+      ],
+      "facingDeg": 183.5,
+      "frontEdge": [
+        229.2,
+        232.9
+      ],
+      "seatSurface": {
+        "centre": [
+          236.6,
+          234.2
+        ],
+        "w": 29,
+        "h": 14
+      },
+      "backrestTopY": 218,
+      "facingFrom": "the table it is drawn up to"
+    },
+    {
+      "id": "table-near-1",
+      "group": "table-near",
+      "sourceComponent": 9,
+      "seat": [
+        174.9,
+        241.7
+      ],
+      "facingDeg": 338.7,
+      "frontEdge": [
+        187.6,
+        240.8
+      ],
+      "seatSurface": {
+        "centre": [
+          179.4,
+          244.8
+        ],
+        "w": 28,
+        "h": 14
+      },
+      "backrestTopY": 228,
       "facingFrom": "the table it is drawn up to"
     },
     {
@@ -335,5 +355,5 @@
     }
   ],
   "seatAnchorNote": "frontEdge is the front lip of the seat surface, drawn directly on the scene by the owner and read back off the image. A seated sprite is placed so its knee covers that point.\n\nEverything that used to derive this is gone. Deriving it needed the chair's floor line, its seat height and which side the occupant faced, and each of those was wrong in turn: the painted blobs stop short of the chair legs, seat heights differ between stools and chairs, and the lip moves to the far side when the sitter faces away. Eleven drawn lines settled all of it.",
-  "facingNote": "facingDeg is measured, not chosen: it is the direction from the painted chair back to the painted seat top, which is where the occupant looks. Every chair in this art turns out to have its back up-screen, so every sitter is a front view. backrestTopY is the top row of that painted back; the renderer gives the back that depth so a chair never covers its own occupant."
+  "facingNote": "facingDeg comes from what the seat is drawn up to, not from the painted chair back. A table chair faces its table, a counter stool faces the counter, the park bench faces the open ground. Two attempts at reading it off the chair-back paint both failed: the back is an upright panel, so its centroid sits above its seat and reported every chair as facing the camera, and moving to the back's bottom edge fixed the sign but not the spread, because a hand-painted patch a few pixels across cannot pin an angle. The table is the better instrument - every seat around it agrees on where it is. backrestTopY is the top row of the nearest painted back; the renderer uses it as that back's depth so a chair does not cover its own occupant, which is a deliberate stopgap - some backs really do stand in front of their sitter, and occlusion is deferred."
 }

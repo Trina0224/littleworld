@@ -343,6 +343,15 @@
       "brother-02",
       "dog-01"
     ],
-    "wholeOnSeatNote": "The owner's call: these two are small enough to sit entirely on the painted seat, feet and all, so they need no hip alignment. Their sprite bottom goes on the seat's front edge and they centre on it. Everyone else is anchored by the marked buttock line, because their feet reach past the front of the chair and the two cannot both be satisfied."
+    "wholeOnSeatNote": "The owner's call: these two are small enough to sit entirely on the painted seat, feet and all, so they need no hip alignment. Their sprite bottom goes on the seat's front edge and they centre on it. Everyone else is anchored by the marked buttock line, because their feet reach past the front of the chair and the two cannot both be satisfied.",
+    "dropUnits": 6.0,
+    "dropUnitsNote": "A flat downward nudge on every placed character, seated and standing, in world units. The owner's call, made by eye: everyone read a little high. 6 units is 12 px in the 1280x720 preview and 24 px against the 2560x1440 background. It is a knob, not a measurement - raise or lower it and re-render."
+  },
+  "drawnFacing": {
+    "_note": "Which way a sheet is drawn facing, per pose. Mirroring assumes the art faces screen right and flips it when the character should look left; a sheet drawn facing left needs the opposite. brother-01's back view is the one that is, which had him looking away from his brother and away from the open ground.",
+    "default": "right",
+    "brother-01": {
+      "back": "left"
+    }
   }
 }
