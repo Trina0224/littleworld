@@ -17,9 +17,10 @@
    ],
    "frontLegY": 196,
    "frontEdge": [
-    230.4,
-    178.1
-   ]
+    229.3,
+    172.6
+   ],
+   "seatSurfaceY": 178.1
   },
   {
    "id": "counter-stool-2",
@@ -38,9 +39,10 @@
    ],
    "frontLegY": 202,
    "frontEdge": [
-    210.1,
-    183.3
-   ]
+    208.9,
+    177.5
+   ],
+   "seatSurfaceY": 183.3
   },
   {
    "id": "counter-stool-3",
@@ -59,9 +61,10 @@
    ],
    "frontLegY": 209,
    "frontEdge": [
-    182.8,
-    189.3
-   ]
+    181.5,
+    183.2
+   ],
+   "seatSurfaceY": 189.3
   },
   {
    "id": "table-near-1",
@@ -80,9 +83,10 @@
    ],
    "frontLegY": 253,
    "frontEdge": [
-    174.9,
-    237.4
-   ]
+    182.1,
+    233.7
+   ],
+   "seatSurfaceY": 237.4
   },
   {
    "id": "table-near-2",
@@ -101,9 +105,10 @@
    ],
    "frontLegY": 230,
    "frontEdge": [
-    179.3,
-    216.4
-   ]
+    186.3,
+    218.0
+   ],
+   "seatSurfaceY": 216.4
   },
   {
    "id": "table-near-3",
@@ -122,9 +127,10 @@
    ],
    "frontLegY": 226,
    "frontEdge": [
-    226.8,
-    212.7
-   ]
+    221.0,
+    216.6
+   ],
+   "seatSurfaceY": 212.7
   },
   {
    "id": "table-near-4",
@@ -143,9 +149,10 @@
    ],
    "frontLegY": 240,
    "frontEdge": [
-    238.7,
-    225.5
-   ]
+    231.2,
+    224.4
+   ],
+   "seatSurfaceY": 225.5
   },
   {
    "id": "table-far-1",
@@ -164,9 +171,10 @@
    ],
    "frontLegY": 179,
    "frontEdge": [
-    303.3,
-    169.7
-   ]
+    308.1,
+    170.0
+   ],
+   "seatSurfaceY": 169.7
   },
   {
    "id": "table-far-2",
@@ -185,9 +193,10 @@
    ],
    "frontLegY": 177,
    "frontEdge": [
-    344.4,
-    167.9
-   ]
+    340.4,
+    170.4
+   ],
+   "seatSurfaceY": 167.9
   },
   {
    "id": "table-far-3",
@@ -206,9 +215,10 @@
    ],
    "frontLegY": 186,
    "frontEdge": [
-    360.0,
-    176.1
-   ]
+    355.1,
+    174.5
+   ],
+   "seatSurfaceY": 176.1
   },
   {
    "id": "bench-slot-1",
@@ -227,9 +237,10 @@
    ],
    "frontLegY": 260,
    "frontEdge": [
-    529.9,
-    243.8
-   ]
+    526.9,
+    235.9
+   ],
+   "seatSurfaceY": 243.8
   },
   {
    "id": "bench-slot-2",
@@ -248,9 +259,10 @@
    ],
    "frontLegY": 271,
    "frontEdge": [
-    502.1,
-    253.9
-   ]
+    499.0,
+    245.5
+   ],
+   "seatSurfaceY": 253.9
   },
   {
    "id": "bench-slot-3",
@@ -269,9 +281,10 @@
    ],
    "frontLegY": 280,
    "frontEdge": [
-    474.2,
-    262.1
-   ]
+    470.9,
+    253.3
+   ],
+   "seatSurfaceY": 262.1
   }
  ],
  "stations": [
@@ -286,13 +299,14 @@
    ],
    "anchor": [
     176.5,
-    160.0
+    178.0
    ],
    "facingDeg": 78.2,
    "walkable": false,
    "occluderPending": true,
-   "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter."
+   "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter.",
+   "anchorNote": "the keeper stands on the shop floor behind the counter, not at the far edge of the painted region; the earlier y=160 sat almost on the horizon and rendered her far too small"
   }
  ],
- "seatAnchorNote": "seat is the painted cyan centroid. frontLegY is where that chair's front legs meet the floor, taken from the bottom of its blob in that column, so the bench's three slots each get their own because it runs diagonally. frontEdge is the front lip of the seat surface, one seat height above the legs, and it is where a seated sprite's knee belongs. ground stays for reference but nothing anchors to it: a sit pose's feet are wherever the drawing put them."
+ "seatAnchorNote": "seat is the painted cyan centroid and frontLegY is where that chair's front legs meet the floor, per column, so the diagonal bench gives each slot its own. seatSurfaceY is one seat height above that. frontEdge is the lip of the seat on the side the occupant faces, and it is where a seated sprite's knee belongs.\n\nWhich side that is depends on the facing. A chair whose occupant faces the camera has its lip on the near side; one whose occupant faces away — the bench, the counter stools, table-near-1 — has it on the far side, with the backrest between the sitter and the camera. Assuming the near side for all of them put the bench pair on the wrong side of their own backrest."
 }

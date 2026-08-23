@@ -92,8 +92,11 @@ def sprite(cid, pose, deg):
     return im.transpose(Image.FLIP_LEFT_RIGHT) if 90 <= d < 270 else im
 
 CHILD = {'boy-01', 'girl-01', 'brother-01', 'brother-02'}
+# stature, standing. brother-01 is the elder of the pair and reads bulkier, so he
+# is not the same height as his brother.
+STATURE = {'dog-01': 0.55, 'brother-01': 1.40, 'brother-02': 1.25}
 def metres(cid):
-    return 0.55 if cid == 'dog-01' else (1.35 if cid in CHILD else 1.65)
+    return STATURE.get(cid, 1.35 if cid in CHILD else 1.65)
 
 # Measuring this off the art does not work: the stand and sit sheets are each
 # framed to fill their canvas, so their pixel heights carry no shared scale.
@@ -129,7 +132,8 @@ def seated_box(cid, sprite_ratio, seat):
     fx, fy = seat['frontEdge']
     scale = K * (seat['frontLegY'] - H0)
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
-    h = SITH[kind] * scale / (1.0 - HIP.get(cid, 0.45))
+    sit_m = SITH[kind] * metres(cid) / (0.55 if kind == 'dog' else (1.35 if kind == 'child' else 1.65))
+    h = sit_m * scale / (1.0 - HIP.get(cid, 0.45))
     w = h * sprite_ratio
     kx, ky = KNEE.get(cid, [0.5, 0.41])
     left = fx - kx * w
@@ -170,6 +174,7 @@ def occluder_baselines():
     """
     occ = load_mask('occluder.png', full=True)
     walk = load_mask('walkable.png')
+
 
     seen = np.zeros(walk.shape, bool)
     holes = np.zeros(walk.shape, bool)
@@ -232,7 +237,9 @@ for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontLegY'] if p[1]
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
         h, w, left, bottom = seated_box(cid, sp.width / sp.height, at)
-        depth = at['frontLegY']
+        # facing away puts the chair back in front of the sitter, facing the
+        # camera puts the sitter in front of it
+        depth = at['frontLegY'] - 1 if 180 <= at['facingDeg'] % 360 < 360 else at['frontLegY'] + 1
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
         left = at[0] - w/2; bottom = at[1]; depth = at[1]
