@@ -248,7 +248,7 @@ def occluder_baselines():
     standing on the floor, which is how both cafe tables get their depth without
     anyone painting them.
     """
-    occ = load_mask('occluder.png', full=True)
+    occ = load_mask('occluder.png', full=True) | load_mask('seatbacks.png', full=True)
     walk = load_mask('walkable.png')
 
 
@@ -291,21 +291,6 @@ def occluder_baselines():
             else:
                 y += 1
 
-    # A chair back gets its depth from where it meets the floor, measured over the
-    # seat's own columns - backrestBaseY. Four of the fourteen seats are on the
-    # near side of their table or bench, and their backs really do stand between
-    # the camera and whoever sits there; those backs cover their occupant, which
-    # is what the owner asked for on the park bench. The other ten stand
-    # up-screen and draw behind.
-    backs = load_mask('seatbacks.png', full=True)
-    for s in A['seats']:
-        if 'backrestBaseY' not in s:
-            continue
-        cx, cy = s['seatSurface']['centre']
-        near = backs & (np.abs(np.arange(FW)[None, :] - cx*4) < 60) \
-                     & (np.abs(np.arange(FH)[:, None] - cy*4) < 60)
-        mask |= near
-        base[near] = s['backrestBaseY'] * 4
     return mask, base
 
 

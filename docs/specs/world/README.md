@@ -148,18 +148,26 @@ One painted blob merged a table chair with the stool behind it. Its row profile
 breaks at y=210, where both the width and the right edge jump, so it is split
 there into `counter-stool-3` and `table-near-2`.
 
-### A chair back covers its occupant when it stands in front of them
+### Chair backs need no special case at all
 
-Each seat carries `backrestBaseY`: where its painted back meets the floor,
-averaged over the seat's own columns. That is the back's depth. A back whose
-foot is nearer the camera than its seat stands between the camera and whoever
-sits there, and covers them; a back up-screen of its seat draws behind them.
+The plain occluder rule already does it. Every vertical run of occluder pixels
+carries the screen y where that run meets the floor, and a character is behind
+the run exactly when its own ground y is smaller. Feed the painted chair backs
+into that and each back lands correctly: a back standing between the camera and
+its seat covers the occupant, a back up-screen of the seat draws behind them.
 
-Four of the fourteen seats are the near-side ones — `table-near-1`,
-`table-near-4`, `table-far-3`, and all three bench slots. `backrestCovers` marks
-them, and it is worth noting that this list is derived from the paint alone and
-comes out exactly equal to the list of seats whose facing is a back view. Two
-independent measurements, same answer.
+Two earlier attempts overrode this with a per-seat constant — first the back's
+top row, then its bottom edge. Neither was needed, and the constant is strictly
+worse: **it is a single depth for the whole patch, so it cannot answer "what
+about someone walking past in front of it?"** The run rule answers that per
+column, which is the question the owner asked and the reason the override is
+gone.
+
+`backrestBaseY` and `backrestCovers` are still written into `anchors.json` as
+description, not as inputs. The four near-side seats are `table-near-1`,
+`table-near-4`, `table-far-3` and all three bench slots — a list derived from the
+paint alone that comes out exactly equal to the list of seats whose facing is a
+back view. Two independent measurements, same answer.
 
 The park bench is the case that made this matter. Its back really is in front of
 its occupants, so drawing it correctly buried the two boys down to a cap. They
@@ -169,10 +177,15 @@ clear and leaves the back covering their legs, and `brother-02` takes a further
 
 **The bench's armrest is not painted and therefore cannot occlude.** The magenta
 in `seatbacks.png` starts at x=474; the armrest at the bench's near end occupies
-roughly x=452–472, y=248–272, and is bare. The owner says it is foreground like
-the back, and it should be — a stroke of `#FF00FF` over it in the seatbacks
-painting is all that is needed. Until then `brother-02` is moved clear of it
-instead, which hides the problem rather than fixing it.
+roughly x=452–472, y=248–272, and is bare. A stroke of `#FF00FF` over it is all
+that is needed. Until then `brother-02` is moved clear of it instead, which hides
+the problem rather than fixing it.
+
+Painting it does not make it a wall. It becomes foreground only for people
+further from the camera than the armrest's own floor line; anyone walking past in
+front of the bench draws over it. That is the run rule doing its job, and it is
+worth checking rather than trusting — put a standing figure at y=246, 268 and 292
+by the bench and the bench hides her legs, then half of them, then none.
 
 ### The counter is a station, not walkable ground
 
