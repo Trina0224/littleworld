@@ -25,7 +25,7 @@ def comps(m, minpx=40):
         ys,xs=np.nonzero(lab==i)
         if len(ys)>=minpx:
             out[i]=dict(cx=xs.mean(),cy=ys.mean(),x0=int(xs.min()),x1=int(xs.max()),
-                        y0=int(ys.min()),y1=int(ys.max()),n=len(ys))
+                        y0=int(ys.min()),y1=int(ys.max()),n=len(ys),ys=ys,xs=xs)
     return out
 
 SUM=mask('seatsurfaces.png')
@@ -59,24 +59,39 @@ for s in seats:
                           w=c['x1']-c['x0']+1, h=c['y1']-c['y0']+1)
     print(f"{s['id']:16s} surf ({c['cx']:6.1f},{c['cy']:6.1f}) {c['x1']-c['x0']+1:3d}x{c['y1']-c['y0']+1:3d}  d{d:4.1f}")
 
+BKM=mask('seatbacks.png')
+
+def back_foot(b, x0, x1):
+    """Centre of a chair back's BOTTOM edge, over the columns a seat occupies.
+
+    Not its centroid. A back is a panel standing upright, so its pixels run far
+    up the screen from wherever it stands and its centroid always lands above
+    its seat - which made every chair in the scene look like it faced the
+    camera. The bottom edge is where the back meets the seat, and that is the
+    side the occupant's spine is on.
+
+    The columns matter too. The bench has one painted back across all three
+    slots, so its whole bottom edge points along the bench rather than across
+    it; restricting to a slot's own columns asks the right question.
+    """
+    ys, xs = b['ys'], b['xs']
+    sel = (xs >= x0) & (xs <= x1)
+    if sel.sum() < 20:
+        sel = np.ones(len(xs), bool)
+    pts = [(x, ys[sel][xs[sel] == x].max()) for x in np.unique(xs[sel])]
+    p = np.array(pts, float)
+    return p[:, 0].mean(), p[:, 1].mean()
+
+
 def face(bx,by,cx,cy): return round(math.degrees(math.atan2(cy-by,cx-bx))%360,1)
-bench=None
 for s in seats:
     if 'seatSurface' not in s: continue
-    cx,cy=s['seatSurface']['centre']
+    cx,cy=s['seatSurface']['centre']; w=s['seatSurface']['w']
     i=min(BK,key=lambda i:(BK[i]['cx']-cx)**2+(BK[i]['cy']-cy)**2)
     b=BK[i]
-    if s['id'].startswith('bench'):
-        # one painted back spans all three slots, so only the middle slot gives a
-        # sensible direction; the two ends inherit it.
-        if bench is None:
-            bs=[t for t in seats if t['id'].startswith('bench') and 'seatSurface' in t]
-            mx=sum(t['seatSurface']['centre'][0] for t in bs)/len(bs)
-            my=sum(t['seatSurface']['centre'][1] for t in bs)/len(bs)
-            bench=(face(b['cx'],b['cy'],mx,my), b['y0'])
-        s['facingDeg'], s['backrestTopY'] = bench
-    else:
-        s['facingDeg']=face(b['cx'],b['cy'],cx,cy); s['backrestTopY']=b['y0']
+    bx,by=back_foot(b, cx-w/2, cx+w/2)
+    s['facingDeg']=face(bx,by,cx,cy)
+    s['backrestTopY']=b['y0']
     s.pop('facing',None)
 A['facingNote']=("facingDeg is measured, not chosen: it is the direction from the "
   "painted chair back to the painted seat top, which is where the occupant looks. "

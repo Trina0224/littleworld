@@ -163,10 +163,13 @@ def seated_box(cid, sprite, seat, facing):
     if mirror:
         hip_x = 1.0 - hip_x
 
-    kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
-    # the brothers are not the same size, and sitting must not hide that
-    sit_m = SITH[kind] * (metres(cid) / (1.35 if kind == 'child' else 1.65)
-                          if kind != 'dog' else 1.0)
+    if cid == 'dog-01':
+        sit_m = SITH['dog']
+    elif cid in CHILD:
+        # the brothers are not the same size, and sitting must not hide that
+        sit_m = SITH['child'] * metres(cid) / 1.35
+    else:
+        sit_m = SITH.get(cid, SITH['default'])
     h = sit_m * K * (cy - H0) / (1.0 - hip) * COVER.get(cid, COVER['default'])
     w = h * sprite.width / sprite.height
 

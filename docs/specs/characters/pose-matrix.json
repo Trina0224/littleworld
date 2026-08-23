@@ -86,7 +86,15 @@
     "method": "hip on the painted seat top; size from the ramp and sitting height",
     "note": "The seat tops in anchors.json are painted by the owner onto the scene, so a chair's height and its floor line are read rather than guessed. A seated sprite puts its hip on that surface. Size does NOT come from the seat's painted width: that quad lies on the ground plane and the projection stretches it to roughly 1.8x the chair's real width, while a sitter's shoulders stand upright and get no such stretch, so matching a body to its seat's width made a 1.65 m man read 2.4 m tall. A sitter covers the middle of the seat and leaves its front edge showing, which is what a chair looks like from this angle. The feet land wherever the drawing puts them and are not corrected: rising 0.42 m onto the seat and stepping 0.45 m back off the chair reach nearly the same screen row here.",
     "sittingHeightMetres": {
-      "adult": 0.85,
+      "_note": "Seat surface to the top of the head. Showa-era Japanese sitting height (zakou) runs about 0.90 m for an adult man and 0.84 m for an adult woman, a little less with age. One figure for every adult made the office worker read short next to the women on the counter, which is what the owner saw. Children scale with stature off the child figure.",
+      "default": 0.85,
+      "man-01": 0.9,
+      "gentleman-01": 0.9,
+      "pastor-01": 0.86,
+      "grandpa-01": 0.86,
+      "grandma-01": 0.79,
+      "woman-01": 0.84,
+      "shopkeeper-01": 0.84,
       "child": 0.7,
       "dog": 0.45
     },

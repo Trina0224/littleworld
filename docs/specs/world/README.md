@@ -108,22 +108,29 @@ painted maps — seats in `#00FFFF`, the counter in `#0000FF`.
 Each seat carries a `seat` point, a `seatSurface` (the painted seat top: its
 centre and box), a `facingDeg`, and a `backrestTopY`.
 
-### Facing is measured now, not inferred
+### Facing is measured, from the chair back's foot
 
-The first pass guessed facings from geometry — the normal of the counter's
-principal axis, the centroid of a table group — and every guess was wrong
-somewhere. The owner then painted the chair backs (`seatbacks.png`) and the seat
-tops (`seatsurfaces.png`), which turns facing into a measurement: **a sitter
-looks in the direction from the back of their chair toward the seat of it.**
+A sitter looks in the direction from the back of their chair toward the seat of
+it. Two details in that sentence are the whole thing:
 
-That measurement says something the guesses never did. Every chair in this
-painting has its back up-screen of its seat, so **every sitter in the scene is a
-front view.** The back-view halves of the sheets go unused here; they are still
-needed for standing and for any chair added later that turns the other way.
+**From the back's bottom edge, not its centroid.** A chair back is an upright
+panel, so its pixels run far up the screen from wherever it stands, and its
+centroid always lands above its seat. Measuring centroid to centroid therefore
+reported that every chair in the scene faces the camera — which put the kimono
+man and the grandfather with their backs to their own table, and turned the two
+boys round on the park bench. The bottom edge is where the back meets the seat,
+and that is the side the occupant's spine is on.
 
-The bench has one painted back spanning all three slots, so the three share a
-facing taken from the whole bench, and the one painted seat top is cut in three
-along its length.
+**Over the seat's own columns.** The bench has one painted back spanning all
+three slots, so its full bottom edge points along the bench rather than across
+it. Restricting to a slot's columns asks the right question.
+
+The check is the thing nobody has to paint: the seven chairs around the two
+tables must face their table. All seven agree within 22 degrees, and all seven
+agree on front view versus back — `table-near-1` and `-4` and `table-far-3` are
+the near-side chairs and show their occupants' backs, the rest show faces. The
+bench comes out at 235-270 degrees, facing the open sand, which is what the
+owner says a park bench does.
 
 The bench is 93 world units long, so it is split into three slots rather than
 treated as one seat. Two agents sharing a bench is exactly the emergent scene
@@ -133,15 +140,19 @@ One painted blob merged a table chair with the stool behind it. Its row profile
 breaks at y=210, where both the width and the right edge jump, so it is split
 there into `counter-stool-3` and `table-near-2`.
 
-### A chair back must not cover its own occupant
+### A chair back does not cover its own occupant — for now
 
-Occluders take their depth from the bottom of each vertical run — the row where
-the object meets the floor. A chair back breaks that rule, because it is painted
-down to the seat and not to the floor, so its lowest row reads as a depth in
-front of the person sitting in it and the chair swallows them whole. Since every
-back here stands up-screen of its seat, `backrestTopY` — the back's own top row —
-is the honest depth: the occupant is nearer than that and draws over the back,
-anyone further away is behind it and gets covered by it.
+Occluders take their depth from the bottom of each vertical run, the row where
+the object meets the floor. Chair backs currently take `backrestTopY` instead —
+the back's own top row — so a back never covers the person sitting in it.
+
+**That is a stopgap, and it is now known to be wrong for some chairs.** It was
+written when the facing measurement claimed every back stood up-screen of its
+seat. The corrected measurement says otherwise: `table-near-1`, `table-near-4`,
+`table-far-3` and all three bench slots have their backs between the camera and
+the sitter, so those backs genuinely should cover their occupant, and the bench's
+would hide the two boys down to their heads. The owner has deferred occlusion,
+so the stopgap stands until it is picked up.
 
 ### The counter is a station, not walkable ground
 
