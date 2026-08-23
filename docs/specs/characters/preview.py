@@ -267,7 +267,60 @@ def occluder_baselines():
                 y = end + 1
             else:
                 y += 1
+
+    # A hand-painted foot wobbles by a row or two, and a character whose depth
+    # lands inside that wobble gets sliced: boy-01 sits at row 175.6 and his own
+    # chair's painted foot runs 172 to 176 across its width, so three columns of
+    # it drew over his shoulder. Smoothing each painted back's foot along its
+    # length with a running median removes the wobble and keeps the slope, which
+    # the bench needs - its foot really does fall away from one end to the other.
+    for lab, prof in painted_feet():
+        for x in range(FW):
+            wx = x // 4
+            if wx >= len(prof) or prof[wx] < 0:
+                continue
+            col = (lab[:, x] > 0)
+            if col.any():
+                base[col, x] = prof[wx] * 4 + 3
     return mask, base
+
+
+def painted_feet():
+    """(full-res label, smoothed floor line per world column) per painted back."""
+    wb = load_mask('seatbacks.png')
+    lab = np.zeros(wb.shape, np.int32); n = 0
+    for sy, sx in zip(*np.nonzero(wb)):
+        if lab[sy, sx]:
+            continue
+        n += 1; q = deque([(sy, sx)]); lab[sy, sx] = n
+        while q:
+            y, x = q.popleft()
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    ny, nx = y+dy, x+dx
+                    if 0 <= ny < HH and 0 <= nx < W and wb[ny, nx] and not lab[ny, nx]:
+                        lab[ny, nx] = n; q.append((ny, nx))
+    full = load_mask('seatbacks.png', full=True)
+    out = []
+    for i in range(1, n+1):
+        m = lab == i
+        if m.sum() < 40:
+            continue
+        raw = np.full(W, -1)
+        for x in range(W):
+            ys = np.nonzero(m[:, x])[0]
+            if len(ys):
+                raw[x] = ys.max()
+        prof = raw.copy()
+        for x in range(W):
+            if raw[x] < 0:
+                continue
+            win = [v for v in raw[max(0, x-4):x+5] if v >= 0]
+            prof[x] = int(np.median(win))
+        grown = np.asarray(Image.fromarray((m*255).astype(np.uint8))
+                           .resize((FW, FH), Image.NEAREST)) > 127
+        out.append((grown & full, prof))
+    return out
 
 
 OCC_MASK, OCC_BASE = occluder_baselines()

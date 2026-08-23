@@ -164,7 +164,20 @@ column, which is the question the owner asked and the reason the override is
 gone.
 
 `backrestBaseY` and `backrestCovers` are still written into `anchors.json` as
-description, not as inputs. The four near-side seats are `table-near-1`,
+description, not as inputs.
+
+### Painted feet get median-smoothed
+
+A hand-painted foot wobbles by a row or two, and a character whose depth lands
+inside that wobble gets sliced. `boy-01` sits at row 175.6; his own chair's
+painted foot runs 172 to 176 across its width, so the three columns that read 176
+drew over his shoulder and put chair slats through his arm.
+
+Each painted back's floor line is now median-smoothed along its own length, five
+world columns either side. That removes the wobble and keeps genuine slope, which
+the bench needs — its foot really does fall away from one end to the other, and a
+single constant there would put someone standing beside the near end behind the
+whole bench. The four near-side seats are `table-near-1`,
 `table-near-4`, `table-far-3` and all three bench slots — a list derived from the
 paint alone that comes out exactly equal to the list of seats whose facing is a
 back view. Two independent measurements, same answer.
