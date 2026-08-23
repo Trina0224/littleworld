@@ -114,6 +114,14 @@ Treat these as the current production preview:
 - `docs/styles.css`
 - `docs/showa-scene-clean.js`
 - `docs/assets/showa/scene-clean-2560.webp` — production clean background asset
+- `docs/assets/characters/` — cut sprites the live page loads
+- `docs/specs/world/` — the painted world spec and the scripts that read it
+- `docs/specs/characters/` — the cast: sizes, marks, placements, exporters
+
+The spec files under `docs/specs/` are **generated from paintings, not hand
+edited.** Change the painting, re-run the derive script, commit both. Editing a
+derived JSON by hand will be silently overwritten the next time anyone re-runs
+the script.
 
 GitHub Pages preview:
 
@@ -195,6 +203,40 @@ Never silently spend a long time building a Base64 transport workaround. Surface
 
 Direct binary commits are proven to work in this repository, so option 3 has no remaining justification. Do not create new Base64 fragment directories such as `docs/assets/showa/clean-1440p/`; commit the `.webp` or `.png` file itself instead.
 
+## 6b. What the scene layer already knows, and the two rules not to rediscover
+
+Everything about the scene is painted by the owner onto the background and read
+back by the scripts in `docs/specs/`. Two rules cost several rounds each to get
+right. Both are written up in `docs/specs/world/README.md`; the short form:
+
+**Facing comes from what a seat is drawn up to.** A table chair faces its table,
+a counter stool faces the counter, the park bench faces the open ground. Facing
+was twice derived from the painted chair backs and was wrong both times — a
+chair back is an upright panel, so its pixels run far up the screen and its
+centroid always lands above its own seat, which reported that every chair in the
+scene faced the camera. Even measuring from the back's bottom edge, which fixed
+the sign, left a spread big enough to see. A table is a better instrument than a
+brush stroke: every seat around it agrees on where it is.
+
+**Occlusion is per column, not per object.** Every vertical run of occluder
+pixels carries the screen row where it meets the floor; a character is behind
+that run exactly when its own ground row is smaller. Do not replace this with a
+single depth per object — a constant cannot answer "what about someone walking
+past in front of it?", which is the question that matters. Painted feet are
+median-smoothed along their own length first, because a hand-painted edge wobbles
+by a row or two and a character whose depth lands inside the wobble gets sliced.
+
+A third thing worth knowing before touching sizes: **a walkable map cannot
+describe a tabletop.** It describes the floor, and a tabletop is 0.7 m above the
+floor, so its drawn silhouette sits well up-screen of anything a floor map can
+express. Furniture that occludes must be painted.
+
+And on scale: characters are sized as a fraction of their own sheet's pixel
+height — 0.275 for adults, 0.15 for the two young brothers — measured at
+`referenceY` 232.6 and then scaled by the height ramp. Anatomical sizing was
+tried and reads too small, because this painting's furniture is drawn larger than
+a strict ground-plane projection would give.
+
 ## 7. Planned character actions and world data
 
 Initial agent actions:
@@ -243,14 +285,16 @@ Do not implement the LLM decision layer before deterministic scene semantics can
 
 Unless the owner explicitly changes priorities, work in this order:
 
-### Phase 0 — Stabilize the scene pipeline
+**Phases 0, 1 and 2 are complete.** Phase 3 is next.
+
+### Phase 0 — Stabilize the scene pipeline — done
 
 - keep the approved clean background visible and complete;
 - preserve direct loading from `docs/assets/showa/scene-clean-2560.webp`;
 - keep obsolete Base64-fragment loaders out of the active pipeline;
 - preserve pan, zoom, pinch, and Fit.
 
-### Phase 1 — Scene semantics
+### Phase 1 — Scene semantics — done
 
 - define world coordinates;
 - define walkable areas;
@@ -258,12 +302,17 @@ Unless the owner explicitly changes priorities, work in this order:
 - define entrances, exits, seats, counter positions, and hotspots;
 - keep the semantic layer separate from the visual background.
 
-### Phase 2 — Character art and animation
+### Phase 2 — Character art and animation — done, except walking
 
 - decide character scale and visual style;
 - define the minimum pose/animation matrix;
 - create a small proof set before producing many characters;
-- test walking and sitting against the approved scene.
+- test sitting against the approved scene.
+
+**There is no walk cycle and none is planned.** The owner's decision, recorded
+here so nobody builds one: agents hop between positions. The pose matrix is eight
+states per character — stand or sit, front or back, each mirrored — and that is
+the whole set.
 
 ### Phase 3 — Deterministic simulation prototype
 

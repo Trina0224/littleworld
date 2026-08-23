@@ -66,28 +66,55 @@ These locations will later provide interaction anchors, occupancy rules, and age
 
 ### Working now
 
-- Phaser-based static scene;
-- fixed camera direction;
-- drag-to-pan;
-- mouse-wheel zoom;
-- touch pinch zoom;
-- Fit button;
-- GitHub Pages preview;
-- clean background with all people removed;
-- placeholder logical hotspots.
+- Phaser scene with a fixed camera, drag-to-pan, wheel and pinch zoom, and Fit;
+- a clean 2560 × 1440 background with every person removed;
+- a **painted world spec** — walkable ground, backstage, scenery occluders, chair
+  backs, seat tops, tabletops — with seats, facings and a measured height ramp
+  derived from it;
+- **twelve characters standing and sitting in the live page**, each at its own
+  scale, on its own seat, facing the right way, and cut by whatever stands in
+  front of it;
+- a `層` button (or the `D` key) that overlays the whole spec on the scene.
 
 ### Not implemented yet
 
-- walkable and blocked-area map;
-- collision or pathfinding;
-- production character sprites;
-- walking, sitting, working, or interaction animations;
-- structured world state;
+- walking, pathfinding, or any movement at all;
+- pose changes at runtime;
+- structured world state, memory, or relationships;
 - autonomous agent runtime;
-- Node.js server;
-- persistence;
-- MCP tools;
-- LLM decision logic.
+- Node.js server, persistence, MCP tools, LLM decision logic.
+
+## How the world is described
+
+Everything the simulation needs to know about the scene is **painted by the
+project owner onto the background** and read back by scripts under
+`docs/specs/`. Nothing is hand-typed as coordinates, and nothing is guessed from
+the artwork by an algorithm that thinks it knows better.
+
+| Layer | Colour | What it means |
+|---|---|---|
+| `walkable.png` | magenta | ground an agent may stand on |
+| `backstage.png` | — | walkable but effectively out of sight; movement costs four times as much |
+| `occluder.png` | green | scenery that can stand in front of a character |
+| `seats.png` | cyan | where the seats are |
+| `seatbacks.png` | magenta | chair backs and the bench back |
+| `seatsurfaces.png` | blue | the surface a sitter's weight lands on |
+| `tables.png` | magenta | the two cafe tabletops |
+
+Two rules took far longer to get right than they look, and both are written down
+in `docs/specs/world/README.md` so they are not rediscovered the hard way:
+
+**Facing comes from what a seat is drawn up to** — a table chair faces its table,
+a stool faces the counter, the bench faces the open ground. Reading it off the
+painted chair backs was tried twice and failed twice; a back is an upright panel,
+so its pixels run far up the screen and it never points where you expect.
+
+**Occlusion is per column, not per object.** Every vertical run of occluder
+pixels carries the screen row where it meets the floor, and a character is behind
+it exactly when its own ground row is smaller. That single rule gives a table
+that hides the person seated behind it and not the person walking in front, a
+chair back that covers its occupant only when it stands between them and the
+camera, and a bench whose near end behaves differently from its far end.
 
 ## Important visual rule
 
@@ -130,9 +157,32 @@ docs/                                    Canonical GitHub Pages application
   styles.css                             Preview UI styles
   showa-scene-clean.js                   Active Phaser scene
   assets/showa/scene-clean-2560.webp     Production background
+  assets/characters/                     Cut sprites the live page loads
+
+  specs/world/                           The painted world spec
+    world.json                           Coordinates, entrances, height ramp
+    walkable.png  backstage.png          Ground and out-of-sight ground
+    occluder.png  seatbacks.png          Scenery and chair backs
+    seats.png  seatsurfaces.png          Seats and the surfaces sat on
+    tables.png                           Cafe tabletops
+    occdepth.png                         Floor line per pixel, for the browser
+    anchors.json                         Fourteen seats and one work station
+    derive.py  seat-derive.py            Read the paintings into the spec
+    tables-derive.py
+    README.md                            Why each layer exists and what broke
+
+  specs/characters/                      The cast
+    pose-matrix.json                     Sizes, buttock lines, offsets, views
+    marks/                               Owner-marked sit sheets
+    read-marks.py                        Reads the marks into pose-matrix.json
+    preview.py                           Offline render, the reference picture
+    export-web.py                        Writes what the live page loads
+    placements.json                      Where each character stands, in world units
+    README.md                            Sheet layouts and sizing rules
 
 assets/                                  Source masters, not published
   showa/scene-clean-2560.png             Lossless PNG master of the background
+  characters/                            The twelve reference sheets
 ```
 
 Every file in the repository is now part of the active Showa direction. The
@@ -145,6 +195,17 @@ Serve the `docs/` directory through HTTP:
 
 ```bash
 python3 -m http.server 8000 --directory docs
+```
+
+Phaser is loaded from a CDN, so the preview needs network access. To rebuild what
+the page loads after changing the spec or the cast:
+
+```bash
+python3 docs/specs/world/seat-derive.py       # seats, facings, chair backs
+python3 docs/specs/world/tables-derive.py <painting.png>
+python3 docs/specs/characters/read-marks.py   # the owner's sit marks
+python3 docs/specs/characters/preview.py      # offline reference render
+python3 docs/specs/characters/export-web.py   # sprites, placements, depth map
 ```
 
 Then open:
@@ -165,24 +226,17 @@ Opening `docs/index.html` directly through `file://` is still not recommended; s
 
 ## Planned development order
 
-1. **Stabilize scene assets**
-   - keep the approved clean WebP background complete and visible;
-   - preserve direct image loading, camera controls, and cache-busting.
+1. ~~**Stabilize scene assets**~~ — done.
 
-2. **Define scene semantics**
-   - world coordinates;
-   - walkable areas;
-   - blocked scenery;
-   - entrances, exits, seats, counter positions, and hotspot anchors.
+2. ~~**Define scene semantics**~~ — done. World coordinates, walkable ground,
+   backstage, occluders, entrances, seats, facings, and a measured height ramp.
 
-3. **Design the character system**
-   - character scale;
-   - facing directions;
-   - minimum pose and animation matrix;
-   - transparent sprite prototypes;
-   - walking and sitting tests in the current scene.
+3. ~~**Design the character system**~~ — done for standing and sitting. Twelve
+   characters, eight states each (stand/sit × front/back × mirrored), sized and
+   seated and occluded in the live page. **There is no walk cycle and none is
+   planned**: the owner's decision is that agents hop between positions.
 
-4. **Build a deterministic simulation prototype**
+4. **Build a deterministic simulation prototype** ← next
    - one to three agents;
    - movement and occupancy;
    - sitting, ordering, working, resting, and simple conversations.
