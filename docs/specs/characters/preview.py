@@ -138,14 +138,21 @@ def seated_box(cid, sprite_ratio, seat):
     sit_m = SITH[kind] * metres(cid) / ref
     h = sit_m * scale / (1.0 - HIP.get(cid, 0.45))
     w = h * sprite_ratio
-    # The feet rest on the floor a seat depth from the chair's legs, in the
-    # direction the sitter faces: toward us for a chair facing the camera, away
-    # from us for the bench and the counter stools. Anchoring the sprite's
-    # bottom there is what stops a sitter standing on their own seat.
+    # The hip goes on the seat surface. That is the one contact that is真 in
+    # world terms, and it is the only one the projection lets us honour: going
+    # up 0.42 m onto the seat and going back 0.45 m onto the floor behind the
+    # chair land on nearly the same screen row here, so "hip on the seat" and
+    # "feet on the floor beyond" cannot both hold for a drawing that separates
+    # them by four tenths of a body.
+    hip = HIP.get(cid, 0.45)
+    bottom = seat['seatSurfaceY'] + hip * h
     d = math.radians(seat['facingDeg'])
-    bottom = seat['frontLegY'] + math.sin(d) * SEAT_DEPTH * scale
-    left = seat['seat'][0] + math.cos(d) * SEAT_DEPTH * scale * 0.5 - w / 2
-    return h, w, left, bottom, None
+    left = seat['seat'][0] + math.cos(d) * SEAT_DEPTH * scale * 0.35 - w / 2
+    # Facing away, the chair back covers everything from the seat up to its own
+    # top, which is what you actually see of someone on a park bench from behind
+    # and above: head and shoulders, nothing else.
+    clip = seat['backTopY'] if 180 <= seat['facingDeg'] % 360 < 360 else None
+    return h, w, left, bottom, clip
 
 place = []
 for s in A['seats']:

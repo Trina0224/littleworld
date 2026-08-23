@@ -250,19 +250,19 @@
    ],
    "facingDeg": 249.5,
    "facing": "N",
-   "seatHeightMetres": 0.42,
+   "seatHeightMetres": 0.43,
    "ground": [
     529.9,
     265.0
    ],
-   "frontLegY": 260,
+   "frontLegY": 300.5,
    "frontEdge": [
-    526.9,
-    235.9
+    526.3,
+    270.8
    ],
-   "seatSurfaceY": 243.8,
-   "backHeightMetres": 0.85,
-   "backTopY": 227.3
+   "seatSurfaceY": 280.4,
+   "backHeightMetres": 0.91,
+   "backTopY": 258.0
   },
   {
    "id": "bench-slot-2",
@@ -274,19 +274,19 @@
    ],
    "facingDeg": 249.5,
    "facing": "N",
-   "seatHeightMetres": 0.42,
+   "seatHeightMetres": 0.43,
    "ground": [
     502.1,
     276.3
    ],
-   "frontLegY": 271,
+   "frontLegY": 292.5,
    "frontEdge": [
-    499.0,
-    245.5
+    498.6,
+    263.8
    ],
-   "seatSurfaceY": 253.9,
-   "backHeightMetres": 0.85,
-   "backTopY": 236.4
+   "seatSurfaceY": 273.1,
+   "backHeightMetres": 0.91,
+   "backTopY": 251.5
   },
   {
    "id": "bench-slot-3",
@@ -298,19 +298,19 @@
    ],
    "facingDeg": 249.5,
    "facing": "N",
-   "seatHeightMetres": 0.42,
+   "seatHeightMetres": 0.43,
    "ground": [
     474.2,
     287.7
    ],
-   "frontLegY": 280,
+   "frontLegY": 284.4,
    "frontEdge": [
     470.9,
-    253.3
+    256.8
    ],
-   "seatSurfaceY": 262.1,
-   "backHeightMetres": 0.85,
-   "backTopY": 243.9
+   "seatSurfaceY": 265.7,
+   "backHeightMetres": 0.91,
+   "backTopY": 244.9
   }
  ],
  "stations": [
@@ -335,5 +335,6 @@
   }
  ],
  "seatAnchorNote": "seat is the painted cyan centroid and frontLegY is where that chair's front legs meet the floor, per column, so the diagonal bench gives each slot its own. seatSurfaceY is one seat height above that. frontEdge is the lip of the seat on the side the occupant faces, and it is where a seated sprite's knee belongs.\n\nWhich side that is depends on the facing. A chair whose occupant faces the camera has its lip on the near side; one whose occupant faces away — the bench, the counter stools, table-near-1 — has it on the far side, with the backrest between the sitter and the camera. Assuming the near side for all of them put the bench pair on the wrong side of their own backrest.",
- "backNote": "backTopY is the top of the chair back, one back height above where its legs meet the floor. When the occupant faces away from the camera the back sits between them and us, and everything below that line should be hidden — the drawing puts their legs below the knee because that is how a back view is drawn, but in the world those legs run away from us, not down. Without it a sitter appears to stand on the seat. This is a stand-in until chair backs are painted into occluder.png, which depth sorting now makes safe."
+ "backNote": "backTopY is the top of the chair back, one back height above where its legs meet the floor. When the occupant faces away from the camera the back sits between them and us, and everything below that line should be hidden — the drawing puts their legs below the knee because that is how a back view is drawn, but in the world those legs run away from us, not down. Without it a sitter appears to stand on the seat. This is a stand-in until chair backs are painted into occluder.png, which depth sorting now makes safe.",
+ "measuredNote": "bench numbers are measured off the background rather than taken from the paint: at x=485 the floor is y=287.5, the seat 268.75 and the back top 247.5, giving a 0.43 m seat and a 0.91 m back. The painted blob stopped about 7.5 units short of the bench feet, which put every derived line too high."
 }
