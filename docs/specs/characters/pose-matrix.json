@@ -209,6 +209,20 @@
           "kneeX": 0.841
         }
       },
+      "brother-02": {
+        "front": {
+          "hip": 0.226,
+          "hipX": 0.517,
+          "knee": 0.346,
+          "kneeX": 0.335
+        },
+        "back": {
+          "hip": 0.035,
+          "hipX": 0.343,
+          "knee": 0.246,
+          "kneeX": 0.734
+        }
+      },
       "gentleman-01": {
         "front": {
           "hip": 0.452,
@@ -316,6 +330,11 @@
         }
       }
     },
-    "sitMarksNote": "Measured off the owner-marked sheets in marks/, by read-marks.py. Fractions of sprite height above the sprite bottom; hipX/kneeX are fractions of sprite width from its left. hip is where the buttocks meet the seat and is the anchor; knee is the check that the sitter is not floating off the front of the chair. Characters with no sheet yet fall back to hipFraction, which is eyeballed."
+    "sitMarksNote": "Measured off the owner-marked sheets in marks/, by read-marks.py. Fractions of sprite height above the sprite bottom; hipX/kneeX are fractions of sprite width from its left. hip is where the buttocks meet the seat and is the anchor; knee is the check that the sitter is not floating off the front of the chair. Characters with no sheet yet fall back to hipFraction, which is eyeballed.",
+    "wholeOnSeat": [
+      "brother-02",
+      "dog-01"
+    ],
+    "wholeOnSeatNote": "The owner's call: these two are small enough to sit entirely on the painted seat, feet and all, so they need no hip alignment. Their sprite bottom goes on the seat's front edge and they centre on it. Everyone else is anchored by the marked buttock line, because their feet reach past the front of the chair and the two cannot both be satisfied."
   }
 }

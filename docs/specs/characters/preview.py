@@ -117,6 +117,7 @@ HIP_BACK = SA['hipFractionBack']
 COVER = SA['seatCoverage']
 SITH = SA['sittingHeightMetres']
 MARKS = SA.get('sitMarks', {})
+WHOLE = set(SA.get('wholeOnSeat', []))
 
 SEAT_TOP = np.asarray(Image.open('/home/user/littleworld/docs/specs/world/seatsurfaces.png')
                       .convert('L').resize((W, HH), Image.BOX)) > 127
@@ -170,9 +171,16 @@ def seated_box(cid, sprite, seat, facing):
     w = h * sprite.width / sprite.height
 
     far, near = seat_band(cx, cy, surf['h'])
-    hip_y = far + HIP_INTO_SEAT * (near - far)
-    left = cx - hip_x * w
-    bottom = hip_y + hip * h
+    if cid in WHOLE:
+        # small enough to sit on the seat entire, feet and all, so the sprite's
+        # own bottom goes on the seat's front edge and nothing needs aligning
+        bottom = near
+        left = cx - w / 2
+        hip_y = bottom - hip * h
+    else:
+        hip_y = far + HIP_INTO_SEAT * (near - far)
+        left = cx - hip_x * w
+        bottom = hip_y + hip * h
     knee = m.get('knee')
     knee_y = bottom - knee * h if knee is not None else None
     return h, w, left, bottom, None, (hip_y, knee_y, far, near)
@@ -185,7 +193,7 @@ for s in A['seats']:
 for st in A['stations']:
     cid = CAST.get(st['id'])
     if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
-place.append(('dog-01', 'stand', [455, 300], 300.0))         # in front of the bench, with the brothers
+place.append(('dog-01', 'stand', [462, 262], 300.0))         # on the sand beside the bench, with the brothers
 
 FW, FH = W*4, HH*4                                   # the masks' own resolution
 

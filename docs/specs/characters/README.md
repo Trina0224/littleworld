@@ -164,6 +164,12 @@ Feet are not corrected. Rising 0.42 m onto a seat and stepping 0.45 m back off
 the chair reach nearly the same screen row here, so no single placement puts both
 the buttocks and the soles where they belong. The buttocks win.
 
+Two characters are exempt, by the owner's call: `brother-02` and `dog-01` are
+small enough to sit on the painted seat entire, feet and all. They are listed in
+`wholeOnSeat` and placed by their own sprite bottom on the seat's front edge,
+centred, with nothing to align. Everyone else's feet reach past the front of the
+chair, which is what forces the choice.
+
 `preview.py` prints, per sitter, whether the marked buttock line and knee both
 land inside the painted seat. All five marked characters currently do.
 
@@ -180,9 +186,7 @@ height ramp, sorts by depth, draws the scenery occluders in between, and writes
 
 ## Still to build
 
-Two of the twelve sit sheets are not marked yet — `brother-02` and `dog-01`.
-They fall back to the eyeballed `hipFraction` until they are, which is visible:
-`brother-02` currently renders slightly taller than his elder brother, who is
-measured.
+One of the twelve sit sheets is not marked yet — `dog-01`. It falls back to the
+eyeballed `hipFraction` until it is, and it does not sit anywhere yet anyway.
 
 Then packing, and wiring depth sorting and the occluder mask into the live scene.
