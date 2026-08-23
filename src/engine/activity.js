@@ -12,9 +12,19 @@
  * time never waits, so this layer only ever does work it can finish inside the
  * tick it started.
  */
-import { SEAT_AVAILABLE } from './world.js';
+import { AVAILABLE } from './resources.js';
 
 const STEPS = {
+  /** walk to the resource, then wait for the walk to finish */
+  approach: (world, agent, a) => {
+    if (world.walking(agent.id)) return 'running';
+    if (a.walkStarted) return 'done';
+    const r = world.resource(a.target);
+    if (!r) return 'failed';
+    a.walkStarted = true;
+    return world.moveTo(agent.id, r.at) ? 'running' : 'failed';
+  },
+
   reserve: (world, agent, a) => (world.reserve(a.target, agent.id) ? 'done' : 'failed'),
 
   sit: (world, agent, a) => (world.occupy(a.target, agent.id) ? 'done' : 'failed'),
@@ -32,13 +42,20 @@ export function idle() {
   return { name: 'idle', steps: [] };
 }
 
-/** Claim a seat, sit on it for a while, give it back. */
+/**
+ * Claim a seat, walk to it, sit on it for a while, give it back.
+ *
+ * Reserve comes before approach on purpose. Walking to a seat and only then
+ * finding out someone else took it is how agents spend an afternoon crossing a
+ * park for nothing; claiming first means a refusal costs one tick.
+ */
 export function sitAndRest(seatId, restTicks) {
   return {
     name: 'sit_and_rest',
     target: seatId,
     restTicks,
-    steps: [{ type: 'reserve' }, { type: 'sit' }, { type: 'rest' }, { type: 'release' }]
+    steps: [{ type: 'reserve' }, { type: 'approach' }, { type: 'sit' },
+            { type: 'rest' }, { type: 'release' }]
   };
 }
 
@@ -94,8 +111,8 @@ export function createActivityRuntime(world) {
           log.note(world.tick, 'step_failed', { agent: id, activity: a.name, step: step.type });
           // Whatever it already holds must not be leaked - a half-done activity
           // that keeps a reservation forever is how a world runs out of seats.
-          const spot = a.target ? world.spot(a.target) : null;
-          if (spot && spot.holder === id && spot.state !== SEAT_AVAILABLE) world.release(a.target, id);
+          const r = a.target ? world.resource(a.target) : null;
+          if (r && r.holder === id && r.state !== AVAILABLE) world.release(a.target, id);
           finish(agent, 'failed');
         } else if (result === 'done') {
           agent.step += 1;

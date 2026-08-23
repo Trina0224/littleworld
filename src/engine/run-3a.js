@@ -1,92 +1,140 @@
 /**
- * Phase 3A scenario, items 1-4: clock, activity runtime, canonical seats,
- * atomic reservation.
+ * Phase 3A: clock, activity runtime, canonical resources, atomic reservation,
+ * movement, a recording, and replay.
  *
- * There is no LLM here and no mock of one, no perception, no memory, no zones
- * (section 17.1). Two scripted agents want the same bench slot. One gets it,
- * rests, and gives it back; the other is refused and falls to idle, then takes
- * the slot once it is free.
+ * There is no LLM here and no mock of one, no perception, no memory, no zones,
+ * no conversation, no scheduler (section 17.1).
  *
  *     node src/engine/run-3a.js
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { createWorld } from './world.js';
-import { createActivityRuntime, sitAndRest, idle } from './activity.js';
+import { createActivityRuntime, sitAndRest } from './activity.js';
+import { createNav } from './nav.js';
+import { createView, replay } from './view.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const ANCHORS = join(HERE, '..', '..', 'docs', 'specs', 'world', 'anchors.json');
+const SPEC = join(HERE, '..', '..', 'docs', 'specs', 'world');
+const RUNS = join(HERE, '..', '..', 'docs', 'runs');
 
 const SEAT = 'bench-slot-2';
+const CAFE = [200, 250];                 // in front of the cafe, on the paving
 
 /** The script: what happens, at which tick. Not part of the engine. */
 const SCRIPT = [
-  { t: 2, agent: 'brother-01', want: sitAndRest, seat: SEAT, rest: 15 },
-  { t: 2, agent: 'brother-02', want: sitAndRest, seat: SEAT, rest: 15 },
-  { t: 30, agent: 'brother-02', want: sitAndRest, seat: SEAT, rest: 10 }
+  { t: 2, agent: 'brother-01', seat: SEAT, rest: 40 },
+  { t: 2, agent: 'brother-02', seat: SEAT, rest: 20 },
+  { t: 150, agent: 'brother-02', seat: SEAT, rest: 20 }
 ];
 
-export function runScenario({ seed = 20260823, ticks = 60, anchors }) {
-  const world = createWorld({ anchors, seed, tickDurationMs: 100 });
+export function runScenario({ anchors, grid, seed = 20260823, ticks = 280, onTick }) {
+  const nav = createNav(grid);
+  const world = createWorld({ anchors, nav, seed, tickDurationMs: 100 });
   const runtime = createActivityRuntime(world);
 
   world.start();
-  for (const id of ['brother-01', 'brother-02']) {
-    world.spawn(id, [480, 262]);
-    runtime.assign(id, idle());          // cold start: everyone has an activity
-  }
+  world.spawn('brother-01', [...CAFE]);
+  world.spawn('brother-02', [CAFE[0] + 6, CAFE[1]]);
 
+  let seen = 0;
   while (world.tick < ticks) {
     for (const line of SCRIPT.filter((l) => l.t === world.tick)) {
-      // An intention is not a fact. It goes to the audit stream, and the
-      // renderer never sees it.
+      // An intention is not a fact. Audit stream; the renderer never sees it.
       world.log.note(world.tick, 'intent', {
         agent: line.agent, activity: 'sit_and_rest', target: line.seat
       });
-      runtime.assign(line.agent, line.want(line.seat, line.rest));
+      runtime.assign(line.agent, sitAndRest(line.seat, line.rest));
     }
+    world.stepMovement();
     runtime.tick();
+    if (onTick) onTick(world.log.facts.slice(seen), world.tick);
+    seen = world.log.facts.length;
     world.clock.advance();
   }
+  world.stop();
+  if (onTick) onTick(world.log.facts.slice(seen), world.tick);
   return world;
 }
 
 function main() {
-  const anchors = JSON.parse(readFileSync(ANCHORS, 'utf8'));
-  const world = runScenario({ anchors });
+  const anchors = JSON.parse(readFileSync(join(SPEC, 'anchors.json'), 'utf8'));
+  const grid = JSON.parse(readFileSync(join(SPEC, 'navgrid.json'), 'utf8'));
 
-  const show = (rows, title) => {
-    console.log(`\n${title}  (${rows.length})`);
-    for (const e of rows) {
-      const { v, t, type, ...rest } = e;
-      console.log(`  t=${String(t).padStart(3)}  ${type.padEnd(18)} ${JSON.stringify(rest)}`);
+  // Live: drive a view from facts as they are emitted, and snapshot every tick.
+  const live = createView();
+  const liveFrames = [];
+  const world = runScenario({
+    anchors,
+    grid,
+    onTick(fresh, t) {
+      for (const e of fresh) live.apply(e);
+      live.goto(t);
+      liveFrames.push(live.snapshot());
     }
-  };
-  show(world.log.facts, 'FACTS   — renderer and replay read this');
-  show(world.log.audit, 'AUDIT   — why; the renderer may not read this');
+  });
 
-  // --- the two things items 1-4 have to prove
-  const problems = [];
-  const occupied = world.log.facts.filter((e) => e.type === 'seat_occupied' && e.seat === SEAT);
-  const released = world.log.facts.filter((e) => e.type === 'seat_released' && e.seat === SEAT);
-  for (let i = 0; i < occupied.length; i += 1) {
-    const prevRelease = released.filter((r) => r.t <= occupied[i].t).length;
-    if (prevRelease < i) problems.push(`${SEAT} occupied twice without a release between`);
+  mkdirSync(RUNS, { recursive: true });
+  const file = join(RUNS, '3a-bench.json');
+  writeFileSync(file, JSON.stringify(world.log.recording()));
+
+  // Replay: the same view code, fed from the file, with no runtime running.
+  const replayFrames = [];
+  replay(JSON.parse(readFileSync(file, 'utf8')), { onTick: (f) => replayFrames.push(f) });
+
+  for (const e of world.log.facts) {
+    const { v, t, type, path, ...rest } = e;
+    const tail = path ? `${JSON.stringify(rest)} path=${path.length}pts` : JSON.stringify(rest);
+    console.log(`  t=${String(t).padStart(3)}  ${type.padEnd(18)} ${tail}`);
   }
+  console.log(`\n  audit (${world.log.audit.length}):`);
+  for (const e of world.log.audit) {
+    const { v, t, type, ...rest } = e;
+    console.log(`  t=${String(t).padStart(3)}  ${type.padEnd(18)} ${JSON.stringify(rest)}`);
+  }
+
+  const problems = [];
+  const occupied = world.log.facts.filter((e) => e.type === 'resource_occupied' && e.resource === SEAT);
+  const released = world.log.facts.filter((e) => e.type === 'resource_released' && e.resource === SEAT);
+  occupied.forEach((o, i) => {
+    if (released.filter((r) => r.t <= o.t).length < i) {
+      problems.push(`${SEAT} occupied again with no release between`);
+    }
+  });
   if (occupied.length !== 2) problems.push(`expected 2 occupations of ${SEAT}, got ${occupied.length}`);
   if (occupied[0]?.by === occupied[1]?.by) problems.push('the loser never got the seat back');
+  if (!world.log.facts.some((e) => e.type === 'move_completed')) problems.push('nobody walked anywhere');
 
-  // Weak today - nothing in this scenario draws from the rng yet - but the
-  // check exists from the start so it fails the day something does.
-  const second = runScenario({ anchors });
-  if (JSON.stringify(world.log.facts) !== JSON.stringify(second.log.facts)) {
+  const n = Math.min(liveFrames.length, replayFrames.length);
+  if (liveFrames.length !== replayFrames.length) {
+    problems.push(`live ran ${liveFrames.length} frames, replay ${replayFrames.length}`);
+  }
+  for (let i = 0; i < n; i += 1) {
+    if (JSON.stringify(liveFrames[i]) !== JSON.stringify(replayFrames[i])) {
+      problems.push(`live and replay differ at tick ${i}`);
+      console.log('\n  live  ', JSON.stringify(liveFrames[i]));
+      console.log('  replay', JSON.stringify(replayFrames[i]));
+      break;
+    }
+  }
+
+  // Weak while nothing draws from the rng, but in place so it fails the day
+  // something does.
+  const again = runScenario({ anchors, grid });
+  if (JSON.stringify(world.log.facts) !== JSON.stringify(again.log.facts)) {
     problems.push('same seed produced a different fact stream');
   }
 
   console.log('');
-  console.log(problems.length ? `FAILED\n  ${problems.join('\n  ')}` : 'OK  seat held once at a time, reused after release, same seed = same stream');
+  if (problems.length) {
+    console.log(`FAILED\n  ${problems.join('\n  ')}`);
+  } else {
+    console.log(`OK  ${liveFrames.length} ticks; live and replay identical every tick;`);
+    console.log(`    seat held once at a time and reused; same seed = same stream`);
+    console.log(`    recording: docs/runs/3a-bench.json`);
+  }
   process.exitCode = problems.length ? 1 : 0;
 }
 
