@@ -36,17 +36,24 @@ placements = []
 for depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note in pv.drawn:
     d = deg % 360
     view = pv.VIEW.get(cid) or ('front' if d < 180 else 'back')
+    if clip is not None:
+        # Bake the counter's cut into the sprite. The page then needs no rule for
+        # it, and the exported box shrinks to what is actually drawn.
+        top = bottom - h
+        frac = min(1.0, max(0.02, (clip - top) / h))
+        sp = sp.crop((0, 0, sp.width, max(1, round(sp.height * frac))))
+        h *= frac
+        bottom = top + h                       # the crop keeps the head, not the feet
     key = f'{cid}-{pose}-{view}'
     mirrored = (90 <= d < 270) != (pv.DRAWN.get(cid, {}).get(view, pv.DRAWN['default']) == 'left')
     if mirrored:
         key += '-m'
-    path = f'{SPRITE_DIR}/{key}.png'
-    if not os.path.exists(path):
-        im = sp
-        if im.height > MAX_SPRITE_H:
-            im = im.resize((max(1, round(im.width * MAX_SPRITE_H / im.height)), MAX_SPRITE_H),
-                           Image.LANCZOS)
-        im.save(path)
+    im = sp
+    if im.height > MAX_SPRITE_H:
+        im = im.resize((max(1, round(im.width * MAX_SPRITE_H / im.height)), MAX_SPRITE_H),
+                       Image.LANCZOS)
+    im.save(f'{SPRITE_DIR}/{key}.png')          # always rewritten: a clip or a
+                                                # mirror change must not be skipped
     placements.append({'id': cid, 'key': key, 'pose': pose,
                        'x': round(left, 2), 'y': round(bottom - h, 2),
                        'w': round(w, 2), 'h': round(h, 2),

@@ -12,16 +12,6 @@
       "depth": 175.6
     },
     {
-      "id": "shopkeeper-01",
-      "key": "shopkeeper-01-stand-front",
-      "pose": "stand",
-      "x": 169.85,
-      "y": 135.41,
-      "w": 13.29,
-      "h": 45.59,
-      "depth": 178.0
-    },
-    {
       "id": "girl-01",
       "key": "girl-01-sit-back-m",
       "pose": "sit",
@@ -50,6 +40,16 @@
       "w": 25.63,
       "h": 50.9,
       "depth": 192.2
+    },
+    {
+      "id": "shopkeeper-01",
+      "key": "shopkeeper-01-stand-front",
+      "pose": "stand",
+      "x": 168.69,
+      "y": 146.4,
+      "w": 15.63,
+      "h": 26.6,
+      "depth": 197.0
     },
     {
       "id": "grandma-01",

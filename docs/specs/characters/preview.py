@@ -219,11 +219,11 @@ def seated_box(cid, sprite, seat, facing):
 place = []
 for s in A['seats']:
     cid = CAST.get(s['id'])
-    if cid: place.append((cid, 'sit', s, s['facingDeg']))
+    if cid: place.append((cid, 'sit', s, s['facingDeg'], None))
 for st in A['stations']:
     cid = CAST.get(st['id'])
-    if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg']))
-place.append(('dog-01', 'stand', [462, 262], 300.0))         # on the sand beside the bench, with the brothers
+    if cid: place.append((cid, 'stand', st['anchor'], st['facingDeg'], st.get('clipY')))
+place.append(('dog-01', 'stand', [462, 262], 300.0, None))   # on the sand beside the bench, with the brothers
 
 FW, FH = W*4, HH*4                                   # the masks' own resolution
 
@@ -339,7 +339,7 @@ def draw_occluders(lo, hi):
 
 
 drawn = []
-for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['centre'][1] if p[1]=='sit' else p[2][1])):
+for cid, pose, at, deg, clip_y in sorted(place, key=lambda p: (p[2]['seatSurface']['centre'][1] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
         h, w, left, bottom, clip, chk = seated_box(cid, sp, at, deg)
@@ -351,7 +351,9 @@ for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['cent
         depth = at['seatSurface']['centre'][1] + OFFSET.get(cid, (0.0, 0.0))[1]
     else:
         h = native_height(cid, sp, at[1]) * SCALE; w = h * sp.width / sp.height
-        left = at[0] - w/2; bottom = at[1] + DROP; depth = at[1]; clip = None; note = ''
+        left = at[0] - w/2; bottom = at[1] + DROP; depth = at[1]; note = ''
+        # the counter hides the keeper's lower body; see clipNote in anchors.json
+        clip = clip_y
     drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note))
 
 last = -1

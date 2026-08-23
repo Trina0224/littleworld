@@ -373,13 +373,13 @@
       ],
       "anchor": [
         176.5,
-        178.0
+        197.0
       ],
       "facingDeg": 78.2,
       "walkable": false,
-      "occluderPending": true,
-      "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter.",
-      "anchorNote": "the keeper stands on the shop floor behind the counter, not at the far edge of the painted region; the earlier y=160 sat almost on the horizon and rendered her far too small"
+      "anchorNote": "She stands on the shop floor behind the counter. y=178 had her feet on the counter's own top surface, which is what the owner spotted; y=160 before that sat almost on the horizon and rendered her far too small.",
+      "clipY": 173.0,
+      "clipNote": "The counter stands between the keeper and the camera and hides her lower body. It is not painted into any occluder layer - the owner deferred that, and a flat mask would have been wrong anyway, since how much of a body the counter hides depends on where that body stands. So the keeper alone is cut at a stated row: clipY is the counter's top edge as it projects at her column, and her anchor is the shop floor she stands on behind it. Two numbers, both adjustable by eye. If anyone ever walks behind that counter, this stops being enough and the counter front has to be painted."
     }
   ],
   "seatAnchorNote": "frontEdge is the front lip of the seat surface, drawn directly on the scene by the owner and read back off the image. A seated sprite is placed so its knee covers that point.\n\nEverything that used to derive this is gone. Deriving it needed the chair's floor line, its seat height and which side the occupant faced, and each of those was wrong in turn: the painted blobs stop short of the chair legs, seat heights differ between stools and chairs, and the lip moves to the far side when the sitter faces away. Eleven drawn lines settled all of it.",
