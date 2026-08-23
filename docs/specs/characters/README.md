@@ -180,7 +180,7 @@ world units — 6 px in the preview, 12 px against the full-size background. It
 was 6, which pushed all three counter-stool sitters off their painted seat tops;
 those tops are only 5 units deep.
 
-`sizeScale` multiplies every character's height, currently 1.20. The
+`sizeScale` multiplies every character's height, currently 1.50. The
 anatomically correct sizes read too small against this furniture, which is drawn
 larger than a strict ground-plane projection would give — the painted stool top
 is 0.60 m wide where a real stool is 0.35 m. A seated sprite grows around its

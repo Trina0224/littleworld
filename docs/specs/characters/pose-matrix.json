@@ -346,7 +346,7 @@
     "wholeOnSeatNote": "The owner's call: these two are small enough to sit entirely on the painted seat, feet and all, so they need no hip alignment. Their sprite bottom goes on the seat's front edge and they centre on it. Everyone else is anchored by the marked buttock line, because their feet reach past the front of the chair and the two cannot both be satisfied.",
     "dropUnits": 3.0,
     "dropUnitsNote": "A flat downward nudge on every placed character, seated and standing, in world units. The owner's call, made by eye. 3 units is 6 px in the 1280x720 preview and 12 px against the 2560x1440 background. It was 6, which pushed the three counter stools' sitters off their painted seat tops - those tops are only 5 units deep. A knob, not a measurement.",
-    "sizeScale": 1.2,
+    "sizeScale": 1.5,
     "sizeScaleNote": "A flat multiplier on every character's height, on top of the ramp and sitting height. The owner's call: the anatomically correct sizes read too small against this furniture, which is drawn larger than a strict ground-plane projection would give. Seated sprites grow around their buttock line, so the hip stays on the seat and the head and feet move outward. A knob, not a measurement."
   },
   "drawnFacing": {
