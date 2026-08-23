@@ -193,15 +193,16 @@ the truth about where the buttocks actually land.
 ### Which way a sheet is drawn
 
 Mirroring assumes a sheet is drawn facing screen right, and flips it when the
-character should look left. `brother-01`'s back view is drawn the other way, so
-it needs the opposite condition — without that he sat looking away from his
-brother and away from the open ground. `drawnFacing` in `pose-matrix.json`
-records the exceptions.
+character should look left. `drawnFacing` in `pose-matrix.json`
+records the exceptions, and `poseView` is the blunter override that pins a
+character to one sheet whatever the seat's facing says.
 
-`poseView` is the blunter override: it pins a character to one sheet whatever the
-seat's facing says. `brother-01` is pinned to `front` — the bench looks out over
-the open ground, which is a back view for everyone on it, but the owner wants him
-seen from the front, turned left.
+**Both are empty, and that is the point.** `brother-01` went through all four
+combinations before the owner picked one, and the answer was the plain rule with
+no exception at all: back view, mirrored, exactly what the bench's own facing
+gives. Rendering the four and asking which letter took one round; guessing took
+three and got two of them wrong. When a facing argument goes past one correction,
+render the options.
 
 ## Preview
 

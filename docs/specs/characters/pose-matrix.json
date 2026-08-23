@@ -350,15 +350,10 @@
     "sizeScaleNote": "A flat multiplier on every character's height, on top of the ramp and sitting height. The owner's call: the anatomically correct sizes read too small against this furniture, which is drawn larger than a strict ground-plane projection would give. Seated sprites grow around their buttock line, so the hip stays on the seat and the head and feet move outward. A knob, not a measurement."
   },
   "drawnFacing": {
-    "_note": "Which way a sheet is drawn facing, per pose. Mirroring assumes the art faces screen right and flips it when the character should look left; a sheet drawn facing left needs the opposite. brother-01 is drawn facing left in both poses - his backpack is on the right-hand side of his front sheet, and a backpack is worn on the back.",
-    "default": "right",
-    "brother-01": {
-      "front": "left",
-      "back": "left"
-    }
+    "_note": "Which way a sheet is drawn facing, per pose. Mirroring assumes the art faces screen right and flips it when the character should look left; a sheet drawn facing left needs the opposite condition. No sheet needs this today - brother-01 was marked here twice and both times the owner said it was backwards, and the plain rule with no exception is what he actually wanted. Kept because the mechanism will be needed the first time a sheet really is drawn the other way.",
+    "default": "right"
   },
   "poseView": {
-    "_note": "Force a character to a particular sheet regardless of which way the seat faces. brother-01 is the owner's call: the bench looks out over the open ground, which is a back view, but he should be seen from the front looking left.",
-    "brother-01": "front"
+    "_note": "Force a character to one sheet whatever the seat's facing says. Empty: brother-01 was pinned to front for a while, and the answer was the back sheet the bench's facing gives on its own."
   }
 }
