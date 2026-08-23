@@ -5,7 +5,7 @@
   "sprite": "brother-01",
   "knows": [
     { "who": "brother-02", "as": "タタ" },
-    { "who": "dog-01", "as": "TODO 狗的名字" }
+    { "who": "dog-01", "as": "ハナ" }
   ],
-  "_note": "appearance 是世界真相，任何看得到他的人都知道，所以不含名字。knows 是種子辨識：他認得誰、叫對方什麼。"
+  "_note": "appearance 是世界真相，任何看得到他的人都知道，所以不含名字。knows 是種子辨識：他認得誰、叫對方什麼。狗的名字是選的不是記得的，見 bible.md。"
 }

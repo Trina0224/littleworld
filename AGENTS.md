@@ -12,6 +12,22 @@ The current MVP is:
 
 > **A Showa-era Japanese pocket park integrated with a semi-open kissaten / light-meal café, using the visual language of roughly 1965–1985.**
 
+**This place is imagined, not reconstructed.** The character prototype who lived
+in that era looked at the scene and said he could not recognise it as Japan — he
+had never seen a cafe and a park put together like this. So the world is *built
+in the visual language of Showa*, and is not a claim about any real year.
+
+That is a decision, and it settles several arguments cheaply. The menu board's
+coffee price does not have to agree with any year's statistics. Children's
+heights do not have to match the school health survey. What still binds is
+**internal consistency** — a seven-year-old has to read as a seven-year-old
+standing next to the adults — and the emotional truth of the prototypes.
+
+What is *not* released by this: anything that is a hard object either exists in
+the world or does not. A home game console did not exist before 1983, so putting
+one in a child's hands moves the whole world late. Prefer props that hold across
+the whole era.
+
 The earlier Second Temple Jerusalem / Bethesda Pool direction has been abandoned, and its files have been removed from the working tree. They remain in git history only. Treat any reference to Jerusalem, Bethesda, the Temple Mount, or the Sheep Gate as dead history, never as a requirement.
 
 Do not restart, restore, extend, or use the Jerusalem work as the design source unless the project owner explicitly reverses the pivot.
