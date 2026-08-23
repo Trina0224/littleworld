@@ -1,0 +1,10 @@
+{
+  "id": "woman-01",
+  "brain": "llm",
+  "appearance": "留著長髮的年輕女子，白色上衣配及踝的深色長裙",
+  "sprite": "woman-01",
+  "knows": [
+    { "who": "grandma-01", "as": "おばあちゃん" }
+  ],
+  "_note": "整個卡司裡最短的一份 knows，而且是刻意的。她只認得外婆一個人。見 bible.md。"
+}
