@@ -344,8 +344,10 @@
       "dog-01"
     ],
     "wholeOnSeatNote": "The owner's call: these two are small enough to sit entirely on the painted seat, feet and all, so they need no hip alignment. Their sprite bottom goes on the seat's front edge and they centre on it. Everyone else is anchored by the marked buttock line, because their feet reach past the front of the chair and the two cannot both be satisfied.",
-    "dropUnits": 6.0,
-    "dropUnitsNote": "A flat downward nudge on every placed character, seated and standing, in world units. The owner's call, made by eye: everyone read a little high. 6 units is 12 px in the 1280x720 preview and 24 px against the 2560x1440 background. It is a knob, not a measurement - raise or lower it and re-render."
+    "dropUnits": 3.0,
+    "dropUnitsNote": "A flat downward nudge on every placed character, seated and standing, in world units. The owner's call, made by eye. 3 units is 6 px in the 1280x720 preview and 12 px against the 2560x1440 background. It was 6, which pushed the three counter stools' sitters off their painted seat tops - those tops are only 5 units deep. A knob, not a measurement.",
+    "sizeScale": 1.2,
+    "sizeScaleNote": "A flat multiplier on every character's height, on top of the ramp and sitting height. The owner's call: the anatomically correct sizes read too small against this furniture, which is drawn larger than a strict ground-plane projection would give. Seated sprites grow around their buttock line, so the hip stays on the seat and the head and feet move outward. A knob, not a measurement."
   },
   "drawnFacing": {
     "_note": "Which way a sheet is drawn facing, per pose. Mirroring assumes the art faces screen right and flips it when the character should look left; a sheet drawn facing left needs the opposite. brother-01's back view is the one that is, which had him looking away from his brother and away from the open ground.",
@@ -353,5 +355,9 @@
     "brother-01": {
       "back": "left"
     }
+  },
+  "poseView": {
+    "_note": "Force a character to a particular sheet regardless of which way the seat faces. brother-01 is the owner's call: the bench looks out over the open ground, which is a back view, but he should be seen from the front looking left.",
+    "brother-01": "front"
   }
 }

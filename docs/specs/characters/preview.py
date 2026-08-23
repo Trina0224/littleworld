@@ -86,7 +86,7 @@ def views(cid, pose):
 def sprite(cid, pose, deg):
     f, b = views(cid, pose)
     d = deg % 360
-    view = 'front' if d < 180 else 'back'
+    view = VIEW.get(cid) or ('front' if d < 180 else 'back')
     im = f if view == 'front' else b
     # mirroring assumes the sheet is drawn facing screen right; a sheet drawn the
     # other way has to flip on the opposite condition
@@ -122,6 +122,8 @@ COVER = SA['seatCoverage']
 SITH = SA['sittingHeightMetres']
 MARKS = SA.get('sitMarks', {})
 DROP = SA.get('dropUnits', 0.0)
+SCALE = SA.get('sizeScale', 1.0)
+VIEW = PM.get('poseView', {})
 DRAWN = PM.get('drawnFacing', {'default': 'right'})
 WHOLE = set(SA.get('wholeOnSeat', []))
 
@@ -160,7 +162,7 @@ def seated_box(cid, sprite, seat, facing):
     surf = seat['seatSurface']
     cx, cy = surf['centre']
     d = facing % 360
-    view = 'front' if d < 180 else 'back'
+    view = VIEW.get(cid) or ('front' if d < 180 else 'back')
     mirror = 90 <= d < 270
     m = MARKS.get(cid, {}).get(view, {})
     back = view == 'back'
@@ -176,7 +178,7 @@ def seated_box(cid, sprite, seat, facing):
         sit_m = SITH['child'] * metres(cid) / 1.35
     else:
         sit_m = SITH.get(cid, SITH['default'])
-    h = sit_m * K * (cy - H0) / (1.0 - hip) * COVER.get(cid, COVER['default'])
+    h = sit_m * K * (cy - H0) / (1.0 - hip) * COVER.get(cid, COVER['default']) * SCALE
     w = h * sprite.width / sprite.height
 
     far, near = seat_band(cx, cy, surf['h'])
@@ -315,7 +317,7 @@ for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['cent
         # camera puts the sitter in front of it
         depth = at['seatSurface']['centre'][1]
     else:
-        h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
+        h = K * (at[1] - H0) * metres(cid) * SCALE; w = h * sp.width / sp.height
         left = at[0] - w/2; bottom = at[1] + DROP; depth = at[1]; clip = None; note = ''
     drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note))
 

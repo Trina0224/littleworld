@@ -173,16 +173,22 @@ chair, which is what forces the choice.
 `preview.py` prints, per sitter, whether the marked buttock line and knee both
 land inside the painted seat.
 
-### The drop
+### Two knobs the owner turns
 
-`dropUnits` shifts every placed character down by a flat amount — 6 world units,
-which is 12 px in the preview and 24 px against the full-size background. It is
-the owner's call, made by eye, and it is a knob rather than a measurement.
+`dropUnits` shifts every placed character down by a flat amount, currently 3
+world units — 6 px in the preview, 12 px against the full-size background. It
+was 6, which pushed all three counter-stool sitters off their painted seat tops;
+those tops are only 5 units deep.
 
-It is applied after the seat check, not before, so the check keeps telling the
-truth: at 6 units the three counter stools now report their sitters' buttocks
-off the painted seat, because those stool tops are only 5 units deep. The round
-table, the far table and the bench all still land on the paint.
+`sizeScale` multiplies every character's height, currently 1.20. The
+anatomically correct sizes read too small against this furniture, which is drawn
+larger than a strict ground-plane projection would give — the painted stool top
+is 0.60 m wide where a real stool is 0.35 m. A seated sprite grows around its
+buttock line, so the hip stays on the seat while the head and feet move outward.
+
+Both are the owner's calls by eye, and both are knobs, not measurements. The drop
+is applied after the seat check rather than before, so the check keeps telling
+the truth about where the buttocks actually land.
 
 ### Which way a sheet is drawn
 
@@ -191,6 +197,11 @@ character should look left. `brother-01`'s back view is drawn the other way, so
 it needs the opposite condition — without that he sat looking away from his
 brother and away from the open ground. `drawnFacing` in `pose-matrix.json`
 records the exceptions.
+
+`poseView` is the blunter override: it pins a character to one sheet whatever the
+seat's facing says. `brother-01` is pinned to `front` — the bench looks out over
+the open ground, which is a back view for everyone on it, but the owner wants him
+seen from the front, turned left.
 
 ## Preview
 
