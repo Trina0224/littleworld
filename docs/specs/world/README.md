@@ -163,8 +163,16 @@ independent measurements, same answer.
 
 The park bench is the case that made this matter. Its back really is in front of
 its occupants, so drawing it correctly buried the two boys down to a cap. They
-are offset along the bench toward the big tree, which lifts their heads and
-shoulders clear and leaves the back covering their legs.
+are offset 6 units toward the big tree, which lifts their heads and shoulders
+clear and leaves the back covering their legs, and `brother-02` takes a further
+8 units along the bench toward his brother.
+
+**The bench's armrest is not painted and therefore cannot occlude.** The magenta
+in `seatbacks.png` starts at x=474; the armrest at the bench's near end occupies
+roughly x=452–472, y=248–272, and is bare. The owner says it is foreground like
+the back, and it should be — a stroke of `#FF00FF` over it in the seatbacks
+painting is all that is needed. Until then `brother-02` is moved clear of it
+instead, which hides the problem rather than fixing it.
 
 ### The counter is a station, not walkable ground
 

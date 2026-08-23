@@ -369,14 +369,14 @@
     "flat": false
   },
   "seatOffset": {
-    "_note": "Per-character offset from the seat, in world units, toward the big tree at (418, 200). The bench's back stands between the camera and whoever sits on it, so with the back correctly drawn as foreground the two boys were buried in it. Pushing them along the bench toward the tree lifts their heads and shoulders clear, and the back reads as foreground in front of their legs, which is what the owner asked for.",
+    "_note": "Per-character offset from the seat, in world units. The bench's back stands between the camera and whoever sits on it, so with the back correctly drawn as foreground both boys were buried in it; 6 units toward the big tree at (418, 200) lifts their heads and shoulders clear. brother-02 takes a further 8 units along the bench toward his brother, out from behind the armrest.",
     "brother-01": [
-      -8.6,
-      -8.2
+      -4.3,
+      -4.1
     ],
     "brother-02": [
-      -8.6,
-      -8.2
+      3.5,
+      -6.0
     ]
   }
 }
