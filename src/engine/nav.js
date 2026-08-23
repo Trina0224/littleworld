@@ -86,13 +86,31 @@ export function createNav(grid) {
     return null;
   }
 
-  function clearLine(a, b) {
-    const steps = Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])));
+  /**
+   * What a straight walk from a to b would cost, under the same weighting A*
+   * used - or null if it crosses something unwalkable.
+   *
+   * Checking only walkability is not enough. A* charges backstage cells the
+   * multiplier and routes around them; a shortcut that is merely walkable can
+   * cut straight back through the cells it just paid to avoid, which silently
+   * undoes the preference. Smoothing has to be cost-aware or it is not
+   * smoothing the path A* found.
+   */
+  function lineCost(a, b) {
+    const span = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+    const steps = Math.ceil(span);
+    if (steps === 0) return 0;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const per = length / steps;
+    let total = 0;
     for (let i = 0; i <= steps; i += 1) {
-      const t = steps ? i / steps : 0;
-      if (!ok(Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t))) return false;
+      const t = i / steps;
+      const x = Math.round(a[0] + (b[0] - a[0]) * t);
+      const y = Math.round(a[1] + (b[1] - a[1]) * t);
+      if (!ok(x, y)) return null;
+      if (i > 0) total += per * cost(at(x, y));
     }
-    return true;
+    return total;
   }
 
   return {
@@ -143,11 +161,17 @@ export function createNav(grid) {
       for (let i = gi; i !== -1; i = from[i]) cells.push([i % w, (i / w) | 0]);
       cells.reverse();
 
-      // string pull: keep only the corners a straight walk cannot skip
+      // String pull: drop a corner only when walking straight past it is both
+      // clear and no more expensive than the route A* actually chose. dist[]
+      // still holds the accumulated weighted cost, so the comparison is against
+      // the real thing rather than against distance.
       const out = [cells[0]];
       let anchor = 0;
+      const idx = (c) => at(c[0], c[1]);
       for (let i = 2; i < cells.length; i += 1) {
-        if (!clearLine(cells[anchor], cells[i])) {
+        const straight = lineCost(cells[anchor], cells[i]);
+        const along = dist[idx(cells[i])] - dist[idx(cells[anchor])];
+        if (straight === null || straight > along + 1e-6) {
           out.push(cells[i - 1]);
           anchor = i - 1;
         }

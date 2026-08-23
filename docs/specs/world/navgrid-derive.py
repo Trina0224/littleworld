@@ -9,16 +9,17 @@ for both layers. Small enough to ship to the browser with the page.
 """
 import base64
 import json
+import os
 
 import numpy as np
 from PIL import Image
 
 W, H = 640, 360
-ROOT = '/home/user/littleworld/docs/specs/world'
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def bits(name):
-    m = np.asarray(Image.open(f'{ROOT}/{name}').convert('L').resize((W, H), Image.BOX)) > 127
+    m = np.asarray(Image.open(os.path.join(HERE, name)).convert('L').resize((W, H), Image.BOX)) > 127
     return base64.b64encode(np.packbits(m.reshape(-1)).tobytes()).decode('ascii'), int(m.sum())
 
 
@@ -32,5 +33,5 @@ json.dump({
     'backstageCost': 4,
     'walkable': walk,
     'backstage': back
-}, open(f'{ROOT}/navgrid.json', 'w'), indent=0)
+}, open(os.path.join(HERE, 'navgrid.json'), 'w'), indent=0)
 print(f'walkable {nwalk} cells, backstage {nback} cells -> navgrid.json')

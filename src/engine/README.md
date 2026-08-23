@@ -7,6 +7,7 @@ API, to read the spec files from disk.
 ```bash
 python3 docs/specs/world/navgrid-derive.py    # once, after the painted maps change
 node src/engine/run-3a.js
+node src/engine/nav.test.js
 ```
 
 | File | |
@@ -20,6 +21,7 @@ node src/engine/run-3a.js
 | `activity.js` | the Activity Runtime |
 | `view.js` | facts → what a renderer draws, and replay |
 | `run-3a.js` | the scripted scenario, and the checks it has to pass |
+| `nav.test.js` | the one navigation property that is easy to lose |
 
 **Nothing outside the slice is here.** No perception, no memory, no zones, no
 conversation, no scheduler, no provider adapter — not even a mock one. See
@@ -54,6 +56,16 @@ nothing; claiming first makes a refusal cost one tick.
 
 The path is solved once, when the move starts, and written into the
 `move_started` fact. Replay follows the recorded path and never opens `nav.js`.
+
+**Smoothing is cost-aware, and has to be.** A* charges backstage cells the
+multiplier the world spec gives them and routes around them. String pulling then
+asks "could I just walk straight from here to there instead" — and if it asks
+only about walkability, the answer is yes, straight back through the cells A*
+just paid to avoid. The path comes out looking smoother with the weighting
+silently discarded. A shortcut is taken only when it is both clear and no more
+expensive than the route A* actually chose, compared against the accumulated
+cost A* already computed. `nav.test.js` fails on the walkability-only version
+and passes on this one.
 
 Speed is a flat 4 world units per tick — about 1.2 m/s where the bench is, which
 is a walk. Flat in world units rather than in metres: making it flat in metres
