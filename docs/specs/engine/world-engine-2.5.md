@@ -137,6 +137,21 @@ World
   world event stream
 ```
 
+### 4.0 World time is an integer tick — decided
+
+The world clock counts ticks, and a tick is an integer. `tick = 1842` is the
+time. Seconds exist only where a human or a renderer needs them, as
+`tick * tickDurationMs`, and never inside simulation logic.
+
+Elapsed floating-point seconds would work on the first day and rot afterwards:
+accumulated rounding and timer jitter make two runs of the same scenario diverge
+for reasons that have nothing to do with the simulation, and every such
+divergence has to be chased before a real one can be seen. An integer tick has
+no such failure mode.
+
+Durations are therefore expressed in ticks, not milliseconds — a move that takes
+40 ticks, a turn deadline of 60 ticks.
+
 ### 4.1 World tick never waits for inference
 
 Every agent must always have a deterministic current runtime activity or fallback state. Requesting a new LLM decision does not replace that state with `waiting_for_llm`.
@@ -334,12 +349,43 @@ MOCK / SCRIPTED
 
 This permits a known-good run to be replayed during a demonstration if network access, provider availability, credentials or quota fail. It also permits deterministic inspection of failures without requiring the same LLM behavior to occur again.
 
-### 8.2 Determinism is what makes replay true
+### 8.2 Facts and intentions are two different logs — decided
 
-Replay works by re-running the Activity Runtime over the recorded event stream.
-Events are semantic — an intention, a reservation, a line of speech — not sprite
-positions, so the runtime has to arrive at the same positions again. That imposes
-a hard constraint on every deterministic component:
+The event stream the renderer and replay consume records **committed world
+facts**, never wants or proposals. Not:
+
+```text
+agent wants to sit at bench-slot-2
+```
+
+but the transitions that actually happened:
+
+```text
+seat_reserved -> move_started -> move_completed -> seat_occupied
+```
+
+Intentions, plans and model proposals are recorded too, in a **separate audit
+stream**, for debugging and for answering "why did she do that". Nothing in the
+renderer or the replay path may read it.
+
+Keeping them in one stream looks harmless and is not: it leaves replay quietly
+undecided between *re-executing commands* and *playing back what happened*. Those
+are different systems with different failure modes, and the ambiguity only
+surfaces once a command would now produce a different result than it did when it
+was recorded.
+
+With facts as the contract, **replay is playback, not re-simulation.** A fact
+carries what a viewer needs — where a move went and how long it took, which seat
+was taken — so the renderer never re-derives it.
+
+### 8.3 Determinism, and what it is actually for
+
+Because replay plays back facts, replay fidelity does not depend on the
+simulation being reproducible. Determinism is still required, for a different
+reason: re-running a scenario from the same seed to reproduce a bug, and tests
+that assert on a whole run rather than on one step.
+
+The rules are the same either way:
 
 ```text
 no unseeded randomness
@@ -351,9 +397,9 @@ All randomness comes from a seeded generator whose seed is recorded in the event
 stream. All time comes from the world clock, never from the host clock. Where a
 map or set is iterated and the order can change a result, sort first.
 
-This is cheap to honour from the first line of code and expensive to retrofit: a
-run that is only *nearly* deterministic replays correctly for a while and then
-drifts, and the drift looks like a rendering bug rather than a missing seed.
+This is cheap to honour from the first line of code and expensive to retrofit. A
+run that is only *nearly* deterministic reproduces a bug most of the time, which
+is worse than not reproducing it at all.
 
 Events carry a schema version. A stream recorded before a schema change must
 either still replay or be refused outright — never replayed as if it matched.
@@ -646,8 +692,9 @@ The first slice is entirely deterministic:
 3. load canonical seats/stations from `docs/specs/world/anchors.json`;
 4. atomic seat reservation (`available / reserved / occupied`);
 5. one scripted agent that goes from the cafe area to a bench, reserves it, sits, waits, stands and releases it;
-6. objective event log for every visible state transition, versioned, with the
-   run's random seed recorded in it;
+6. two streams: committed world facts for every visible state transition,
+   versioned and carrying the run's seed, and a separate audit stream for the
+   script's intentions;
 7. replay that reproduces the scripted run through the normal renderer path,
    from the recorded stream alone;
 8. a second scripted agent attempting to claim the same seat, proving reservation conflict handling.
@@ -658,13 +705,35 @@ Success criteria for Phase 3A:
 - the world continues running with no LLM at all;
 - two agents cannot occupy the same exclusive seat;
 - every visible transition is represented in the event stream;
-- a recorded run replays to the same visible sequence, twice in a row and after
-  a restart - if it only nearly matches, the determinism rules in §8.2 are being
-  broken somewhere and that is the bug to fix, not the replay;
+- a recorded run replays to the same visible sequence, from the fact stream
+  alone, with the Activity Runtime not running at all;
+- re-running the scenario live from the same seed produces an identical fact
+  stream - if it only nearly matches, §8.3 is being broken somewhere;
 - intention source can later be swapped from script/mock to LLM without changing World Engine mechanics.
 ```
 
-Only after Phase 3A is stable should implementation add Mock Brain / scheduler integration, then a real provider adapter.
+### 17.1 What Phase 3A must not contain
+
+The specification describes perception, memory, zones, salience, conversation and
+scheduling. **None of it belongs in 3A**, however well specified it already is.
+
+```text
+not in 3A    perception, observation packages, salience
+not in 3A    memory of any kind
+not in 3A    semantic zones
+not in 3A    conversation
+not in 3A    LLM scheduler, budgets, priorities
+not in 3A    any provider adapter, including a mock one
+```
+
+3A exists to prove exactly one chain:
+
+```text
+clock -> activity -> reservation -> state mutation -> events -> replay
+```
+
+Only after that chain is stable should implementation add Mock Brain / scheduler
+integration, then a real provider adapter.
 
 ## 18. Decisions closed by this review
 
@@ -686,6 +755,9 @@ The following are no longer open questions for the MVP:
 | Cold start | Every agent holds a deterministic activity from the first tick, before any inference. |
 | Replay fidelity | Seeded randomness recorded in the stream, no host-clock reads in simulation logic, versioned events. |
 | Deployment | Static Pages hosts REPLAY and MOCK; LIVE requires an engine process holding the credential. A credential never reaches the browser. |
+| World time | Integer ticks. Seconds only for presentation, as `tick * tickDurationMs`. Durations in ticks. |
+| Event streams | Two: committed world facts (renderer and replay read this) and an audit stream of intentions and proposals (they must not). |
+| Replay semantics | Playback of facts, not re-execution of commands. |
 
 ## 19. Open questions before later implementation
 
