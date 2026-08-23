@@ -121,38 +121,32 @@ SA = PM['seatedAnchoring']
 HIP = SA['hipFraction']
 KNEE = SA['kneeFraction']
 SITH = SA['sittingHeightMetres']
-SEAT_DEPTH = 0.45          # chair seat front-to-back, metres
+
 
 def seated_box(cid, sprite_ratio, seat):
     """Size and placement for a seated sprite, anchored by the head.
 
-    The head is the one landmark every sheet agrees on: it is the top of the
-    sprite whichever way the character faces, and its world height is fixed —
-    seat height plus sitting height above the floor. Knee fractions were
-    measured on the front views and do not transfer to the back views, where
-    the knee is not even visible, which is what threw the away-facing sitters.
+    The knee is the contact that reads as sitting in a chair, and the seat
+    lips it lands on are measured rather than derived. Scale comes from
+    sitting height, hip to head, which holds across poses in a way overall
+    sprite height does not.
+
     """
-    scale = K * (seat['frontLegY'] - H0)
+    fx, fy = seat['frontEdge']
+    scale = K * (fy - H0)
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
     ref = 0.55 if kind == 'dog' else (1.35 if kind == 'child' else 1.65)
     sit_m = SITH[kind] * metres(cid) / ref
     h = sit_m * scale / (1.0 - HIP.get(cid, 0.45))
     w = h * sprite_ratio
-    # The hip goes on the seat surface. That is the one contact that is真 in
-    # world terms, and it is the only one the projection lets us honour: going
-    # up 0.42 m onto the seat and going back 0.45 m onto the floor behind the
-    # chair land on nearly the same screen row here, so "hip on the seat" and
-    # "feet on the floor beyond" cannot both hold for a drawing that separates
-    # them by four tenths of a body.
-    hip = HIP.get(cid, 0.45)
-    bottom = seat['seatSurfaceY'] + hip * h
-    d = math.radians(seat['facingDeg'])
-    left = seat['seat'][0] + math.cos(d) * SEAT_DEPTH * scale * 0.35 - w / 2
-    # Facing away, the chair back covers everything from the seat up to its own
-    # top, which is what you actually see of someone on a park bench from behind
-    # and above: head and shoulders, nothing else.
-    clip = seat['backTopY'] if 180 <= seat['facingDeg'] % 360 < 360 else None
-    return h, w, left, bottom, clip
+    # The knee covers the seat's front lip. That lip is not derived any more:
+    # the owner drew all eleven of them straight onto the scene, which settled
+    # three separate things that kept coming out wrong — the chair's floor
+    # line, its seat height, and which side of it the occupant faces.
+    kx, ky = KNEE.get(cid, [0.5, 0.41])
+    left = fx - kx * w
+    bottom = fy + ky * h
+    return h, w, left, bottom, None
 
 place = []
 for s in A['seats']:
@@ -247,13 +241,13 @@ def draw_occluders(lo, hi):
 
 
 drawn = []
-for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontLegY'] if p[1]=='sit' else p[2][1])):
+for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontEdge'][1] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
         h, w, left, bottom, clip = seated_box(cid, sp.width / sp.height, at)
         # facing away puts the chair back in front of the sitter, facing the
         # camera puts the sitter in front of it
-        depth = at['frontLegY'] - 1 if 180 <= at['facingDeg'] % 360 < 360 else at['frontLegY'] + 1
+        depth = at['frontEdge'][1]
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
         left = at[0] - w/2; bottom = at[1]; depth = at[1]; clip = None

@@ -10,19 +10,10 @@
    ],
    "facingDeg": 258.2,
    "facing": "N",
-   "seatHeightMetres": 0.7,
-   "ground": [
-    230.4,
-    199.7
-   ],
-   "frontLegY": 196,
    "frontEdge": [
-    229.3,
-    172.6
-   ],
-   "seatSurfaceY": 178.1,
-   "backHeightMetres": 0.45,
-   "backTopY": 184.5
+    227.5,
+    177.8
+   ]
   },
   {
    "id": "counter-stool-2",
@@ -34,19 +25,10 @@
    ],
    "facingDeg": 258.2,
    "facing": "N",
-   "seatHeightMetres": 0.7,
-   "ground": [
-    210.1,
-    207.4
-   ],
-   "frontLegY": 202,
    "frontEdge": [
-    208.9,
-    177.5
-   ],
-   "seatSurfaceY": 183.3,
-   "backHeightMetres": 0.45,
-   "backTopY": 190.0
+    207.5,
+    184.1
+   ]
   },
   {
    "id": "counter-stool-3",
@@ -58,19 +40,10 @@
    ],
    "facingDeg": 258.2,
    "facing": "N",
-   "seatHeightMetres": 0.7,
-   "ground": [
-    182.8,
-    216.7
-   ],
-   "frontLegY": 209,
    "frontEdge": [
-    181.5,
-    183.2
-   ],
-   "seatSurfaceY": 189.3,
-   "backHeightMetres": 0.45,
-   "backTopY": 196.3
+    185.9,
+    191.0
+   ]
   },
   {
    "id": "table-near-1",
@@ -82,19 +55,10 @@
    ],
    "facingDeg": 332.7,
    "facing": "NE",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    174.9,
-    257.7
-   ],
-   "frontLegY": 253,
    "frontEdge": [
-    182.1,
-    233.7
-   ],
-   "seatSurfaceY": 237.4,
-   "backHeightMetres": 0.85,
-   "backTopY": 221.5
+    187.6,
+    240.8
+   ]
   },
   {
    "id": "table-near-2",
@@ -106,19 +70,10 @@
    ],
    "facingDeg": 12.7,
    "facing": "E",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    179.3,
-    234.5
-   ],
-   "frontLegY": 230,
    "frontEdge": [
-    186.3,
-    218.0
-   ],
-   "seatSurfaceY": 216.4,
-   "backHeightMetres": 0.85,
-   "backTopY": 202.5
+    191.2,
+    227.1
+   ]
   },
   {
    "id": "table-near-3",
@@ -130,19 +85,10 @@
    ],
    "facingDeg": 146.3,
    "facing": "SW",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    226.8,
-    224.9
-   ],
-   "frontLegY": 226,
    "frontEdge": [
-    221.0,
-    216.6
-   ],
-   "seatSurfaceY": 212.7,
-   "backHeightMetres": 0.85,
-   "backTopY": 199.2
+    216.9,
+    222.3
+   ]
   },
   {
    "id": "table-near-4",
@@ -154,19 +100,10 @@
    ],
    "facingDeg": 188.3,
    "facing": "W",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    238.7,
-    246.2
-   ],
-   "frontLegY": 240,
    "frontEdge": [
-    231.2,
-    224.4
-   ],
-   "seatSurfaceY": 225.5,
-   "backHeightMetres": 0.85,
-   "backTopY": 210.8
+    229.2,
+    232.9
+   ]
   },
   {
    "id": "table-far-1",
@@ -178,19 +115,10 @@
    ],
    "facingDeg": 4.1,
    "facing": "E",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    303.3,
-    178.0
-   ],
-   "frontLegY": 179,
    "frontEdge": [
-    308.1,
-    170.0
-   ],
-   "seatSurfaceY": 169.7,
-   "backHeightMetres": 0.85,
-   "backTopY": 160.2
+    311.6,
+    178.6
+   ]
   },
   {
    "id": "table-far-2",
@@ -202,19 +130,10 @@
    ],
    "facingDeg": 147.9,
    "facing": "SW",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    344.4,
-    174.7
-   ],
-   "frontLegY": 177,
    "frontEdge": [
-    340.4,
-    170.4
-   ],
-   "seatSurfaceY": 167.9,
-   "backHeightMetres": 0.85,
-   "backTopY": 158.6
+    337.7,
+    174.6
+   ]
   },
   {
    "id": "table-far-3",
@@ -226,19 +145,10 @@
    ],
    "facingDeg": 197.5,
    "facing": "W",
-   "seatHeightMetres": 0.42,
-   "ground": [
-    360.0,
-    188.8
-   ],
-   "frontLegY": 186,
    "frontEdge": [
-    355.1,
-    174.5
-   ],
-   "seatSurfaceY": 176.1,
-   "backHeightMetres": 0.85,
-   "backTopY": 166.0
+    348.6,
+    181.5
+   ]
   },
   {
    "id": "bench-slot-1",
@@ -250,19 +160,10 @@
    ],
    "facingDeg": 249.5,
    "facing": "N",
-   "seatHeightMetres": 0.43,
-   "ground": [
-    529.9,
-    265.0
-   ],
-   "frontLegY": 300.5,
    "frontEdge": [
-    526.3,
-    270.8
-   ],
-   "seatSurfaceY": 280.4,
-   "backHeightMetres": 0.91,
-   "backTopY": 258.0
+    529.9,
+    242.9
+   ]
   },
   {
    "id": "bench-slot-2",
@@ -274,19 +175,10 @@
    ],
    "facingDeg": 249.5,
    "facing": "N",
-   "seatHeightMetres": 0.43,
-   "ground": [
-    502.1,
-    276.3
-   ],
-   "frontLegY": 292.5,
    "frontEdge": [
-    498.6,
-    263.8
-   ],
-   "seatSurfaceY": 273.1,
-   "backHeightMetres": 0.91,
-   "backTopY": 251.5
+    502.1,
+    252.6
+   ]
   },
   {
    "id": "bench-slot-3",
@@ -298,19 +190,10 @@
    ],
    "facingDeg": 249.5,
    "facing": "N",
-   "seatHeightMetres": 0.43,
-   "ground": [
-    474.2,
-    287.7
-   ],
-   "frontLegY": 284.4,
    "frontEdge": [
-    470.9,
-    256.8
-   ],
-   "seatSurfaceY": 265.7,
-   "backHeightMetres": 0.91,
-   "backTopY": 244.9
+    474.2,
+    262.4
+   ]
   }
  ],
  "stations": [
@@ -334,7 +217,5 @@
    "anchorNote": "the keeper stands on the shop floor behind the counter, not at the far edge of the painted region; the earlier y=160 sat almost on the horizon and rendered her far too small"
   }
  ],
- "seatAnchorNote": "seat is the painted cyan centroid and frontLegY is where that chair's front legs meet the floor, per column, so the diagonal bench gives each slot its own. seatSurfaceY is one seat height above that. frontEdge is the lip of the seat on the side the occupant faces, and it is where a seated sprite's knee belongs.\n\nWhich side that is depends on the facing. A chair whose occupant faces the camera has its lip on the near side; one whose occupant faces away — the bench, the counter stools, table-near-1 — has it on the far side, with the backrest between the sitter and the camera. Assuming the near side for all of them put the bench pair on the wrong side of their own backrest.",
- "backNote": "backTopY is the top of the chair back, one back height above where its legs meet the floor. When the occupant faces away from the camera the back sits between them and us, and everything below that line should be hidden — the drawing puts their legs below the knee because that is how a back view is drawn, but in the world those legs run away from us, not down. Without it a sitter appears to stand on the seat. This is a stand-in until chair backs are painted into occluder.png, which depth sorting now makes safe.",
- "measuredNote": "bench numbers are measured off the background rather than taken from the paint: at x=485 the floor is y=287.5, the seat 268.75 and the back top 247.5, giving a 0.43 m seat and a 0.91 m back. The painted blob stopped about 7.5 units short of the bench feet, which put every derived line too high."
+ "seatAnchorNote": "frontEdge is the front lip of the seat surface, drawn directly on the scene by the owner and read back off the image. A seated sprite is placed so its knee covers that point.\n\nEverything that used to derive this is gone. Deriving it needed the chair's floor line, its seat height and which side the occupant faced, and each of those was wrong in turn: the painted blobs stop short of the chair legs, seat heights differ between stools and chairs, and the lip moves to the far side when the sitter faces away. Eleven drawn lines settled all of it."
 }
