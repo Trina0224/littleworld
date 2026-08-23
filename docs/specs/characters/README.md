@@ -142,6 +142,14 @@ Guessing these was the single biggest source of characters that looked wrong.
 The measured values are nothing like the eyeballed ones — `grandma-01`'s buttock
 line is at 0.30 of her sprite height, not the 0.42 that was guessed.
 
+Two poses in the set are not chair-sitting at all, and the marks say so plainly.
+`shopkeeper-01`'s sit sheet is a floor squat: her buttocks read 0.247 and her
+knee 0.370, knee well above hip, which is what a crouch looks like and not what
+a chair looks like. `brother-01` is close behind at 0.246 / 0.278. Neither should
+be dropped onto a table chair without looking at the result — the shopkeeper
+stands at her counter today, and the boy sits on a low bench, so both are fine
+where they are.
+
 ### Where the sprite goes
 
 The buttock line goes on the painted seat top, 30% back from its front edge.
@@ -172,8 +180,9 @@ height ramp, sorts by depth, draws the scenery occluders in between, and writes
 
 ## Still to build
 
-Seven of the twelve sit sheets are not marked yet — `woman-01`, `shopkeeper-01`,
-`boy-01`, `girl-01`, `brother-01`, `brother-02`, `dog-01`. They fall back to the
-eyeballed `hipFraction` until they are.
+Two of the twelve sit sheets are not marked yet — `brother-02` and `dog-01`.
+They fall back to the eyeballed `hipFraction` until they are, which is visible:
+`brother-02` currently renders slightly taller than his elder brother, who is
+measured.
 
 Then packing, and wiring depth sorting and the occluder mask into the live scene.

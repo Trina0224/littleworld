@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHEET_H, PAD, GAP = 760, 40, 60
 
 
-def groups(mask, minpx=25, reach=4):
+def groups(mask, minpx=25, reach=2):
     lab = np.zeros(mask.shape, np.int32); n = 0; out = []
     for sy, sx in zip(*np.nonzero(mask)):
         if lab[sy, sx]:
@@ -51,11 +51,11 @@ def read(path, widths):
         sel = magenta.copy(); sel[:, :x] = False; sel[:, x+w:] = False
         gs = groups(sel)
         if gs:
-            # the buttocks stroke is the long one and starts furthest left
+                # the buttock stroke is the long one; whatever else is drawn is a
+            # knee, and where two are drawn the bigger stroke is the near leg
             gs.sort(key=lambda c: -len(c))
             hip = gs[0]
-            rest = [c for c in gs[1:] if c[:, 1].mean() > hip[:, 1].mean()]
-            knee = max(rest, key=len) if rest else None
+            knee = gs[1] if len(gs) > 1 else None
             frac = lambda ys: float(((PAD + SHEET_H) - ys.mean()) / SHEET_H)
             m = {'hip': round(frac(hip[:, 0]), 3),
                  'hipX': round(float((hip[:, 1].mean() - x) / w), 3)}
