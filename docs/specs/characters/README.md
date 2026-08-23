@@ -118,17 +118,38 @@ This is the height ramp being honest, not a bug: those anchors really are close
 to the horizon. It just means the characters whose detail matters — the brothers
 and the dog, the first LLM scenario — belong near the camera.
 
-## Seated size and placement
+## Size
 
-Seated size cannot be read off the art. Each sheet is framed to fill its own
-canvas, so a character's standing and seated drawings share no scale — measuring
-their pixel heights returns a ratio near 1.0 for everyone, which is a fact about
-framing, not anatomy.
+Size is a fraction of each sheet's own pixel height. That is how the owner reads
+it, and after several rounds of anatomy it is the thing that actually converges:
 
-So seated size comes from **sitting height**, seat surface to the top of the
-head: 0.85 m for a 1.65 m adult, scaled by stature. That is the one body measure
-that survives the framing difference, and it is the measure taken from the seat,
-which is exactly where the sprite is anchored.
+| | fraction of the sheet |
+|---|---|
+| everyone | **0.275** |
+| `brother-01`, `brother-02` | **0.15** |
+| `dog-01` | 0.13, and that one is a guess |
+
+`boy-01` and `girl-01` are **not** children for this purpose — the owner counts
+only the two brothers as children.
+
+The fraction is the size for standing at `referenceY` = 232.6, the near table,
+which is where the four people the owner judged right are sitting. The height
+ramp still applies from there, so the same fraction shrinks with depth. Turning
+that off — every character the same fraction wherever they stand — makes the boy
+at the far table taller than the shopkeeper standing two metres in front of him,
+so the ramp stays.
+
+Scaling is one resize, never a shrink and a re-grow: the sheet's own pixels go
+straight to the target height in a single `resize`.
+
+### What this replaced
+
+Seated size used to come from sitting height, seat surface to the top of the
+head, scaled by the ramp. That is anatomically right and it kept reading small,
+because the furniture in this painting is drawn larger than a strict ground-plane
+projection would give — the painted stool top is 0.60 m wide where a real stool
+is 0.35 m. Anatomy cannot win an argument with the art. `sittingHeightMetres` is
+still in `pose-matrix.json` and is no longer used for size.
 
 ### The marked sheets
 

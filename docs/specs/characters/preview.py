@@ -124,6 +124,21 @@ MARKS = SA.get('sitMarks', {})
 DROP = SA.get('dropUnits', 0.0)
 SCALE = SA.get('sizeScale', 1.0)
 VIEW = PM.get('poseView', {})
+NS = PM['nativeScale']
+NS_REF = NS['referenceY']
+NS_FLAT = NS.get('flat', False)   # True: every character the same fraction, no depth
+
+
+def native_height(cid, sprite, y):
+    """Height in world units, as a fraction of the sheet's own pixels.
+
+    The owner sizes characters this way rather than by anatomy: 0.275 of the
+    sheet for a person at the near table, 0.15 for the two brothers. The ramp
+    still applies, so the same fraction shrinks with depth.
+    """
+    f = NS.get(cid, NS['default'])
+    ramp = 1.0 if NS_FLAT else (y - H0) / (NS_REF - H0)
+    return sprite.height * f * ramp / 4.0        # 4 px per world unit at 2560x1440
 DRAWN = PM.get('drawnFacing', {'default': 'right'})
 WHOLE = set(SA.get('wholeOnSeat', []))
 
@@ -178,7 +193,7 @@ def seated_box(cid, sprite, seat, facing):
         sit_m = SITH['child'] * metres(cid) / 1.35
     else:
         sit_m = SITH.get(cid, SITH['default'])
-    h = sit_m * K * (cy - H0) / (1.0 - hip) * COVER.get(cid, COVER['default']) * SCALE
+    h = native_height(cid, sprite, cy) * SCALE
     w = h * sprite.width / sprite.height
 
     far, near = seat_band(cx, cy, surf['h'])
@@ -317,7 +332,7 @@ for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['cent
         # camera puts the sitter in front of it
         depth = at['seatSurface']['centre'][1]
     else:
-        h = K * (at[1] - H0) * metres(cid) * SCALE; w = h * sp.width / sp.height
+        h = native_height(cid, sp, at[1]) * SCALE; w = h * sp.width / sp.height
         left = at[0] - w/2; bottom = at[1] + DROP; depth = at[1]; clip = None; note = ''
     drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp, note))
 

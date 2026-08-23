@@ -346,8 +346,8 @@
     "wholeOnSeatNote": "The owner's call: these two are small enough to sit entirely on the painted seat, feet and all, so they need no hip alignment. Their sprite bottom goes on the seat's front edge and they centre on it. Everyone else is anchored by the marked buttock line, because their feet reach past the front of the chair and the two cannot both be satisfied.",
     "dropUnits": 3.0,
     "dropUnitsNote": "A flat downward nudge on every placed character, seated and standing, in world units. The owner's call, made by eye. 3 units is 6 px in the 1280x720 preview and 12 px against the 2560x1440 background. It was 6, which pushed the three counter stools' sitters off their painted seat tops - those tops are only 5 units deep. A knob, not a measurement.",
-    "sizeScale": 1.5,
-    "sizeScaleNote": "A flat multiplier on every character's height, on top of the ramp and sitting height. The owner's call: the anatomically correct sizes read too small against this furniture, which is drawn larger than a strict ground-plane projection would give. Seated sprites grow around their buttock line, so the hip stays on the seat and the head and feet move outward. A knob, not a measurement."
+    "sizeScale": 1.0,
+    "sizeScaleNote": "Left at 1.0: size now comes from nativeScale, not from sitting height."
   },
   "drawnFacing": {
     "_note": "Which way a sheet is drawn facing, per pose. Mirroring assumes the art faces screen right and flips it when the character should look left; a sheet drawn facing left needs the opposite condition. No sheet needs this today - brother-01 was marked here twice and both times the owner said it was backwards, and the plain rule with no exception is what he actually wanted. Kept because the mechanism will be needed the first time a sheet really is drawn the other way.",
@@ -355,5 +355,17 @@
   },
   "poseView": {
     "_note": "Force a character to one sheet whatever the seat's facing says. Empty: brother-01 was pinned to front for a while, and the answer was the back sheet the bench's facing gives on its own."
+  },
+  "nativeScale": {
+    "_note": "Size as a fraction of the sheet's own pixel height, which is how the owner reads it. 0.275 is the size for a person standing at referenceY; the height ramp still adjusts it for actual depth, so someone at the far table is smaller than the same fraction at the near table. Sitting height and the ramp no longer set size - only where the buttock line lands.",
+    "default": 0.275,
+    "brother-01": 0.15,
+    "brother-02": 0.15,
+    "referenceY": 232.6,
+    "referenceYNote": "The near table, found as an enclosed hole in walkable.png. The four people around it are the ones the owner judged right.",
+    "childNote": "boy-01 and girl-01 are not children for this purpose - the owner counts only the two brothers as children.",
+    "dog-01": 0.13,
+    "dogNote": "A guess, not the owner's: 0.275 is for people, and a dog at that fraction came out person-sized. 0.13 puts him around half a metre at the shoulder.",
+    "flat": false
   }
 }
