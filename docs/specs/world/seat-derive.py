@@ -59,40 +59,103 @@ for s in seats:
                           w=c['x1']-c['x0']+1, h=c['y1']-c['y0']+1)
     print(f"{s['id']:16s} surf ({c['cx']:6.1f},{c['cy']:6.1f}) {c['x1']-c['x0']+1:3d}x{c['y1']-c['y0']+1:3d}  d{d:4.1f}")
 
-BKM=mask('seatbacks.png')
-
-def back_foot(b, x0, x1):
-    """Centre of a chair back's BOTTOM edge, over the columns a seat occupies.
-
-    Not its centroid. A back is a panel standing upright, so its pixels run far
-    up the screen from wherever it stands and its centroid always lands above
-    its seat - which made every chair in the scene look like it faced the
-    camera. The bottom edge is where the back meets the seat, and that is the
-    side the occupant's spine is on.
-
-    The columns matter too. The bench has one painted back across all three
-    slots, so its whole bottom edge points along the bench rather than across
-    it; restricting to a slot's own columns asks the right question.
-    """
-    ys, xs = b['ys'], b['xs']
-    sel = (xs >= x0) & (xs <= x1)
-    if sel.sum() < 20:
-        sel = np.ones(len(xs), bool)
-    pts = [(x, ys[sel][xs[sel] == x].max()) for x in np.unique(xs[sel])]
-    p = np.array(pts, float)
-    return p[:, 0].mean(), p[:, 1].mean()
+def hull_centre(pts):
+    return pts[:, 0].mean(), pts[:, 1].mean()
 
 
-def face(bx,by,cx,cy): return round(math.degrees(math.atan2(cy-by,cx-bx))%360,1)
+def furniture_centres():
+    """Enclosed holes in the walkable map: things standing on the floor."""
+    walk = mask('walkable.png')
+    seen = np.zeros(walk.shape, bool); out = []
+    for sy, sx in zip(*np.nonzero(~walk)):
+        if seen[sy, sx]:
+            continue
+        st = [(sy, sx)]; seen[sy, sx] = True; cells = []; edge = False
+        while st:
+            y, x = st.pop(); cells.append((y, x))
+            if y in (0, H-1) or x in (0, W-1):
+                edge = True
+            for dy, dx in ((1,0),(-1,0),(0,1),(0,-1)):
+                ny, nx = y+dy, x+dx
+                if 0 <= ny < H and 0 <= nx < W and not walk[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True; st.append((ny, nx))
+        if not edge and len(cells) >= 40:
+            c = np.array(cells, float)
+            out.append((c[:, 1].mean(), c[:, 0].mean()))
+    return out
+
+
+def face(bx, by, cx, cy):
+    return round(math.degrees(math.atan2(cy - by, cx - bx)) % 360, 1)
+
+
+# Facing is not derived from the paint any more. The owner stated the rule for
+# each kind of seat outright, and those statements are the specification:
+#
+#   "the round table's four chairs of course face the round table"
+#   "the park bench faces the open ground"
+#   "the four counter stools - as long as the seat is covered, how they sit is
+#    not important"
+#
+# Measuring it from the painted chair backs kept producing answers that were
+# plausible per chair and wrong as a set. A chair back is an upright panel, so
+# its pixels run far up the screen and its centroid sits above its seat; moving
+# to the back's bottom edge fixed the sign but not the spread, because a hand
+# painted patch a few pixels wide cannot pin an angle. A table is a much better
+# instrument than a brush stroke: the seats around it agree on where it is.
+GROUP_FACES = {}
+seat_groups = {}
 for s in seats:
-    if 'seatSurface' not in s: continue
-    cx,cy=s['seatSurface']['centre']; w=s['seatSurface']['w']
-    i=min(BK,key=lambda i:(BK[i]['cx']-cx)**2+(BK[i]['cy']-cy)**2)
-    b=BK[i]
-    bx,by=back_foot(b, cx-w/2, cx+w/2)
-    s['facingDeg']=face(bx,by,cx,cy)
-    s['backrestTopY']=b['y0']
-    s.pop('facing',None)
+    seat_groups.setdefault(s['id'].rsplit('-', 1)[0], []).append(s)
+
+furniture = furniture_centres()
+for g, members in seat_groups.items():
+    mx = sum(t['seatSurface']['centre'][0] for t in members) / len(members)
+    my = sum(t['seatSurface']['centre'][1] for t in members) / len(members)
+    if g.startswith('table'):
+        # the table itself, when the walkable map has it as a hole in the floor
+        near = [f for f in furniture if math.hypot(f[0]-mx, f[1]-my) <= 12]
+        tx, ty = near[0] if near else (mx, my)
+        for t in members:
+            cx, cy = t['seatSurface']['centre']
+            t['facingDeg'] = face(cx, cy, tx, ty)
+            t['facingFrom'] = 'the table it is drawn up to'
+    elif g == 'counter-stool':
+        # into the counter. The stools stand in a row parallel to it, so their
+        # own row is the counter's line; face across it, up-screen into the shop.
+        pts = np.array([t['seatSurface']['centre'] for t in members], float)
+        d = pts[-1] - pts[0]
+        ang = math.atan2(d[1], d[0])
+        n = min((ang + math.pi/2, ang - math.pi/2), key=lambda a: math.sin(a))
+        for t in members:
+            t['facingDeg'] = round(math.degrees(n) % 360, 1)
+            t['facingFrom'] = 'the counter it is drawn up to'
+    else:
+        # the bench: across its length, toward whichever side is open ground
+        pts = np.array([t['seatSurface']['centre'] for t in members], float)
+        d = pts[-1] - pts[0]
+        ang = math.atan2(d[1], d[0])
+        walk = mask('walkable.png')
+        best = None
+        for n in (ang + math.pi/2, ang - math.pi/2):
+            open_cells = 0
+            for r in range(4, 30):
+                x = int(mx + math.cos(n)*r); y = int(my + math.sin(n)*r)
+                if 0 <= x < W and 0 <= y < H and walk[y, x]:
+                    open_cells += 1
+            if best is None or open_cells > best[0]:
+                best = (open_cells, n)
+        for t in members:
+            t['facingDeg'] = round(math.degrees(best[1]) % 360, 1)
+            t['facingFrom'] = 'the open ground it looks out over'
+
+BK_TOP = {}
+for s in seats:
+    cx, cy = s['seatSurface']['centre']
+    i = min(BK, key=lambda i: (BK[i]['cx']-cx)**2 + (BK[i]['cy']-cy)**2)
+    s['backrestTopY'] = BK[i]['y0']
+    s.pop('facing', None)
+
 A['facingNote']=("facingDeg is measured, not chosen: it is the direction from the "
   "painted chair back to the painted seat top, which is where the occupant looks. "
   "Every chair in this art turns out to have its back up-screen, so every sitter "

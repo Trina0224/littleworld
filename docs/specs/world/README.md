@@ -108,29 +108,37 @@ painted maps — seats in `#00FFFF`, the counter in `#0000FF`.
 Each seat carries a `seat` point, a `seatSurface` (the painted seat top: its
 centre and box), a `facingDeg`, and a `backrestTopY`.
 
-### Facing is measured, from the chair back's foot
+### Facing comes from what the seat is drawn up to
 
-A sitter looks in the direction from the back of their chair toward the seat of
-it. Two details in that sentence are the whole thing:
+A table chair faces its table. A counter stool faces the counter. The park bench
+faces the open ground. That is the whole rule, and it is the owner's, stated
+outright rather than inferred.
 
-**From the back's bottom edge, not its centroid.** A chair back is an upright
-panel, so its pixels run far up the screen from wherever it stands, and its
-centroid always lands above its seat. Measuring centroid to centroid therefore
-reported that every chair in the scene faces the camera — which put the kimono
-man and the grandfather with their backs to their own table, and turned the two
-boys round on the park bench. The bottom edge is where the back meets the seat,
-and that is the side the occupant's spine is on.
+Two attempts at reading facing off the painted chair backs both failed, and the
+second failure is the instructive one. A back is an upright panel, so its pixels
+run far up the screen from wherever it stands and its centroid always lands above
+its seat — which reported that every chair in the scene faces the camera, put the
+kimono man and the grandfather with their backs to their own table, and turned the
+two boys round on the bench. Moving to the back's bottom edge fixed the sign, and
+the seven table chairs then agreed with their table to within 22 degrees. Close,
+and still wrong: a hand-painted patch a few pixels across cannot pin an angle, and
+the residual spread was enough to be visible.
 
-**Over the seat's own columns.** The bench has one painted back spanning all
-three slots, so its full bottom edge points along the bench rather than across
-it. Restricting to a slot's columns asks the right question.
+**A table is a far better instrument than a brush stroke** — every seat around it
+agrees on where it is. So:
 
-The check is the thing nobody has to paint: the seven chairs around the two
-tables must face their table. All seven agree within 22 degrees, and all seven
-agree on front view versus back — `table-near-1` and `-4` and `table-far-3` are
-the near-side chairs and show their occupants' backs, the rest show faces. The
-bench comes out at 235-270 degrees, facing the open sand, which is what the
-owner says a park bench does.
+| Group | Faces |
+|---|---|
+| `table-near` | the near table, found as an enclosed hole in `walkable.png` at (210.7, 232.6) |
+| `table-far` | the centroid of its own three seats; the walkable map has no hole close enough to be that table |
+| `counter-stool` | across the row the stools stand in, up-screen into the counter |
+| `bench` | across its length, toward whichever side has open walkable ground |
+
+The painted backs are still used, for `backrestTopY` and for nothing else.
+
+The owner counts **four** counter stools. Only three have a painted seat top, so
+only three can be sat on; the fourth, furthest into the shop, has a painted back
+and no seat.
 
 The bench is 93 world units long, so it is split into three slots rather than
 treated as one seat. Two agents sharing a bench is exactly the emergent scene
