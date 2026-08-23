@@ -20,7 +20,9 @@
     229.3,
     172.6
    ],
-   "seatSurfaceY": 178.1
+   "seatSurfaceY": 178.1,
+   "backHeightMetres": 0.45,
+   "backTopY": 184.5
   },
   {
    "id": "counter-stool-2",
@@ -42,7 +44,9 @@
     208.9,
     177.5
    ],
-   "seatSurfaceY": 183.3
+   "seatSurfaceY": 183.3,
+   "backHeightMetres": 0.45,
+   "backTopY": 190.0
   },
   {
    "id": "counter-stool-3",
@@ -64,7 +68,9 @@
     181.5,
     183.2
    ],
-   "seatSurfaceY": 189.3
+   "seatSurfaceY": 189.3,
+   "backHeightMetres": 0.45,
+   "backTopY": 196.3
   },
   {
    "id": "table-near-1",
@@ -86,7 +92,9 @@
     182.1,
     233.7
    ],
-   "seatSurfaceY": 237.4
+   "seatSurfaceY": 237.4,
+   "backHeightMetres": 0.85,
+   "backTopY": 221.5
   },
   {
    "id": "table-near-2",
@@ -108,7 +116,9 @@
     186.3,
     218.0
    ],
-   "seatSurfaceY": 216.4
+   "seatSurfaceY": 216.4,
+   "backHeightMetres": 0.85,
+   "backTopY": 202.5
   },
   {
    "id": "table-near-3",
@@ -130,7 +140,9 @@
     221.0,
     216.6
    ],
-   "seatSurfaceY": 212.7
+   "seatSurfaceY": 212.7,
+   "backHeightMetres": 0.85,
+   "backTopY": 199.2
   },
   {
    "id": "table-near-4",
@@ -152,7 +164,9 @@
     231.2,
     224.4
    ],
-   "seatSurfaceY": 225.5
+   "seatSurfaceY": 225.5,
+   "backHeightMetres": 0.85,
+   "backTopY": 210.8
   },
   {
    "id": "table-far-1",
@@ -174,7 +188,9 @@
     308.1,
     170.0
    ],
-   "seatSurfaceY": 169.7
+   "seatSurfaceY": 169.7,
+   "backHeightMetres": 0.85,
+   "backTopY": 160.2
   },
   {
    "id": "table-far-2",
@@ -196,7 +212,9 @@
     340.4,
     170.4
    ],
-   "seatSurfaceY": 167.9
+   "seatSurfaceY": 167.9,
+   "backHeightMetres": 0.85,
+   "backTopY": 158.6
   },
   {
    "id": "table-far-3",
@@ -218,7 +236,9 @@
     355.1,
     174.5
    ],
-   "seatSurfaceY": 176.1
+   "seatSurfaceY": 176.1,
+   "backHeightMetres": 0.85,
+   "backTopY": 166.0
   },
   {
    "id": "bench-slot-1",
@@ -240,7 +260,9 @@
     526.9,
     235.9
    ],
-   "seatSurfaceY": 243.8
+   "seatSurfaceY": 243.8,
+   "backHeightMetres": 0.85,
+   "backTopY": 227.3
   },
   {
    "id": "bench-slot-2",
@@ -262,7 +284,9 @@
     499.0,
     245.5
    ],
-   "seatSurfaceY": 253.9
+   "seatSurfaceY": 253.9,
+   "backHeightMetres": 0.85,
+   "backTopY": 236.4
   },
   {
    "id": "bench-slot-3",
@@ -284,7 +308,9 @@
     470.9,
     253.3
    ],
-   "seatSurfaceY": 262.1
+   "seatSurfaceY": 262.1,
+   "backHeightMetres": 0.85,
+   "backTopY": 243.9
   }
  ],
  "stations": [
@@ -308,5 +334,6 @@
    "anchorNote": "the keeper stands on the shop floor behind the counter, not at the far edge of the painted region; the earlier y=160 sat almost on the horizon and rendered her far too small"
   }
  ],
- "seatAnchorNote": "seat is the painted cyan centroid and frontLegY is where that chair's front legs meet the floor, per column, so the diagonal bench gives each slot its own. seatSurfaceY is one seat height above that. frontEdge is the lip of the seat on the side the occupant faces, and it is where a seated sprite's knee belongs.\n\nWhich side that is depends on the facing. A chair whose occupant faces the camera has its lip on the near side; one whose occupant faces away — the bench, the counter stools, table-near-1 — has it on the far side, with the backrest between the sitter and the camera. Assuming the near side for all of them put the bench pair on the wrong side of their own backrest."
+ "seatAnchorNote": "seat is the painted cyan centroid and frontLegY is where that chair's front legs meet the floor, per column, so the diagonal bench gives each slot its own. seatSurfaceY is one seat height above that. frontEdge is the lip of the seat on the side the occupant faces, and it is where a seated sprite's knee belongs.\n\nWhich side that is depends on the facing. A chair whose occupant faces the camera has its lip on the near side; one whose occupant faces away — the bench, the counter stools, table-near-1 — has it on the far side, with the backrest between the sitter and the camera. Assuming the near side for all of them put the bench pair on the wrong side of their own backrest.",
+ "backNote": "backTopY is the top of the chair back, one back height above where its legs meet the floor. When the occupant faces away from the camera the back sits between them and us, and everything below that line should be hidden — the drawing puts their legs below the knee because that is how a back view is drawn, but in the world those legs run away from us, not down. Without it a sitter appears to stand on the seat. This is a stand-in until chair backs are painted into occluder.png, which depth sorting now makes safe."
 }

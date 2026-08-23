@@ -7,6 +7,7 @@ are RGBA and already carry a clean matte; the black vignette is only what they
 look like flattened onto black, so no cut-out algorithm is needed or wanted.
 """
 import json
+import math
 
 import numpy as np
 from PIL import Image, ImageFilter
@@ -120,25 +121,31 @@ SA = PM['seatedAnchoring']
 HIP = SA['hipFraction']
 KNEE = SA['kneeFraction']
 SITH = SA['sittingHeightMetres']
+SEAT_DEPTH = 0.45          # chair seat front-to-back, metres
 
 def seated_box(cid, sprite_ratio, seat):
-    """Size and placement for a seated sprite: knee on the seat's front lip.
+    """Size and placement for a seated sprite, anchored by the head.
 
-    Scale still comes from sitting height, hip to head, which is stable across
-    poses. Placement comes from the knee, because that is the contact the eye
-    reads as sitting in a chair — feet and hip both land differently on every
-    character, since each pose is drawn on its own implied seat.
+    The head is the one landmark every sheet agrees on: it is the top of the
+    sprite whichever way the character faces, and its world height is fixed —
+    seat height plus sitting height above the floor. Knee fractions were
+    measured on the front views and do not transfer to the back views, where
+    the knee is not even visible, which is what threw the away-facing sitters.
     """
-    fx, fy = seat['frontEdge']
     scale = K * (seat['frontLegY'] - H0)
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
-    sit_m = SITH[kind] * metres(cid) / (0.55 if kind == 'dog' else (1.35 if kind == 'child' else 1.65))
+    ref = 0.55 if kind == 'dog' else (1.35 if kind == 'child' else 1.65)
+    sit_m = SITH[kind] * metres(cid) / ref
     h = sit_m * scale / (1.0 - HIP.get(cid, 0.45))
     w = h * sprite_ratio
-    kx, ky = KNEE.get(cid, [0.5, 0.41])
-    left = fx - kx * w
-    bottom = fy + ky * h
-    return h, w, left, bottom
+    # The feet rest on the floor a seat depth from the chair's legs, in the
+    # direction the sitter faces: toward us for a chair facing the camera, away
+    # from us for the bench and the counter stools. Anchoring the sprite's
+    # bottom there is what stops a sitter standing on their own seat.
+    d = math.radians(seat['facingDeg'])
+    bottom = seat['frontLegY'] + math.sin(d) * SEAT_DEPTH * scale
+    left = seat['seat'][0] + math.cos(d) * SEAT_DEPTH * scale * 0.5 - w / 2
+    return h, w, left, bottom, None
 
 place = []
 for s in A['seats']:
@@ -236,22 +243,27 @@ drawn = []
 for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontLegY'] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
-        h, w, left, bottom = seated_box(cid, sp.width / sp.height, at)
+        h, w, left, bottom, clip = seated_box(cid, sp.width / sp.height, at)
         # facing away puts the chair back in front of the sitter, facing the
         # camera puts the sitter in front of it
         depth = at['frontLegY'] - 1 if 180 <= at['facingDeg'] % 360 < 360 else at['frontLegY'] + 1
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
-        left = at[0] - w/2; bottom = at[1]; depth = at[1]
-    drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, sp))
+        left = at[0] - w/2; bottom = at[1]; depth = at[1]; clip = None
+    drawn.append((depth, cid, pose, at, deg, h, w, left, bottom, clip, sp))
 
 last = -1
-for depth, cid, pose, at, deg, h, w, left, bottom, sp in drawn:
+for depth, cid, pose, at, deg, h, w, left, bottom, clip, sp in drawn:
     draw_occluders(last, depth)                      # scenery nearer than the last sprite
     last = depth
     wp = max(2, round(w * S)); hp = max(2, round(h * S))
-    canvas.alpha_composite(sp.resize((wp, hp), Image.LANCZOS),
-                           (round(left*S), round(bottom*S - hp)))
+    img = sp.resize((wp, hp), Image.LANCZOS)
+    top = round(bottom*S - hp)
+    if clip is not None:
+        keep = max(0, min(hp, round(clip*S) - top))
+        if keep < hp:
+            img = img.crop((0, 0, wp, keep))
+    canvas.alpha_composite(img, (round(left*S), top))
     print(f'  {cid:14s} {pose:5s} {deg:5.1f}°  高 {h:5.1f}u  左 {left:5.1f}  底 {bottom:5.1f}')
 draw_occluders(last, HH)
 canvas.convert('RGB').save('populated.png')
