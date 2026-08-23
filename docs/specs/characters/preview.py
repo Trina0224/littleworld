@@ -242,42 +242,19 @@ def occluder_baselines():
     walking in front of it, and which of those is true depends on where they are.
     So each vertical run of occluder pixels carries the y where that run meets
     the floor, and a character is behind it exactly when its own ground y is
-    smaller.
+    smaller. Chair backs and tabletops need no special case: feed them in and
+    the rule places them.
 
-    Furniture comes free: an enclosed hole in the walkable map is an object
-    standing on the floor, which is how both cafe tables get their depth without
-    anyone painting them.
+    The furniture is painted, not derived. Enclosed holes in the walkable map
+    were tried first and cannot work — a walkable map describes the floor, and a
+    tabletop is 0.7 m above it, so the drawn top sits well up-screen of anything
+    a floor map can express. The near table's hole runs y=215-251 against a drawn
+    top of y=209-228, which put a ragged edge across the middle of the top and
+    cut whoever sat behind it in half.
     """
-    occ = load_mask('occluder.png', full=True) | load_mask('seatbacks.png', full=True)
-    walk = load_mask('walkable.png')
-
-
-    seen = np.zeros(walk.shape, bool)
-    holes = np.zeros(walk.shape, bool)
-    for sy, sx in zip(*np.nonzero(~walk)):
-        if seen[sy, sx]:
-            continue
-        stack = [(sy, sx)]; seen[sy, sx] = True; cells = []; touches_edge = False
-        while stack:
-            y, x = stack.pop(); cells.append((y, x))
-            if y in (0, HH-1) or x in (0, W-1):
-                touches_edge = True
-            for dy, dx in ((1,0),(-1,0),(0,1),(0,-1)):
-                ny, nx = y+dy, x+dx
-                if 0 <= ny < HH and 0 <= nx < W and not walk[ny, nx] and not seen[ny, nx]:
-                    seen[ny, nx] = True; stack.append((ny, nx))
-        if not touches_edge:
-            for y, x in cells:
-                holes[y, x] = True
-
-    # Baselines are computed at the masks' own resolution so the bands stay
-    # clean. The holes are found at world resolution because the flood is cheap
-    # there, then snapped back onto the full-resolution walkable boundary so
-    # their edges are not blocky.
-    grown = Image.fromarray((holes*255).astype(np.uint8)).resize((FW, FH), Image.NEAREST)
-    grown = grown.filter(ImageFilter.MaxFilter(9))
-    holes_full = (np.asarray(grown) > 127) & ~load_mask('walkable.png', full=True)
-    mask = occ | holes_full
+    mask = (load_mask('occluder.png', full=True)
+            | load_mask('seatbacks.png', full=True)
+            | load_mask('tables.png', full=True))
     base = np.zeros(mask.shape, np.int16)
     for x in range(FW):
         col = mask[:, x]; y = 0
@@ -290,7 +267,6 @@ def occluder_baselines():
                 y = end + 1
             else:
                 y += 1
-
     return mask, base
 
 
