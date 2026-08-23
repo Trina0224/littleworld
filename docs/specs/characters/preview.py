@@ -83,13 +83,10 @@ def views(cid, pose):
         _cache[key] = split_views(f'{R}/{cid}/{stem}-{pose}.png', 2)
     return tuple(_cache[key])
 
-def trim(im):
-    return im
-
 def sprite(cid, pose, deg):
     f, b = views(cid, pose)
     d = deg % 360
-    im = trim(f if d < 180 else b)
+    im = f if d < 180 else b
     return im.transpose(Image.FLIP_LEFT_RIGHT) if 90 <= d < 270 else im
 
 CHILD = {'boy-01', 'girl-01', 'brother-01', 'brother-02'}
@@ -99,12 +96,9 @@ STATURE = {'dog-01': 0.55, 'brother-01': 1.40, 'brother-02': 1.25}
 def metres(cid):
     return STATURE.get(cid, 1.35 if cid in CHILD else 1.65)
 
-# Measuring this off the art does not work: the stand and sit sheets are each
-# framed to fill their canvas, so their pixel heights carry no shared scale.
-# Seated height is anatomical instead — about 1.25 m for a 1.65 m adult.
-SIT_RATIO = 0.75
-def sit_ratio(cid):
-    return 1.0 if cid == 'dog-01' else SIT_RATIO
+# Seated size cannot be measured off the art: the stand and sit sheets are each
+# framed to fill their canvas, so their pixel heights carry no shared scale. It
+# comes from sitting height instead, hip to head, in pose-matrix.json.
 
 # Anchors near the horizon render very small — a seated child at table-far is
 # only about 20 world units — so the characters whose detail matters most sit
@@ -120,48 +114,40 @@ PM = json.load(open('/home/user/littleworld/docs/specs/characters/pose-matrix.js
 SA = PM['seatedAnchoring']
 HIP = SA['hipFraction']
 HIP_BACK = SA['hipFractionBack']
-SEAT_H = SA['seatHeightMetres']
-KNEE = SA['kneeFraction']
+COVER = SA['seatCoverage']
 SITH = SA['sittingHeightMetres']
 
 
-def ground_under(lip_y, seat_h):
-    """The floor below a seat lip. The lip is seat_h above it, so it sits higher
-    up the screen where the ramp reads smaller; scaling off the lip made every
-    seated character about 15% too small."""
-    return (lip_y - seat_h * K * H0) / (1.0 - seat_h * K)
-
-
 def seated_box(cid, sprite_ratio, seat, facing):
-    """Size and placement for a seated sprite, anchored by the head.
+    """Size and placement for a seated sprite.
 
-    The knee is the contact that reads as sitting in a chair, and the seat
-    lips it lands on are measured rather than derived. Scale comes from
-    sitting height, hip to head, which holds across poses in a way overall
-    sprite height does not.
+    Where: the hip goes on the painted seat top. The owner painted those, so
+    the chair's height and its floor line stop being guessed at.
 
+    How big: from the ramp and sitting height, hip to head, which is the one
+    body measure that survives the difference between the stand and sit sheets.
+    Sizing off the painted seat's width instead does not work, and it is worth
+    saying why: that quad is the seat lying on the ground plane, so the
+    projection stretches it to about 1.8x its real width, while a sitter's
+    shoulders stand upright and get no such stretch. Asking a body to be as
+    wide as its seat looks made a 1.65 m man 2.4 m tall. He covers the middle
+    of the seat and the front edge stays visible, which is what sitting on a
+    chair looks like from here.
     """
-    fx, fy = seat['frontEdge']
-    scale = K * (ground_under(fy, SEAT_H[seat['group']]) - H0)
+    surf = seat['seatSurface']
+    cx, cy = surf['centre']
     back = 180 <= facing % 360 < 360
     hip = (HIP_BACK if back else HIP).get(cid, 0.30 if back else 0.45)
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
-    ref = 0.55 if kind == 'dog' else (1.35 if kind == 'child' else 1.65)
-    sit_m = SITH[kind] * metres(cid) / ref
-    h = sit_m * scale / (1.0 - hip)
+    # the brothers are not the same size, and sitting must not hide that
+    sit_m = SITH[kind] * (metres(cid) / (1.35 if kind == 'child' else 1.65)
+                          if kind != 'dog' else 1.0)
+    h = sit_m * K * (cy - H0) / (1.0 - hip) * COVER.get(cid, COVER['default'])
     w = h * sprite_ratio
-    # Height comes from the hip: the drawn lip is the seat surface, so the hip
-    # sits on it. The feet are left wherever the drawing puts them — this
-    # projection cannot honour both, since rising onto the seat and stepping
-    # back off the chair land on nearly the same screen row.
-    #
-    # The lip is not derived any more. The owner drew all eleven straight onto
-    # the scene, which settled three things that kept coming out wrong: the
-    # chair's floor line, its seat height, and which side the occupant faces.
-    kx, _ = KNEE.get(cid, [0.5, 0.41])
-    left = fx - kx * w
-    bottom = fy + hip * h
+    left = cx - w / 2
+    bottom = cy + hip * h
     return h, w, left, bottom, None
+
 
 place = []
 for s in A['seats']:
@@ -195,7 +181,7 @@ def occluder_baselines():
     standing on the floor, which is how both cafe tables get their depth without
     anyone painting them.
     """
-    occ = load_mask('occluder.png', full=True) | load_mask('seatbacks.png', full=True)
+    occ = load_mask('occluder.png', full=True)
     walk = load_mask('walkable.png')
 
 
@@ -237,6 +223,22 @@ def occluder_baselines():
                 y = end + 1
             else:
                 y += 1
+
+    # Chair backs are the one thing the run rule gets wrong. A back is painted
+    # down to the seat, not to the floor, so its lowest pixel reads as a depth
+    # in front of its own occupant and the chair swallows whoever sits in it.
+    # Every back in this art stands up-screen of its seat, so the honest depth
+    # is the back's own top row: the occupant is nearer than that and draws over
+    # it, anyone further away is behind it and gets covered.
+    backs = load_mask('seatbacks.png', full=True)
+    for s in A['seats']:
+        if 'backrestTopY' not in s:
+            continue
+        cx, cy = s['seatSurface']['centre']
+        near = backs & (np.abs(np.arange(FW)[None, :] - cx*4) < 60) \
+                     & (np.abs(np.arange(FH)[:, None] - cy*4) < 60)
+        mask |= near
+        base[near] = s['backrestTopY'] * 4
     return mask, base
 
 
@@ -256,13 +258,13 @@ def draw_occluders(lo, hi):
 
 
 drawn = []
-for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontEdge'][1] if p[1]=='sit' else p[2][1])):
+for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['centre'][1] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
         h, w, left, bottom, clip = seated_box(cid, sp.width / sp.height, at, deg)
         # facing away puts the chair back in front of the sitter, facing the
         # camera puts the sitter in front of it
-        depth = at['frontEdge'][1]
+        depth = at['seatSurface']['centre'][1]
     else:
         h = K * (at[1] - H0) * metres(cid); w = h * sp.width / sp.height
         left = at[0] - w/2; bottom = at[1]; depth = at[1]; clip = None

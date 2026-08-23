@@ -83,8 +83,8 @@
     "note": "Below about 24 world units a figure loses its distinguishing detail: a seated child at table-far is 20 units, roughly 13 x 20 px, and a backpack becomes four blue pixels. Anchors near the horizon are small — cafe-counter 18.5, table-far 20 to 22, counter stools 22 to 25 for a child — while table-near gives 29 to 35 and the bench 36 to 40. Put the characters whose detail matters near the camera."
   },
   "seatedAnchoring": {
-    "method": "hip height, knee across",
-    "note": "The seat lips in anchors.json are drawn by the owner onto the scene, and they mark the seat surface. A seated sprite sits at that height by its hip, and lines up across it by its knee. The feet land wherever the drawing puts them and are not corrected: in this projection, rising 0.42 m onto the seat and stepping 0.45 m back off the chair reach nearly the same screen row, so a drawing that separates hip from feet by four tenths of a body cannot satisfy both.",
+    "method": "hip on the painted seat top; size from the ramp and sitting height",
+    "note": "The seat tops in anchors.json are painted by the owner onto the scene, so a chair's height and its floor line are read rather than guessed. A seated sprite puts its hip on that surface. Size does NOT come from the seat's painted width: that quad lies on the ground plane and the projection stretches it to roughly 1.8x the chair's real width, while a sitter's shoulders stand upright and get no such stretch, so matching a body to its seat's width made a 1.65 m man read 2.4 m tall. A sitter covers the middle of the seat and leaves its front edge showing, which is what a chair looks like from this angle. The feet land wherever the drawing puts them and are not corrected: rising 0.42 m onto the seat and stepping 0.45 m back off the chair reach nearly the same screen row here.",
     "sittingHeightMetres": {
       "adult": 0.85,
       "child": 0.7,
@@ -172,12 +172,15 @@
       "brother-02": 0.24,
       "dog-01": 0.25
     },
-    "scaleNote": "Scale is taken at the floor under the chair, not at the seat lip. The lip is a seat height above the floor and therefore higher up the screen, where the ramp gives a smaller number, which was making every seated character about 15% too small. The floor is solved back from the lip.",
     "seatHeightMetres": {
       "counter-stool": 0.7,
       "table-near": 0.43,
       "table-far": 0.43,
       "bench": 0.43
+    },
+    "seatCoverage": {
+      "_note": "multiplier on the ramp-derived seated height, per character; 1.0 is the anatomical size",
+      "default": 1.0
     }
   }
 }

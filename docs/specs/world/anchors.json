@@ -1,221 +1,326 @@
 {
- "seats": [
-  {
-   "id": "counter-stool-1",
-   "group": "counter-stool",
-   "sourceComponent": 3,
-   "seat": [
-    230.4,
-    181.3
-   ],
-   "facingDeg": 258.2,
-   "facing": "N",
-   "frontEdge": [
-    227.5,
-    177.8
-   ]
-  },
-  {
-   "id": "counter-stool-2",
-   "group": "counter-stool",
-   "sourceComponent": 5,
-   "seat": [
-    210.1,
-    187.9
-   ],
-   "facingDeg": 258.2,
-   "facing": "N",
-   "frontEdge": [
-    207.5,
-    184.1
-   ]
-  },
-  {
-   "id": "counter-stool-3",
-   "group": "counter-stool",
-   "sourceComponent": 11,
-   "seat": [
-    182.8,
-    195.9
-   ],
-   "facingDeg": 258.2,
-   "facing": "N",
-   "frontEdge": [
-    185.9,
-    191.0
-   ]
-  },
-  {
-   "id": "table-near-1",
-   "group": "table-near",
-   "sourceComponent": 9,
-   "seat": [
-    174.9,
-    241.7
-   ],
-   "facingDeg": 332.7,
-   "facing": "NE",
-   "frontEdge": [
-    187.6,
-    240.8
-   ]
-  },
-  {
-   "id": "table-near-2",
-   "group": "table-near",
-   "sourceComponent": 12,
-   "seat": [
-    179.3,
-    220.5
-   ],
-   "facingDeg": 12.7,
-   "facing": "E",
-   "frontEdge": [
-    191.2,
-    227.1
-   ]
-  },
-  {
-   "id": "table-near-3",
-   "group": "table-near",
-   "sourceComponent": 7,
-   "seat": [
-    226.8,
-    211.7
-   ],
-   "facingDeg": 146.3,
-   "facing": "SW",
-   "frontEdge": [
-    216.9,
-    222.3
-   ]
-  },
-  {
-   "id": "table-near-4",
-   "group": "table-near",
-   "sourceComponent": 8,
-   "seat": [
-    238.7,
-    231.2
-   ],
-   "facingDeg": 188.3,
-   "facing": "W",
-   "frontEdge": [
-    229.2,
-    232.9
-   ]
-  },
-  {
-   "id": "table-far-1",
-   "group": "table-far",
-   "sourceComponent": 2,
-   "seat": [
-    303.3,
-    168.8
-   ],
-   "facingDeg": 4.1,
-   "facing": "E",
-   "frontEdge": [
-    311.6,
-    178.6
-   ]
-  },
-  {
-   "id": "table-far-2",
-   "group": "table-far",
-   "sourceComponent": 1,
-   "seat": [
-    344.4,
-    165.8
-   ],
-   "facingDeg": 147.9,
-   "facing": "SW",
-   "frontEdge": [
-    337.7,
-    174.6
-   ]
-  },
-  {
-   "id": "table-far-3",
-   "group": "table-far",
-   "sourceComponent": 4,
-   "seat": [
-    360.0,
-    178.7
-   ],
-   "facingDeg": 197.5,
-   "facing": "W",
-   "frontEdge": [
-    348.6,
-    181.5
-   ]
-  },
-  {
-   "id": "bench-slot-1",
-   "group": "bench",
-   "sourceComponent": 10,
-   "seat": [
-    529.9,
-    248.4
-   ],
-   "facingDeg": 249.5,
-   "facing": "N",
-   "frontEdge": [
-    529.9,
-    242.9
-   ]
-  },
-  {
-   "id": "bench-slot-2",
-   "group": "bench",
-   "sourceComponent": 10,
-   "seat": [
-    502.1,
-    258.8
-   ],
-   "facingDeg": 249.5,
-   "facing": "N",
-   "frontEdge": [
-    502.1,
-    252.6
-   ]
-  },
-  {
-   "id": "bench-slot-3",
-   "group": "bench",
-   "sourceComponent": 10,
-   "seat": [
-    474.2,
-    269.2
-   ],
-   "facingDeg": 249.5,
-   "facing": "N",
-   "frontEdge": [
-    474.2,
-    262.4
-   ]
-  }
- ],
- "stations": [
-  {
-   "id": "cafe-counter",
-   "type": "work",
-   "region": [
-    106,
-    154,
-    248,
-    224
-   ],
-   "anchor": [
-    176.5,
-    178.0
-   ],
-   "facingDeg": 78.2,
-   "walkable": false,
-   "occluderPending": true,
-   "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter.",
-   "anchorNote": "the keeper stands on the shop floor behind the counter, not at the far edge of the painted region; the earlier y=160 sat almost on the horizon and rendered her far too small"
-  }
- ],
- "seatAnchorNote": "frontEdge is the front lip of the seat surface, drawn directly on the scene by the owner and read back off the image. A seated sprite is placed so its knee covers that point.\n\nEverything that used to derive this is gone. Deriving it needed the chair's floor line, its seat height and which side the occupant faced, and each of those was wrong in turn: the painted blobs stop short of the chair legs, seat heights differ between stools and chairs, and the lip moves to the far side when the sitter faces away. Eleven drawn lines settled all of it."
+  "seats": [
+    {
+      "id": "counter-stool-1",
+      "group": "counter-stool",
+      "sourceComponent": 3,
+      "seat": [
+        230.4,
+        181.3
+      ],
+      "facingDeg": 113.9,
+      "frontEdge": [
+        227.5,
+        177.8
+      ],
+      "seatSurface": {
+        "centre": [
+          230.1,
+          178.7
+        ],
+        "w": 14,
+        "h": 6
+      },
+      "backrestTopY": 168
+    },
+    {
+      "id": "counter-stool-2",
+      "group": "counter-stool",
+      "sourceComponent": 5,
+      "seat": [
+        210.1,
+        187.9
+      ],
+      "facingDeg": 119.7,
+      "frontEdge": [
+        207.5,
+        184.1
+      ],
+      "seatSurface": {
+        "centre": [
+          209.7,
+          185.5
+        ],
+        "w": 14,
+        "h": 6
+      },
+      "backrestTopY": 174
+    },
+    {
+      "id": "counter-stool-3",
+      "group": "counter-stool",
+      "sourceComponent": 11,
+      "seat": [
+        182.8,
+        195.9
+      ],
+      "facingDeg": 118.7,
+      "frontEdge": [
+        185.9,
+        191.0
+      ],
+      "seatSurface": {
+        "centre": [
+          189.2,
+          192.2
+        ],
+        "w": 15,
+        "h": 6
+      },
+      "backrestTopY": 181
+    },
+    {
+      "id": "table-near-1",
+      "group": "table-near",
+      "sourceComponent": 9,
+      "seat": [
+        174.9,
+        241.7
+      ],
+      "facingDeg": 27.8,
+      "frontEdge": [
+        187.6,
+        240.8
+      ],
+      "seatSurface": {
+        "centre": [
+          179.4,
+          244.8
+        ],
+        "w": 28,
+        "h": 14
+      },
+      "backrestTopY": 228
+    },
+    {
+      "id": "table-near-2",
+      "group": "table-near",
+      "sourceComponent": 12,
+      "seat": [
+        179.3,
+        220.5
+      ],
+      "facingDeg": 52.0,
+      "frontEdge": [
+        191.2,
+        227.1
+      ],
+      "seatSurface": {
+        "centre": [
+          184.9,
+          225.4
+        ],
+        "w": 24,
+        "h": 12
+      },
+      "backrestTopY": 204
+    },
+    {
+      "id": "table-near-3",
+      "group": "table-near",
+      "sourceComponent": 7,
+      "seat": [
+        226.8,
+        211.7
+      ],
+      "facingDeg": 125.5,
+      "frontEdge": [
+        216.9,
+        222.3
+      ],
+      "seatSurface": {
+        "centre": [
+          222.2,
+          218.0
+        ],
+        "w": 26,
+        "h": 16
+      },
+      "backrestTopY": 198
+    },
+    {
+      "id": "table-near-4",
+      "group": "table-near",
+      "sourceComponent": 8,
+      "seat": [
+        238.7,
+        231.2
+      ],
+      "facingDeg": 148.7,
+      "frontEdge": [
+        229.2,
+        232.9
+      ],
+      "seatSurface": {
+        "centre": [
+          236.6,
+          234.2
+        ],
+        "w": 29,
+        "h": 14
+      },
+      "backrestTopY": 218
+    },
+    {
+      "id": "table-far-1",
+      "group": "table-far",
+      "sourceComponent": 2,
+      "seat": [
+        303.3,
+        168.8
+      ],
+      "facingDeg": 51.8,
+      "frontEdge": [
+        311.6,
+        178.6
+      ],
+      "seatSurface": {
+        "centre": [
+          308.4,
+          175.6
+        ],
+        "w": 20,
+        "h": 10
+      },
+      "backrestTopY": 158
+    },
+    {
+      "id": "table-far-2",
+      "group": "table-far",
+      "sourceComponent": 1,
+      "seat": [
+        344.4,
+        165.8
+      ],
+      "facingDeg": 124.8,
+      "frontEdge": [
+        337.7,
+        174.6
+      ],
+      "seatSurface": {
+        "centre": [
+          340.4,
+          171.4
+        ],
+        "w": 18,
+        "h": 10
+      },
+      "backrestTopY": 155
+    },
+    {
+      "id": "table-far-3",
+      "group": "table-far",
+      "sourceComponent": 4,
+      "seat": [
+        360.0,
+        178.7
+      ],
+      "facingDeg": 149.3,
+      "frontEdge": [
+        348.6,
+        181.5
+      ],
+      "seatSurface": {
+        "centre": [
+          353.6,
+          182.9
+        ],
+        "w": 21,
+        "h": 10
+      },
+      "backrestTopY": 168
+    },
+    {
+      "id": "bench-slot-1",
+      "group": "bench",
+      "sourceComponent": 10,
+      "seat": [
+        529.9,
+        248.4
+      ],
+      "facingDeg": 158.7,
+      "frontEdge": [
+        529.9,
+        242.9
+      ],
+      "seatSurface": {
+        "centre": [
+          515.4,
+          258.8
+        ],
+        "w": 26,
+        "h": 21
+      },
+      "backrestTopY": 233
+    },
+    {
+      "id": "bench-slot-2",
+      "group": "bench",
+      "sourceComponent": 10,
+      "seat": [
+        502.1,
+        258.8
+      ],
+      "facingDeg": 158.7,
+      "frontEdge": [
+        502.1,
+        252.6
+      ],
+      "seatSurface": {
+        "centre": [
+          492.5,
+          266.0
+        ],
+        "w": 26,
+        "h": 29
+      },
+      "backrestTopY": 233
+    },
+    {
+      "id": "bench-slot-3",
+      "group": "bench",
+      "sourceComponent": 10,
+      "seat": [
+        474.2,
+        269.2
+      ],
+      "facingDeg": 158.7,
+      "frontEdge": [
+        474.2,
+        262.4
+      ],
+      "seatSurface": {
+        "centre": [
+          470.3,
+          271.4
+        ],
+        "w": 26,
+        "h": 21
+      },
+      "backrestTopY": 233
+    }
+  ],
+  "stations": [
+    {
+      "id": "cafe-counter",
+      "type": "work",
+      "region": [
+        106,
+        154,
+        248,
+        224
+      ],
+      "anchor": [
+        176.5,
+        178.0
+      ],
+      "facingDeg": 78.2,
+      "walkable": false,
+      "occluderPending": true,
+      "note": "Not walkable on purpose: agents must not path through the shop. The keeper is placed here directly. The counter front is not in occluder.png, and the owner has deferred it: how much of a body the counter hides depends on whether that body is standing or seated, and on where it stands, so a single painted mask may not be the right answer. Revisit once sprites are actually being placed here. Until then the keeper renders full height in front of the counter.",
+      "anchorNote": "the keeper stands on the shop floor behind the counter, not at the far edge of the painted region; the earlier y=160 sat almost on the horizon and rendered her far too small"
+    }
+  ],
+  "seatAnchorNote": "frontEdge is the front lip of the seat surface, drawn directly on the scene by the owner and read back off the image. A seated sprite is placed so its knee covers that point.\n\nEverything that used to derive this is gone. Deriving it needed the chair's floor line, its seat height and which side the occupant faced, and each of those was wrong in turn: the painted blobs stop short of the chair legs, seat heights differ between stools and chairs, and the lip moves to the far side when the sitter faces away. Eleven drawn lines settled all of it.",
+  "facingNote": "facingDeg is measured, not chosen: it is the direction from the painted chair back to the painted seat top, which is where the occupant looks. Every chair in this art turns out to have its back up-screen, so every sitter is a front view. backrestTopY is the top row of that painted back; the renderer gives the back that depth so a chair never covers its own occupant."
 }

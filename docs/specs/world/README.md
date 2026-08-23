@@ -105,19 +105,25 @@ hedge in front of the right fence, and the bush by the vending machine.
 `anchors.json` holds thirteen seats and one work station, derived from two more
 painted maps — seats in `#00FFFF`, the counter in `#0000FF`.
 
-| Group | Count | Facing derived from |
-|---|---|---|
-| `counter-stool` | 3 | the normal of the counter region's principal axis |
-| `table-near` | 4 | the shared centroid of the group, which is the table |
-| `table-far` | 3 | the same |
-| `bench` | 3 slots | the normal of the bench's long axis, toward whichever side has more walkable ground |
+Each seat carries a `seat` point, a `seatSurface` (the painted seat top: its
+centre and box), a `facingDeg`, and a `backrestTopY`.
 
-Each seat carries a `seat` point, a `foot` point three and a half units in front
-of it, and a facing in both degrees and compass form.
+### Facing is measured now, not inferred
 
-Facing the group centroid works for chairs around a table but gave poor results
-for the counter stools, pointing them along the counter rather than into it. The
-principal-axis normal fixes that and puts all three at 258.2 degrees.
+The first pass guessed facings from geometry — the normal of the counter's
+principal axis, the centroid of a table group — and every guess was wrong
+somewhere. The owner then painted the chair backs (`seatbacks.png`) and the seat
+tops (`seatsurfaces.png`), which turns facing into a measurement: **a sitter
+looks in the direction from the back of their chair toward the seat of it.**
+
+That measurement says something the guesses never did. Every chair in this
+painting has its back up-screen of its seat, so **every sitter in the scene is a
+front view.** The back-view halves of the sheets go unused here; they are still
+needed for standing and for any chair added later that turns the other way.
+
+The bench has one painted back spanning all three slots, so the three share a
+facing taken from the whole bench, and the one painted seat top is cut in three
+along its length.
 
 The bench is 93 world units long, so it is split into three slots rather than
 treated as one seat. Two agents sharing a bench is exactly the emergent scene
@@ -126,6 +132,16 @@ treated as one seat. Two agents sharing a bench is exactly the emergent scene
 One painted blob merged a table chair with the stool behind it. Its row profile
 breaks at y=210, where both the width and the right edge jump, so it is split
 there into `counter-stool-3` and `table-near-2`.
+
+### A chair back must not cover its own occupant
+
+Occluders take their depth from the bottom of each vertical run — the row where
+the object meets the floor. A chair back breaks that rule, because it is painted
+down to the seat and not to the floor, so its lowest row reads as a depth in
+front of the person sitting in it and the chair swallows them whole. Since every
+back here stands up-screen of its seat, `backrestTopY` — the back's own top row —
+is the honest depth: the occupant is nearer than that and draws over the back,
+anyone further away is behind it and gets covered by it.
 
 ### The counter is a station, not walkable ground
 
