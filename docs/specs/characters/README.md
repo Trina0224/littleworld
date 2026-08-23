@@ -225,6 +225,33 @@ gives. Rendering the four and asking which letter took one round; guessing took
 three and got two of them wrong. When a facing argument goes past one correction,
 render the options.
 
+## Getting into the browser
+
+```bash
+python3 docs/specs/characters/export-web.py
+```
+
+`preview.py` already decides everything — which sheet, which way round, how big,
+where the buttocks land, what order to draw in. The exporter writes those
+decisions out so the browser redoes none of it:
+
+| | |
+|---|---|
+| `docs/assets/characters/<key>.png` | one trimmed sprite per placed character |
+| `docs/specs/characters/placements.json` | box and depth per character, in world units |
+| `docs/specs/world/occdepth.png` | the occluder's floor line, per texture pixel |
+
+**The depth map is how occlusion crosses over.** Red and green carry the row
+where that pixel's occluder meets the floor, high byte and low byte; zero means
+no occluder there. The scene rasterises each sprite into its own canvas and
+erases every pixel whose occluder row is below the character's own — the same
+rule `preview.py` draws with, and it keeps working when the characters start
+moving: recut the ones whose depth changed.
+
+Characters are rasterised at four pixels per world unit, the same scale the
+background texture is shown at. Sharper than the background would only look
+wrong.
+
 ## Preview
 
 ```bash

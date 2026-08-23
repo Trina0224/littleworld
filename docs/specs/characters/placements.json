@@ -1,0 +1,125 @@
+{
+  "note": "Written by export-web.py. x, y is the sprite box top-left in world units, w and h its size; depth is the row the character sorts at. The browser draws these in order and erases whatever occdepth.png says stands in front.",
+  "placements": [
+    {
+      "id": "boy-01",
+      "key": "boy-01-sit-front",
+      "pose": "sit",
+      "x": 294.31,
+      "y": 147.65,
+      "w": 25.95,
+      "h": 43.55,
+      "depth": 175.6
+    },
+    {
+      "id": "shopkeeper-01",
+      "key": "shopkeeper-01-stand-front",
+      "pose": "stand",
+      "x": 169.85,
+      "y": 135.41,
+      "w": 13.29,
+      "h": 45.59,
+      "depth": 178.0
+    },
+    {
+      "id": "girl-01",
+      "key": "girl-01-sit-back-m",
+      "pose": "sit",
+      "x": 217.22,
+      "y": 150.33,
+      "w": 18.48,
+      "h": 41.79,
+      "depth": 178.7
+    },
+    {
+      "id": "man-01",
+      "key": "man-01-sit-back-m",
+      "pose": "sit",
+      "x": 190.56,
+      "y": 157.19,
+      "w": 26.96,
+      "h": 46.21,
+      "depth": 185.5
+    },
+    {
+      "id": "woman-01",
+      "key": "woman-01-sit-back-m",
+      "pose": "sit",
+      "x": 173.08,
+      "y": 161.57,
+      "w": 25.63,
+      "h": 50.9,
+      "depth": 192.2
+    },
+    {
+      "id": "grandma-01",
+      "key": "grandma-01-sit-front-m",
+      "pose": "sit",
+      "x": 194.25,
+      "y": 174.29,
+      "w": 33.79,
+      "h": 62.08,
+      "depth": 218.0
+    },
+    {
+      "id": "pastor-01",
+      "key": "pastor-01-sit-front",
+      "pose": "sit",
+      "x": 170.45,
+      "y": 187.96,
+      "w": 37.72,
+      "h": 65.44,
+      "depth": 225.4
+    },
+    {
+      "id": "grandpa-01",
+      "key": "grandpa-01-sit-back-m",
+      "pose": "sit",
+      "x": 215.85,
+      "y": 194.99,
+      "w": 34.02,
+      "h": 57.14,
+      "depth": 234.2
+    },
+    {
+      "id": "gentleman-01",
+      "key": "gentleman-01-sit-back",
+      "pose": "sit",
+      "x": 167.63,
+      "y": 199.74,
+      "w": 35.25,
+      "h": 65.92,
+      "depth": 244.8
+    },
+    {
+      "id": "brother-02",
+      "key": "brother-02-sit-back-m",
+      "pose": "sit",
+      "x": 469.0,
+      "y": 244.95,
+      "w": 14.61,
+      "h": 21.95,
+      "depth": 256.3
+    },
+    {
+      "id": "brother-01",
+      "key": "brother-01-sit-back-m",
+      "pose": "sit",
+      "x": 480.11,
+      "y": 240.38,
+      "w": 16.11,
+      "h": 24.96,
+      "depth": 261.9
+    },
+    {
+      "id": "dog-01",
+      "key": "dog-01-stand-back",
+      "pose": "stand",
+      "x": 456.61,
+      "y": 241.52,
+      "w": 10.78,
+      "h": 23.48,
+      "depth": 262
+    }
+  ]
+}

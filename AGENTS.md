@@ -89,9 +89,12 @@ Current `main` contains:
 - GitHub Pages content under `docs/`;
 - an owner-approved background with all people removed;
 - placeholder logical hotspots;
-- no production character sprites;
-- no walkable map or collision map;
+- a painted world spec under `docs/specs/world/` — walkable, backstage, occluder, chair backs, seat tops, tables, seat anchors and facings;
+- twelve characters placed in the live scene, sized, seated, and cut by whatever stands in front of them;
+- no walking or movement yet;
 - no agent runtime, server, MCP layer, or LLM integration.
+
+Phase 1 and Phase 2 of section 8 are done. The next step is Phase 3.
 
 The current clean background is a **2560 × 1440 losslessly encoded WebP** at `docs/assets/showa/scene-clean-2560.webp`, loaded directly by Phaser. A pixel-identical PNG master lives outside the published directory at `assets/showa/scene-clean-2560.png`.
 
