@@ -139,13 +139,17 @@ def seated_box(cid, sprite_ratio, seat):
     sit_m = SITH[kind] * metres(cid) / ref
     h = sit_m * scale / (1.0 - HIP.get(cid, 0.45))
     w = h * sprite_ratio
-    # The knee covers the seat's front lip. That lip is not derived any more:
-    # the owner drew all eleven of them straight onto the scene, which settled
-    # three separate things that kept coming out wrong — the chair's floor
-    # line, its seat height, and which side of it the occupant faces.
-    kx, ky = KNEE.get(cid, [0.5, 0.41])
+    # Height comes from the hip: the drawn lip is the seat surface, so the hip
+    # sits on it. The feet are left wherever the drawing puts them — this
+    # projection cannot honour both, since rising onto the seat and stepping
+    # back off the chair land on nearly the same screen row.
+    #
+    # The lip is not derived any more. The owner drew all eleven straight onto
+    # the scene, which settled three things that kept coming out wrong: the
+    # chair's floor line, its seat height, and which side the occupant faces.
+    kx, _ = KNEE.get(cid, [0.5, 0.41])
     left = fx - kx * w
-    bottom = fy + ky * h
+    bottom = fy + HIP.get(cid, 0.45) * h
     return h, w, left, bottom, None
 
 place = []
