@@ -119,11 +119,20 @@ CAST = {'cafe-counter': 'shopkeeper-01',
 PM = json.load(open('/home/user/littleworld/docs/specs/characters/pose-matrix.json'))
 SA = PM['seatedAnchoring']
 HIP = SA['hipFraction']
+HIP_BACK = SA['hipFractionBack']
+SEAT_H = SA['seatHeightMetres']
 KNEE = SA['kneeFraction']
 SITH = SA['sittingHeightMetres']
 
 
-def seated_box(cid, sprite_ratio, seat):
+def ground_under(lip_y, seat_h):
+    """The floor below a seat lip. The lip is seat_h above it, so it sits higher
+    up the screen where the ramp reads smaller; scaling off the lip made every
+    seated character about 15% too small."""
+    return (lip_y - seat_h * K * H0) / (1.0 - seat_h * K)
+
+
+def seated_box(cid, sprite_ratio, seat, facing):
     """Size and placement for a seated sprite, anchored by the head.
 
     The knee is the contact that reads as sitting in a chair, and the seat
@@ -133,11 +142,13 @@ def seated_box(cid, sprite_ratio, seat):
 
     """
     fx, fy = seat['frontEdge']
-    scale = K * (fy - H0)
+    scale = K * (ground_under(fy, SEAT_H[seat['group']]) - H0)
+    back = 180 <= facing % 360 < 360
+    hip = (HIP_BACK if back else HIP).get(cid, 0.30 if back else 0.45)
     kind = 'dog' if cid == 'dog-01' else ('child' if cid in CHILD else 'adult')
     ref = 0.55 if kind == 'dog' else (1.35 if kind == 'child' else 1.65)
     sit_m = SITH[kind] * metres(cid) / ref
-    h = sit_m * scale / (1.0 - HIP.get(cid, 0.45))
+    h = sit_m * scale / (1.0 - hip)
     w = h * sprite_ratio
     # Height comes from the hip: the drawn lip is the seat surface, so the hip
     # sits on it. The feet are left wherever the drawing puts them — this
@@ -149,7 +160,7 @@ def seated_box(cid, sprite_ratio, seat):
     # chair's floor line, its seat height, and which side the occupant faces.
     kx, _ = KNEE.get(cid, [0.5, 0.41])
     left = fx - kx * w
-    bottom = fy + HIP.get(cid, 0.45) * h
+    bottom = fy + hip * h
     return h, w, left, bottom, None
 
 place = []
@@ -184,7 +195,7 @@ def occluder_baselines():
     standing on the floor, which is how both cafe tables get their depth without
     anyone painting them.
     """
-    occ = load_mask('occluder.png', full=True)
+    occ = load_mask('occluder.png', full=True) | load_mask('seatbacks.png', full=True)
     walk = load_mask('walkable.png')
 
 
@@ -248,7 +259,7 @@ drawn = []
 for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['frontEdge'][1] if p[1]=='sit' else p[2][1])):
     sp = sprite(cid, pose, deg)
     if pose == 'sit':
-        h, w, left, bottom, clip = seated_box(cid, sp.width / sp.height, at)
+        h, w, left, bottom, clip = seated_box(cid, sp.width / sp.height, at, deg)
         # facing away puts the chair back in front of the sitter, facing the
         # camera puts the sitter in front of it
         depth = at['frontEdge'][1]

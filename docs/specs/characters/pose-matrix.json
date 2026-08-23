@@ -156,6 +156,28 @@
         0.5,
         0.35
       ]
+    },
+    "hipFractionBack": {
+      "_note": "back views put the hip much lower in the sprite than front views do, because the legs are hidden behind the body; measured off the art",
+      "gentleman-01": 0.27,
+      "grandpa-01": 0.3,
+      "grandma-01": 0.3,
+      "pastor-01": 0.28,
+      "man-01": 0.32,
+      "woman-01": 0.35,
+      "shopkeeper-01": 0.28,
+      "boy-01": 0.28,
+      "girl-01": 0.3,
+      "brother-01": 0.24,
+      "brother-02": 0.24,
+      "dog-01": 0.25
+    },
+    "scaleNote": "Scale is taken at the floor under the chair, not at the seat lip. The lip is a seat height above the floor and therefore higher up the screen, where the ramp gives a smaller number, which was making every seated character about 15% too small. The floor is solved back from the lip.",
+    "seatHeightMetres": {
+      "counter-stool": 0.7,
+      "table-near": 0.43,
+      "table-far": 0.43,
+      "bench": 0.43
     }
   }
 }
