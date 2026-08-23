@@ -1,0 +1,15 @@
+{
+  "id": "grandma-01",
+  "brain": "llm",
+  "appearance": "白髮盤起的老太太，戴眼鏡，酒紅色開襟毛衣外面繫著白圍裙",
+  "sprite": "grandma-01",
+  "knows": [
+    { "who": "woman-01", "as": "孫女" },
+    { "who": "brother-01", "as": "辰ちゃん" },
+    { "who": "brother-02", "as": "タタちゃん" },
+    { "who": "dog-01", "as": "ハナ" },
+    { "who": "pastor-01", "as": "牧師さん" },
+    { "who": "shopkeeper-01", "as": "店の子" }
+  ],
+  "_note": "她認得這條街上每一個人。knows 只列會用到的。"
+}
