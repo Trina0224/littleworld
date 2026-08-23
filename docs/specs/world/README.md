@@ -204,6 +204,30 @@ full height in front of the counter.
 The station anchor sits behind the middle of the counter. Exactly where a keeper
 stands is a judgement call, so treat it as adjustable.
 
+## The tables need painting, and the walkable map cannot help
+
+Deriving the two cafe tables from enclosed holes in `walkable.png` was my idea
+and it does not work. **A walkable map describes the floor. A tabletop is 0.7 m
+above the floor, so its drawn silhouette sits well up-screen of anything a floor
+map can express**, and no amount of processing recovers it.
+
+What the hole actually gives is the table's footprint plus whatever of the table
+the owner happened not to paint over. For the near table the hole runs y=215–251
+while the drawn top runs y=209–228, so the occluder covers the lower half of the
+top and stops in a ragged line across the middle of it. Anyone seated behind the
+table is cut in half by that line — which is exactly what the owner reported.
+
+I tried recovering the top from the art with a colour flood from its centre. It
+takes most of the top and stops at the sunlit rim, so it is not clean enough to
+use, and fitting the ellipse by hand is the art-by-guesswork that has gone wrong
+here before.
+
+**The fix is one more painted layer: the two tabletops.** Once painted they need
+nothing else — the run rule gives each column its own floor line, so the table
+covers whoever sits behind it and does not cover whoever walks in front, the same
+way the chair backs work. Same for the bench armrest, which is bare for the same
+kind of reason.
+
 ## Not mapped yet
 
 Nothing else in Phase 1. Phase 2 needs the pose matrix to consume these facings;
