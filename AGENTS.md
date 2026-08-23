@@ -12,17 +12,20 @@ The current MVP is:
 
 > **A Showa-era Japanese pocket park integrated with a semi-open kissaten / light-meal café, using the visual language of roughly 1965–1985.**
 
-The place has a name, and it was painted into the background from the start:
-**ひだまり町** — *the sunny corner*. The awning reads 喫茶ひだまり, the notice
-board reads ひだまり公園, and the sign strapped to the utility pole reads
-ひだまり町内会. That last one settles the scale: a 町内会 is a neighbourhood
-association, so the 町 here is a district inside a city — the sense in which
-濱田町 and 森合 are districts of 福島市 — and that city is deliberately never
-named. Naming the block rather than the municipality gives the cast somewhere to
-say they live without pinning the world to a point on a map.
+The place is **福島市ひだまり町**, and its names were painted into the
+background from the start: the awning reads 喫茶ひだまり, the notice board reads
+ひだまり公園, and the sign strapped to the utility pole reads ひだまり町内会.
+That last one settles the scale — a 町内会 is a neighbourhood association, so
+this 町 is a district inside the city, the sense in which 濱田町 and 森合 are
+districts of 福島市. The city is real and the district is invented, which is the
+right way round: the block carries the story, so nowhere real is being claimed
+as its stage.
 
-Read the signs before inventing anything they already answer. See
-`characters/README.md`.
+Read the signs before inventing anything they already answer, and read the
+世界事實 section of `characters/README.md` before writing a character. It is the
+single source for the place, the shop, the menu prices, the university, and the
+period. I have already derived one of those facts the long way round when the
+picture had answered it.
 
 **This place is imagined, not reconstructed.** The character prototype who lived
 in that era looked at the scene and said he could not recognise it as Japan — he
