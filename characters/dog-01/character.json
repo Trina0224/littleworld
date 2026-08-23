@@ -1,0 +1,11 @@
+{
+  "id": "dog-01",
+  "brain": "deterministic",
+  "appearance": "一隻長毛牧羊犬，茶褐色配白色，胸前和四肢是白的，耳朵尖端往前折，尾巴蓬鬆",
+  "sprite": "dog-01",
+  "bonds": [
+    { "who": "brother-01", "familiarity": 1.0, "role": "家人" },
+    { "who": "brother-02", "familiarity": 1.0, "role": "家人" }
+  ],
+  "_note": "決定性的腦沒有 self.md，牠帶的是參數不是散文。bonds 就是「牠屬於兩兄弟」在引擎裡的樣子。"
+}

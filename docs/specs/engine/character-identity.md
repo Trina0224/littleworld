@@ -190,6 +190,20 @@ needs `character.json` for its appearance, and it still belongs in the bible,
 because the two brothers have opinions about it and those opinions are half the
 scene.
 
+**Where an LLM actor carries prose, a deterministic actor carries parameters.**
+"The dog belongs to the two brothers" is not a sentence for it to read; it is a
+`bonds` list — familiarity per character — that its state machine acts on. That
+is not a reduced version of a personality. For an animal it is the correct shape
+of one.
+
+It is worth noticing what this buys. A deterministic dog runs at someone it
+recognises because that is what the parameter says, and two LLM brothers then
+disagree about what happened — one saw his brother back away, the other knows he
+went to find their grandmother — and **neither of them is lying**. The
+deterministic actor produces the event; the thinking actors produce the
+readings. That division is the whole architecture in one scene, and it costs one
+model call fewer than it would if the dog also had to think.
+
 ## 9. Division of labour
 
 **The owner decides:** who these people are, how they see each other, what must
