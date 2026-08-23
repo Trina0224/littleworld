@@ -2,7 +2,8 @@
 
 **Status:** design draft, reviewed with Claude  
 **Created:** 2026-08-22 23:38 PT (`America/Los_Angeles`)  
-**Review incorporated:** 2026-08-23 00:55 PT (`America/Los_Angeles`)
+**Review incorporated:** 2026-08-23 00:55 PT (`America/Los_Angeles`)  
+**Second review incorporated:** 2026-08-23 02:10 PT (`America/Los_Angeles`) — cold start, prefix schema scope, replay determinism, deployment modes
 
 ## 1. Core principles
 
@@ -94,6 +95,12 @@ Keep stable content byte-for-byte stable where practical so provider adapters ma
 
 Do not put timestamps, changing state, observations, retrieved memories, or other volatile content into this prefix.
 
+`[ACTIVITY AND TOOL SCHEMAS]` is the **complete** schema set, identical for every
+agent and every situation. Do not filter it down to what is currently legal — that
+is a per-decision fact and belongs in `[CURRENTLY LEGAL ACTIVITIES / TARGETS]` in
+the dynamic suffix. A situation-filtered schema differs on every call and destroys
+the stable prefix it is sitting in.
+
 The World Engine specification does not mandate any provider-specific cache threshold or metric. Provider adapters may use their own caching semantics and telemetry.
 
 ### 3.2 Dynamic suffix
@@ -149,6 +156,12 @@ Agent is sitting on bench
 No network call, provider outage, quota wait, structured-output failure, or model latency may block simulation time.
 
 Therefore **timeout and fallback support are required runtime infrastructure**, not an open design question. Exact fallback behavior may vary by activity.
+
+The same rule covers cold start. On the first tick, before any inference has ever
+run, every agent already holds a deterministic activity. There is no bootstrap
+state in which an agent exists but has nothing to do; the world is a working
+simulation before the first Brain request is dispatched, and stays one if none
+ever succeeds.
 
 Candidate defaults:
 
@@ -321,10 +334,35 @@ MOCK / SCRIPTED
 
 This permits a known-good run to be replayed during a demonstration if network access, provider availability, credentials or quota fail. It also permits deterministic inspection of failures without requiring the same LLM behavior to occur again.
 
+### 8.2 Determinism is what makes replay true
+
+Replay works by re-running the Activity Runtime over the recorded event stream.
+Events are semantic — an intention, a reservation, a line of speech — not sprite
+positions, so the runtime has to arrive at the same positions again. That imposes
+a hard constraint on every deterministic component:
+
+```text
+no unseeded randomness
+no wall-clock reads inside simulation logic
+no iteration over unordered collections where order affects outcome
+```
+
+All randomness comes from a seeded generator whose seed is recorded in the event
+stream. All time comes from the world clock, never from the host clock. Where a
+map or set is iterated and the order can change a result, sort first.
+
+This is cheap to honour from the first line of code and expensive to retrofit: a
+run that is only *nearly* deterministic replays correctly for a while and then
+drifts, and the drift looks like a rendering bug rather than a missing seed.
+
+Events carry a schema version. A stream recorded before a schema change must
+either still replay or be refused outright — never replayed as if it matched.
+
 Example event:
 
 ```json
 {
+  "v": 1,
   "t": 482,
   "type": "talk",
   "actor": "boy-01",
@@ -576,6 +614,27 @@ MOCK / SCRIPTED run
 
 This boundary is required so replay behaves like the live world rather than as a separate animation system.
 
+### 16.1 Where each mode runs — decided
+
+A provider credential must never reach the browser. `docs/` is published as a
+static GitHub Pages site, which can hold no secret at all, and this settles the
+deployment question for the MVP rather than leaving it open:
+
+```text
+GitHub Pages (static)   REPLAY and MOCK only - renderer plus a recorded stream
+LIVE                    an engine process holding the credential, with the
+                        renderer connected to it
+```
+
+The published page is therefore always able to show the world, with or without a
+provider, a network, or remaining quota. LIVE mode adds an engine process — local
+during development and on the day of a demonstration, or a small hosted service —
+and the renderer talks to it over a stream rather than calling any provider
+itself.
+
+This is not a fallback bolted on at the end. It is the same three modes as §8.1,
+resolved to where each one is allowed to run.
+
 ## 17. Phase 3A — first implementation slice
 
 Do **not** begin implementation by connecting an LLM.
@@ -587,8 +646,10 @@ The first slice is entirely deterministic:
 3. load canonical seats/stations from `docs/specs/world/anchors.json`;
 4. atomic seat reservation (`available / reserved / occupied`);
 5. one scripted agent that goes from the cafe area to a bench, reserves it, sits, waits, stands and releases it;
-6. objective event log for every visible state transition;
-7. replay that reproduces the scripted run through the normal renderer path;
+6. objective event log for every visible state transition, versioned, with the
+   run's random seed recorded in it;
+7. replay that reproduces the scripted run through the normal renderer path,
+   from the recorded stream alone;
 8. a second scripted agent attempting to claim the same seat, proving reservation conflict handling.
 
 Success criteria for Phase 3A:
@@ -597,7 +658,9 @@ Success criteria for Phase 3A:
 - the world continues running with no LLM at all;
 - two agents cannot occupy the same exclusive seat;
 - every visible transition is represented in the event stream;
-- a recorded run replays to the same visible sequence;
+- a recorded run replays to the same visible sequence, twice in a row and after
+  a restart - if it only nearly matches, the determinism rules in §8.2 are being
+  broken somewhere and that is the bug to fix, not the replay;
 - intention source can later be swapped from script/mock to LLM without changing World Engine mechanics.
 ```
 
@@ -619,13 +682,16 @@ The following are no longer open questions for the MVP:
 | Stale plan | Cancel remaining steps; replan only when scheduler permits. |
 | Pets | Same perception/event/world-action interfaces, deterministic/probabilistic brain. |
 | Provider coupling | Agent Brain uses an adapter; World Engine is provider-agnostic. |
-| Prompt organization | Stable cache-friendly prefix + dynamic suffix. |
+| Prompt organization | Stable cache-friendly prefix + dynamic suffix; prefix schemas are the complete set, never situation-filtered. |
+| Cold start | Every agent holds a deterministic activity from the first tick, before any inference. |
+| Replay fidelity | Seeded randomness recorded in the stream, no host-clock reads in simulation logic, versioned events. |
+| Deployment | Static Pages hosts REPLAY and MOCK; LIVE requires an engine process holding the credential. A credential never reaches the browser. |
 
 ## 19. Open questions before later implementation
 
 These remain intentionally unresolved:
 
-- simulation time model and speed;
+- simulation time model and speed — note that this is not independent of the scheduler: a faster simulation reaches more decision points per real minute and therefore spends provider budget faster, so tick rate and budget must be chosen together;
 - exact semantic-zone boundaries;
 - distance and hearing thresholds;
 - salience scoring and maximum observation package size;
@@ -639,6 +705,6 @@ These remain intentionally unresolved:
 - exact structured-output schemas for `decide`, `converse`, and `summarize`;
 - needs model (hunger, energy, boredom, social drive) and how strongly it influences intention generation;
 - persistence backend for long-running memory and event history;
-- server deployment location and credential strategy for LIVE mode.
+- where the LIVE engine process is hosted for a public demonstration, and how the credential reaches it (that LIVE needs such a process, and that the browser never holds the credential, is settled in §16.1).
 
 These should be decided incrementally after Phase 3A proves the deterministic runtime and replay path.
