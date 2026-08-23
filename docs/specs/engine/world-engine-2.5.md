@@ -78,6 +78,10 @@ Phaser remains outside these responsibilities as a renderer.
 
 ## 3. Private Agent Sessions
 
+Where the content of a private session comes from — the bible, the self sheet,
+the appearance line, and seeded recognition — is specified separately in
+`character-identity.md` (Phase 3B).
+
 Every character has an independent LLM context. An agent must never receive another agent's private prompt, personality, memories, hidden goals, internal plan, or private reasoning state.
 
 A server-built request should contain logically separate stable and dynamic sections.
