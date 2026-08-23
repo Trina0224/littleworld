@@ -169,11 +169,20 @@ for g, members in seat_groups.items():
             t['facingDeg'] = round(math.degrees(best[1]) % 360, 1)
             t['facingFrom'] = 'the open ground it looks out over'
 
-BK_TOP = {}
 for s in seats:
-    cx, cy = s['seatSurface']['centre']
+    cx, cy = s['seatSurface']['centre']; w = s['seatSurface']['w']
     i = min(BK, key=lambda i: (BK[i]['cx']-cx)**2 + (BK[i]['cy']-cy)**2)
-    s['backrestTopY'] = BK[i]['y0']
+    b = BK[i]
+    s['backrestTopY'] = b['y0']
+    # Where the back meets the floor, over the seat's own columns. This is the
+    # back's depth: a back whose foot is nearer the camera than its seat stands
+    # between the camera and whoever sits there, and has to cover them.
+    sel = (b['xs'] >= cx - w/2) & (b['xs'] <= cx + w/2)
+    if sel.sum() < 20:
+        sel = np.ones(len(b['xs']), bool)
+    s['backrestBaseY'] = int(round(float(np.mean(
+        [b['ys'][sel][b['xs'][sel] == x].max() for x in np.unique(b['xs'][sel])]))))
+    s['backrestCovers'] = bool(s['backrestBaseY'] > cy)
     s.pop('facing', None)
 
 A['facingNote']=("facingDeg comes from what the seat is drawn up to, not from the "

@@ -148,19 +148,23 @@ One painted blob merged a table chair with the stool behind it. Its row profile
 breaks at y=210, where both the width and the right edge jump, so it is split
 there into `counter-stool-3` and `table-near-2`.
 
-### A chair back does not cover its own occupant — for now
+### A chair back covers its occupant when it stands in front of them
 
-Occluders take their depth from the bottom of each vertical run, the row where
-the object meets the floor. Chair backs currently take `backrestTopY` instead —
-the back's own top row — so a back never covers the person sitting in it.
+Each seat carries `backrestBaseY`: where its painted back meets the floor,
+averaged over the seat's own columns. That is the back's depth. A back whose
+foot is nearer the camera than its seat stands between the camera and whoever
+sits there, and covers them; a back up-screen of its seat draws behind them.
 
-**That is a stopgap, and it is now known to be wrong for some chairs.** It was
-written when the facing measurement claimed every back stood up-screen of its
-seat. The corrected measurement says otherwise: `table-near-1`, `table-near-4`,
-`table-far-3` and all three bench slots have their backs between the camera and
-the sitter, so those backs genuinely should cover their occupant, and the bench's
-would hide the two boys down to their heads. The owner has deferred occlusion,
-so the stopgap stands until it is picked up.
+Four of the fourteen seats are the near-side ones — `table-near-1`,
+`table-near-4`, `table-far-3`, and all three bench slots. `backrestCovers` marks
+them, and it is worth noting that this list is derived from the paint alone and
+comes out exactly equal to the list of seats whose facing is a back view. Two
+independent measurements, same answer.
+
+The park bench is the case that made this matter. Its back really is in front of
+its occupants, so drawing it correctly buried the two boys down to a cap. They
+are offset along the bench toward the big tree, which lifts their heads and
+shoulders clear and leaves the back covering their legs.
 
 ### The counter is a station, not walkable ground
 

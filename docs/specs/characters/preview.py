@@ -125,6 +125,7 @@ DROP = SA.get('dropUnits', 0.0)
 SCALE = SA.get('sizeScale', 1.0)
 VIEW = PM.get('poseView', {})
 NS = PM['nativeScale']
+OFFSET = {k: tuple(v) for k, v in PM.get('seatOffset', {}).items() if isinstance(v, list)}
 NS_REF = NS['referenceY']
 NS_FLAT = NS.get('flat', False)   # True: every character the same fraction, no depth
 
@@ -176,6 +177,8 @@ def seated_box(cid, sprite, seat, facing):
     """
     surf = seat['seatSurface']
     cx, cy = surf['centre']
+    ox, oy = OFFSET.get(cid, (0.0, 0.0))
+    cx += ox; cy += oy
     d = facing % 360
     view = VIEW.get(cid) or ('front' if d < 180 else 'back')
     mirror = 90 <= d < 270
@@ -196,7 +199,8 @@ def seated_box(cid, sprite, seat, facing):
     h = native_height(cid, sprite, cy) * SCALE
     w = h * sprite.width / sprite.height
 
-    far, near = seat_band(cx, cy, surf['h'])
+    far, near = seat_band(cx - ox, cy - oy, surf['h'])
+    far += oy; near += oy
     if cid in WHOLE:
         # small enough to sit on the seat entire, feet and all, so the sprite's
         # own bottom goes on the seat's front edge and nothing needs aligning
@@ -287,21 +291,21 @@ def occluder_baselines():
             else:
                 y += 1
 
-    # Chair backs are the one thing the run rule gets wrong. A back is painted
-    # down to the seat, not to the floor, so its lowest pixel reads as a depth
-    # in front of its own occupant and the chair swallows whoever sits in it.
-    # Every back in this art stands up-screen of its seat, so the honest depth
-    # is the back's own top row: the occupant is nearer than that and draws over
-    # it, anyone further away is behind it and gets covered.
+    # A chair back gets its depth from where it meets the floor, measured over the
+    # seat's own columns - backrestBaseY. Four of the fourteen seats are on the
+    # near side of their table or bench, and their backs really do stand between
+    # the camera and whoever sits there; those backs cover their occupant, which
+    # is what the owner asked for on the park bench. The other ten stand
+    # up-screen and draw behind.
     backs = load_mask('seatbacks.png', full=True)
     for s in A['seats']:
-        if 'backrestTopY' not in s:
+        if 'backrestBaseY' not in s:
             continue
         cx, cy = s['seatSurface']['centre']
         near = backs & (np.abs(np.arange(FW)[None, :] - cx*4) < 60) \
                      & (np.abs(np.arange(FH)[:, None] - cy*4) < 60)
         mask |= near
-        base[near] = s['backrestTopY'] * 4
+        base[near] = s['backrestBaseY'] * 4
     return mask, base
 
 
@@ -330,7 +334,7 @@ for cid, pose, at, deg in sorted(place, key=lambda p: (p[2]['seatSurface']['cent
         note = f'  臀 {hy:5.1f} {ok(hy):4s}' + (f'  膝 {ky:5.1f} {ok(ky)}' if ky is not None else '')
         # facing away puts the chair back in front of the sitter, facing the
         # camera puts the sitter in front of it
-        depth = at['seatSurface']['centre'][1]
+        depth = at['seatSurface']['centre'][1] + OFFSET.get(cid, (0.0, 0.0))[1]
     else:
         h = native_height(cid, sp, at[1]) * SCALE; w = h * sp.width / sp.height
         left = at[0] - w/2; bottom = at[1] + DROP; depth = at[1]; clip = None; note = ''

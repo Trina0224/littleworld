@@ -22,7 +22,9 @@
         "h": 10
       },
       "backrestTopY": 155,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 170,
+      "backrestCovers": false
     },
     {
       "id": "table-far-1",
@@ -46,7 +48,9 @@
         "h": 10
       },
       "backrestTopY": 158,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 173,
+      "backrestCovers": false
     },
     {
       "id": "counter-stool-1",
@@ -70,7 +74,9 @@
         "h": 6
       },
       "backrestTopY": 168,
-      "facingFrom": "the counter it is drawn up to"
+      "facingFrom": "the counter it is drawn up to",
+      "backrestBaseY": 175,
+      "backrestCovers": false
     },
     {
       "id": "table-far-3",
@@ -94,7 +100,9 @@
         "h": 10
       },
       "backrestTopY": 168,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 187,
+      "backrestCovers": true
     },
     {
       "id": "counter-stool-2",
@@ -118,7 +126,9 @@
         "h": 6
       },
       "backrestTopY": 174,
-      "facingFrom": "the counter it is drawn up to"
+      "facingFrom": "the counter it is drawn up to",
+      "backrestBaseY": 183,
+      "backrestCovers": false
     },
     {
       "id": "counter-stool-3",
@@ -142,7 +152,9 @@
         "h": 6
       },
       "backrestTopY": 181,
-      "facingFrom": "the counter it is drawn up to"
+      "facingFrom": "the counter it is drawn up to",
+      "backrestBaseY": 190,
+      "backrestCovers": false
     },
     {
       "id": "counter-stool-4",
@@ -162,7 +174,9 @@
       "fromUnmatchedPaint": true,
       "facingDeg": 252.1,
       "facingFrom": "the counter it is drawn up to",
-      "backrestTopY": 187
+      "backrestTopY": 187,
+      "backrestBaseY": 194,
+      "backrestCovers": false
     },
     {
       "id": "table-near-3",
@@ -186,7 +200,9 @@
         "h": 16
       },
       "backrestTopY": 198,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 216,
+      "backrestCovers": false
     },
     {
       "id": "table-near-2",
@@ -210,7 +226,9 @@
         "h": 12
       },
       "backrestTopY": 204,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 222,
+      "backrestCovers": false
     },
     {
       "id": "table-near-4",
@@ -234,7 +252,9 @@
         "h": 14
       },
       "backrestTopY": 218,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 238,
+      "backrestCovers": true
     },
     {
       "id": "table-near-1",
@@ -258,7 +278,9 @@
         "h": 14
       },
       "backrestTopY": 228,
-      "facingFrom": "the table it is drawn up to"
+      "facingFrom": "the table it is drawn up to",
+      "backrestBaseY": 250,
+      "backrestCovers": true
     },
     {
       "id": "bench-slot-1",
@@ -282,7 +304,9 @@
         "h": 21
       },
       "backrestTopY": 233,
-      "facingFrom": "the open ground it looks out over"
+      "facingFrom": "the open ground it looks out over",
+      "backrestBaseY": 269,
+      "backrestCovers": true
     },
     {
       "id": "bench-slot-2",
@@ -306,7 +330,9 @@
         "h": 29
       },
       "backrestTopY": 233,
-      "facingFrom": "the open ground it looks out over"
+      "facingFrom": "the open ground it looks out over",
+      "backrestBaseY": 280,
+      "backrestCovers": true
     },
     {
       "id": "bench-slot-3",
@@ -330,7 +356,9 @@
         "h": 21
       },
       "backrestTopY": 233,
-      "facingFrom": "the open ground it looks out over"
+      "facingFrom": "the open ground it looks out over",
+      "backrestBaseY": 283,
+      "backrestCovers": true
     }
   ],
   "stations": [
