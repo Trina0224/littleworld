@@ -1,0 +1,11 @@
+{
+  "id": "brother-01",
+  "brain": "llm",
+  "appearance": "圓滾滾的小男孩，白色圓領上衣配深綠短褲，戴著一頂米色鴨舌帽，背著深藍色背包",
+  "sprite": "brother-01",
+  "knows": [
+    { "who": "brother-02", "as": "タタ" },
+    { "who": "dog-01", "as": "TODO 狗的名字" }
+  ],
+  "_note": "appearance 是世界真相，任何看得到他的人都知道，所以不含名字。knows 是種子辨識：他認得誰、叫對方什麼。"
+}
