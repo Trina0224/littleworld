@@ -1,0 +1,14 @@
+{
+  "id": "shopkeeper-01",
+  "brain": "llm",
+  "appearance": "站在櫃檯後面的年輕女子，頭髮在腦後綰成髻，藏青色和服把袖子捲到手肘，外面套一件白色圍裙",
+  "sprite": "shopkeeper-01",
+  "knows": [
+    { "who": "grandma-01", "as": "星さん" },
+    { "who": "brother-01", "as": "辰ちゃん" },
+    { "who": "brother-02", "as": "タタちゃん" },
+    { "who": "dog-01", "as": "ハナ" },
+    { "who": "boy-01", "as": "菅野さん" }
+  ],
+  "_note": "全卡司最長的一張 knows，這是刻意的：她是唯一不走的人，別人來來去去，她累積。注意方向都不對稱——外婆叫她「店の子」、小朋友只當她是店裡的姊姊、菅野大概講不出她姓什麼。她站 STATION 不坐 SEAT，sprite 有 clipY 因為她在櫃檯後面。"
+}
