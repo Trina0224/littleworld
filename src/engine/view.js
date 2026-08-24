@@ -16,6 +16,7 @@ export function createView() {
   const resources = new Map();
   let tick = 0;
   let tickDurationMs = 100;
+  let day = 0;
 
   function place(agent) {
     if (!agent.walk) return;
@@ -27,6 +28,7 @@ export function createView() {
 
   return {
     get tick() { return tick; },
+    get day() { return day; },
     get tickDurationMs() { return tickDurationMs; },
 
     apply(e) {
@@ -38,7 +40,16 @@ export function createView() {
           }
           break;
         case 'agent_spawned':
+        case 'agent_arrived':
           agents.set(e.agent, { id: e.agent, at: [...e.at], holding: null, walk: null });
+          break;
+        case 'agent_departed':
+          // Out of the scene, so out of the snapshot. The roster still knows
+          // this agent exists; a renderer is only ever told what to draw.
+          agents.delete(e.agent);
+          break;
+        case 'day_started':
+          day = e.day;
           break;
         case 'move_started': {
           const a = agents.get(e.agent);
@@ -84,6 +95,7 @@ export function createView() {
     snapshot() {
       return {
         t: tick,
+        day,
         agents: [...agents.keys()].sort().map((id) => {
           const a = agents.get(id);
           return { id, at: [round(a.at[0]), round(a.at[1])], holding: a.holding, walking: !!a.walk };

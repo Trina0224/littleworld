@@ -90,9 +90,9 @@ export function createActivityRuntime(world) {
   return {
     assign,
 
-    /** advance every agent by one step-tick, in a fixed order */
+    /** advance every present agent by one step-tick, in a fixed order */
     tick() {
-      for (const id of world.agentIds()) {
+      for (const id of world.presentIds()) {
         const agent = world.agents.get(id);
         const a = agent.activity;
         if (!a || a.name === 'idle') continue;
