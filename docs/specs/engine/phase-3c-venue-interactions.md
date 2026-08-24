@@ -2,9 +2,16 @@
 
 **Status:** design notes / implementation contract supplement  
 **Created:** 2026-08-23 22:58 PT (`America/Los_Angeles`)  
+**Updated:** 2026-08-23 23:58 PT (`America/Los_Angeles`) — routine cafe service ownership clarified  
 **Companion to:** `phase-3c-perception.md`, `world-engine-2.5.md`
 
-This file records three decisions that affect perception and later activity/runtime work without expanding Phase 3C into a full cafe simulation.
+This file records decisions that affect perception and later activity/runtime work without expanding Phase 3C into a full cafe simulation.
+
+The central cafe rule is now:
+
+> **Routine commerce is engine-owned; socially meaningful conversation is Brain-owned.**
+
+The shopkeeper's LLM should not be asked to decide or narrate every mechanical shop task.
 
 ## 1. Cafe use creates a social obligation
 
@@ -26,7 +33,7 @@ The obligation is not meant to fire frequently. Its purpose is to preserve belie
 
 The engine should account for shopkeeper load. If the shopkeeper is already talking, preparing food/drink, serving, or otherwise busy, the grace period may be extended and new order pressure may be delayed.
 
-At a suitable Brain wakeup, the dynamic context may tell the agent, in sensory/social terms, that it has been using the cafe for a while and that it would be appropriate to order something if it intends to stay.
+At a suitable Brain wakeup, the dynamic context may tell the customer, in sensory/social terms, that it has been using the cafe for a while and that it would be appropriate to order something if it intends to stay.
 
 Possible responses remain character-driven:
 
@@ -72,13 +79,91 @@ A future order flow may therefore be:
 ```text
 venue obligation becomes due
   -> Brain wakeup suggests ordering / leaving
-  -> agent chooses a loud order from current location
+  -> customer chooses a loud order from current location
   -> broadcast speech fact is committed
-  -> shopkeeper receives the audible order
-  -> deterministic/runtime order handling begins
+  -> cafe runtime recognizes/records the order
+  -> routine deterministic service begins
 ```
 
-## 3. Shopkeeper interaction load
+The order does not require the customer to walk to the counter unless the customer independently chooses to do so for social reasons.
+
+## 3. Cafe Runtime owns routine service
+
+Routine shop operation belongs to the World Engine / Activity Runtime, not to the shopkeeper Brain.
+
+Once a valid order exists, the runtime should own the ordinary lifecycle:
+
+```text
+order received
+  -> order queued
+  -> shopkeeper workload updated
+  -> preparation starts when capacity is available
+  -> preparation duration is calculated from menu/runtime data
+  -> item becomes ready
+  -> serving/delivery activity is scheduled
+  -> item delivered
+  -> customer venue obligation satisfied
+  -> eventual clearing / return-to-workstation
+```
+
+The shopkeeper does not need an LLM call to decide whether tea takes time to steep, whether an order goes into a queue, whether a finished item is ready, or whether she should physically carry a completed order to the customer.
+
+Preparation duration should be deterministic runtime data, with optional seeded variation only if later useful. Conceptually:
+
+```text
+coffee             fixed/base preparation ticks
+black tea           fixed/base preparation ticks
+nerikiri / wagashi  fixed/base handling ticks
+combined order      derived from item timings / available capacity
+```
+
+Exact menu values are deferred until the cafe runtime is implemented.
+
+Routine movement is also engine-owned. A typical service path may be:
+
+```text
+counter/workstation
+  -> prepare
+  -> carry to semantic destination/customer
+  -> serve
+  -> return to workstation
+```
+
+The World Engine chooses the physical path and placement exactly as it does for other activities.
+
+## 4. When the shopkeeper Brain is actually needed
+
+The shopkeeper Brain should be invoked for socially meaningful or open-ended interaction, not mechanical service bookkeeping.
+
+Examples that may require the Brain:
+
+```text
+"今天有什麼推薦的？"
+"這個和菓子是什麼？"
+"最近生意怎麼樣？"
+a customer makes a joke or starts a personal conversation
+whether to remain and chat briefly after serving
+how to respond to unusual/non-menu social requests
+```
+
+Examples that should normally stay deterministic/runtime-owned:
+
+```text
+accepting an unambiguous menu order
+queueing it
+preparing it
+tracking preparation time
+carrying it to the customer
+handing it over
+collecting finished dishes
+returning to the workstation
+```
+
+A trivial acknowledgment such as `はい、少々お待ちください` may eventually be a fixed/templated world utterance rather than an LLM request. If richer wording matters in context, the Brain may be used, but ordinary service must not depend on model availability.
+
+This preserves the non-blocking world invariant: a provider outage must not stop the cafe from functioning mechanically.
+
+## 5. Shopkeeper interaction load
 
 The shopkeeper is physically tied to a workstation more than most characters. The world should therefore create believable inbound interactions through venue operation rather than making her periodically initiate unrelated conversation.
 
@@ -92,13 +177,32 @@ serving / collecting dishes
 payment / leaving greeting
 ```
 
-The World Engine may use shopkeeper activity/load as a scheduling signal for when venue obligations become due, but it must not script what a customer says beyond the social requirement being surfaced.
+The World Engine may use shopkeeper activity/load as a scheduling signal for when venue obligations become due. When she is busy, customer grace periods may stretch; when she has been idle for a long time, an already-plausible customer obligation may become eligible sooner. This is workload shaping, not scripted social behavior.
 
-Principle:
+Principles:
 
-> **World Engine creates the social obligation; Agent Brain decides how to satisfy it.**
+> **World Engine creates the social obligation; customer Brain decides how to satisfy it.**
+>
+> **Cafe Runtime performs routine service; shopkeeper Brain decides socially meaningful language and choices.**
 
-## 4. Two special interaction points — recorded for later
+## 6. Implementation sequencing
+
+The cafe runtime is not part of the Phase 3C perception implementation itself, but it should be implemented **before real LLM provider integration**.
+
+Suggested dependency order:
+
+```text
+3C   perception / subjective sensory state
+3D   private memory
+3E   conversation sessions + speech transport
+3F-A cafe / venue runtime (deterministic routine commerce)
+3F-B scheduler + mock Brain integration
+3G   real LLM provider integration
+```
+
+The exact phase labels may change, but the dependency matters: routine cafe behavior should already work with scripted/mock decisions before real model behavior is introduced.
+
+## 7. Two special interaction points — recorded for later
 
 The current scene contains two additional fixed locations that LLM characters may eventually be allowed to use:
 
