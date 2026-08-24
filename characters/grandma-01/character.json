@@ -9,6 +9,7 @@
     { "who": "brother-02", "as": "タタちゃん" },
     { "who": "dog-01", "as": "ハナ" },
     { "who": "pastor-01", "as": "牧師さん" },
+    { "who": "grandpa-01", "as": "小野さん" },
     { "who": "shopkeeper-01", "as": "店の子" }
   ],
   "_note": "她認得這條街上每一個人。knows 只列會用到的。"
