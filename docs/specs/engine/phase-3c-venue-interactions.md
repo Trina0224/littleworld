@@ -2,10 +2,12 @@
 
 **Status:** design notes / implementation contract supplement  
 **Created:** 2026-08-23 22:58 PT (`America/Los_Angeles`)  
-**Updated:** 2026-08-24 00:07 PT (`America/Los_Angeles`) — structured social-action routing added  
+**Updated:** 2026-08-24 00:12 PT (`America/Los_Angeles`) — cafe runtime promoted to mandatory pre-provider milestone  
 **Companion to:** `phase-3c-perception.md`, `world-engine-2.5.md`
 
 This file records decisions that affect perception and later activity/runtime work without expanding Phase 3C into a full cafe simulation.
+
+> **DO NOT FORGET:** the Cafe / Venue Runtime described here is a required implementation milestone. It is deliberately *not* part of Phase 3C, but it **must be completed and tested before real LLM provider integration**. Do not skip from perception/memory/conversation directly to live model providers.
 
 The central cafe rule is:
 
@@ -315,22 +317,58 @@ Principles:
 >
 > **Speech expresses the fiction; structured social actions drive deterministic execution.**
 
-## 8. Implementation sequencing
+## 8. Mandatory implementation sequencing / handoff checkpoint
 
-The cafe runtime is not part of the Phase 3C perception implementation itself, but it should be implemented **before real LLM provider integration**.
+This section is a **project checkpoint**, not a suggestion.
 
-Suggested dependency order:
+The Cafe / Venue Runtime is intentionally deferred while Phase 3C perception, private memory, and conversation/speech transport are built. However, after those dependencies exist, the project **must return to this document and implement the Cafe Runtime before connecting any real LLM provider**.
+
+Required order:
 
 ```text
 3C   perception / subjective sensory state
+     ↓
 3D   private memory
+     ↓
 3E   conversation sessions + speech transport
-3F-A cafe / venue runtime (deterministic routine commerce + semantic router)
+     ↓
+3F-A CAFE / VENUE RUNTIME — REQUIRED, DO NOT SKIP
+     - venue obligation / grace / refresh_due
+     - structured social_action schema
+     - deterministic semantic router
+     - fixed menu/runtime validation
+     - order queue
+     - preparation timing
+     - shopkeeper workload shaping
+     - deterministic preparation / serving / clearing
+     - deterministic routine shopkeeper movement
+     ↓
 3F-B scheduler + mock Brain integration
-3G   real LLM provider integration
+     ↓
+3G   REAL LLM PROVIDER INTEGRATION
 ```
 
-The exact phase labels may change, but the dependency matters: routine cafe behavior should already work with scripted/mock decisions before real model behavior is introduced.
+### 8.1 Gate
+
+**3G is blocked until 3F-A has an automated scripted/mock acceptance test.**
+
+The minimum Cafe Runtime acceptance test must demonstrate, without any real LLM:
+
+```text
+customer enters/uses cafe seating
+  -> venue obligation eventually becomes due
+  -> scripted/mock customer emits speech + structured order
+  -> semantic router accepts the fixed-menu order without waking shopkeeper Brain
+  -> order is queued
+  -> deterministic preparation consumes the configured ticks
+  -> shopkeeper serves the correct customer/semantic destination
+  -> venue obligation becomes satisfied
+  -> shopkeeper returns to ordinary work state
+```
+
+A second path must demonstrate that an open-ended action such as `ask_shopkeeper:recommendation` is **routed for a future shopkeeper Brain wakeup rather than treated as deterministic commerce**.
+
+Anyone resuming this project — project owner, ChatGPT, Claude, or another implementation agent — should treat this section as the handoff reminder. If 3E is complete and the next proposed task is direct real-provider integration, **stop and implement 3F-A first**.
 
 ## 9. Future structured-action examples
 
