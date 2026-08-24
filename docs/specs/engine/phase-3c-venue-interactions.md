@@ -2,12 +2,12 @@
 
 **Status:** design notes / implementation contract supplement  
 **Created:** 2026-08-23 22:58 PT (`America/Los_Angeles`)  
-**Updated:** 2026-08-23 23:58 PT (`America/Los_Angeles`) — routine cafe service ownership clarified  
+**Updated:** 2026-08-24 00:07 PT (`America/Los_Angeles`) — structured social-action routing added  
 **Companion to:** `phase-3c-perception.md`, `world-engine-2.5.md`
 
 This file records decisions that affect perception and later activity/runtime work without expanding Phase 3C into a full cafe simulation.
 
-The central cafe rule is now:
+The central cafe rule is:
 
 > **Routine commerce is engine-owned; socially meaningful conversation is Brain-owned.**
 
@@ -74,20 +74,148 @@ Ordinary conversation should remain local. The model should not default to broad
 
 This allows cafe customers to order without walking to the counter every time. The world can stay focused on social interaction rather than unnecessary navigation churn.
 
-A future order flow may therefore be:
-
-```text
-venue obligation becomes due
-  -> Brain wakeup suggests ordering / leaving
-  -> customer chooses a loud order from current location
-  -> broadcast speech fact is committed
-  -> cafe runtime recognizes/records the order
-  -> routine deterministic service begins
-```
-
 The order does not require the customer to walk to the counter unless the customer independently chooses to do so for social reasons.
 
-## 3. Cafe Runtime owns routine service
+## 3. Structured social action accompanies speech — decided
+
+The World Engine must **not parse arbitrary natural-language speech to guess whether a customer has placed an order or whether the shopkeeper Brain should be invoked**.
+
+When an Agent Brain intentionally performs a venue-relevant social act, its structured output should contain two logically separate channels:
+
+```text
+speech          what people in the world actually hear
+social_action   server-private execution intent
+```
+
+Example — ordinary order:
+
+```json
+{
+  "speech": {
+    "text": "すみません、紅茶をお願いします。",
+    "scope": "broadcast"
+  },
+  "social_action": {
+    "type": "order",
+    "item": "black_tea"
+  }
+}
+```
+
+The speech becomes an observable/audible world fact according to its transport scope. `social_action` is server-private control data: other characters do not hear or perceive it.
+
+The runtime therefore does not need NLP to infer that `紅茶をお願いします` means `black_tea`. The Brain has already expressed its semantic intention in structured form.
+
+This pattern is not cafe-specific. Future public-telephone, vending-machine, payment and other world interactions may use the same boundary: natural language for the fiction, structured semantic action for execution.
+
+## 4. Deterministic semantic router — decided
+
+Venue-relevant structured actions pass through a deterministic semantic router before any second Brain is considered.
+
+The routing question is:
+
+> **Can the authoritative domain/runtime model completely and safely handle this action without a socially meaningful judgment?**
+
+If yes, execute it deterministically. If no, escalate to the appropriate Brain.
+
+Conceptually:
+
+```text
+Customer Brain
+     |
+     +-- speech --------------------> committed audible fact
+     |
+     +-- structured social_action
+                    |
+                    v
+             semantic router
+               /         \
+      deterministic       social/open-ended
+           |                    |
+      Cafe Runtime       wake Shopkeeper Brain
+           |                    |
+           +---------+----------+
+                     v
+              committed facts
+```
+
+### 4.1 Actions normally handled without the shopkeeper Brain
+
+Examples:
+
+```text
+order a valid fixed-menu item
+cancel an order when cancellation is still legal
+request a bill / finish service
+routine thanks / service acknowledgment
+supported fixed modifiers already represented in the menu schema
+```
+
+Example:
+
+```json
+{
+  "type": "order",
+  "item": "coffee"
+}
+```
+
+If `coffee` is a valid menu item, the Cafe Runtime can create and queue the order immediately. The shopkeeper Brain is not invoked merely to accept it.
+
+### 4.2 Actions that normally escalate to the shopkeeper Brain
+
+Examples:
+
+```text
+ask for today's recommendation
+ask what a wagashi is
+start personal/small-talk conversation with the shopkeeper
+make an unusual request not represented by the menu/runtime schema
+ask an open-ended question whose answer belongs to the shopkeeper character
+```
+
+Example:
+
+```json
+{
+  "speech": {
+    "text": "今日は何がおすすめですか？",
+    "scope": "broadcast"
+  },
+  "social_action": {
+    "type": "ask_shopkeeper",
+    "topic": "recommendation"
+  }
+}
+```
+
+The router knows that this is not a complete executable order and schedules a shopkeeper Brain wakeup.
+
+### 4.3 Validation failure is not permission to guess
+
+If a structured action is syntactically valid but cannot be executed, the runtime must not invent a nearby interpretation.
+
+Example:
+
+```json
+{
+  "type": "order",
+  "item": "unknown_item"
+}
+```
+
+Possible deterministic outcomes include:
+
+```text
+reject action and return an order-needs-clarification event
+surface that the requested item is unavailable
+request a new customer decision
+escalate to the shopkeeper Brain if the situation is genuinely social/ambiguous
+```
+
+The exact policy may depend on the failure class, but **invalid structured data must never be repaired by silently guessing from the speech text**.
+
+## 5. Cafe Runtime owns routine service
 
 Routine shop operation belongs to the World Engine / Activity Runtime, not to the shopkeeper Brain.
 
@@ -131,7 +259,7 @@ counter/workstation
 
 The World Engine chooses the physical path and placement exactly as it does for other activities.
 
-## 4. When the shopkeeper Brain is actually needed
+## 6. When the shopkeeper Brain is actually needed
 
 The shopkeeper Brain should be invoked for socially meaningful or open-ended interaction, not mechanical service bookkeeping.
 
@@ -163,7 +291,7 @@ A trivial acknowledgment such as `はい、少々お待ちください` may even
 
 This preserves the non-blocking world invariant: a provider outage must not stop the cafe from functioning mechanically.
 
-## 5. Shopkeeper interaction load
+## 7. Shopkeeper interaction load
 
 The shopkeeper is physically tied to a workstation more than most characters. The world should therefore create believable inbound interactions through venue operation rather than making her periodically initiate unrelated conversation.
 
@@ -184,8 +312,10 @@ Principles:
 > **World Engine creates the social obligation; customer Brain decides how to satisfy it.**
 >
 > **Cafe Runtime performs routine service; shopkeeper Brain decides socially meaningful language and choices.**
+>
+> **Speech expresses the fiction; structured social actions drive deterministic execution.**
 
-## 6. Implementation sequencing
+## 8. Implementation sequencing
 
 The cafe runtime is not part of the Phase 3C perception implementation itself, but it should be implemented **before real LLM provider integration**.
 
@@ -195,14 +325,28 @@ Suggested dependency order:
 3C   perception / subjective sensory state
 3D   private memory
 3E   conversation sessions + speech transport
-3F-A cafe / venue runtime (deterministic routine commerce)
+3F-A cafe / venue runtime (deterministic routine commerce + semantic router)
 3F-B scheduler + mock Brain integration
 3G   real LLM provider integration
 ```
 
 The exact phase labels may change, but the dependency matters: routine cafe behavior should already work with scripted/mock decisions before real model behavior is introduced.
 
-## 7. Two special interaction points — recorded for later
+## 9. Future structured-action examples
+
+The same semantic-action routing pattern should later be reusable for other deterministic world affordances.
+
+Conceptually:
+
+```json
+{"type":"use_public_phone"}
+{"type":"buy_vending_drink","item":"ramune"}
+{"type":"request_bill"}
+```
+
+The Brain may accompany those actions with natural speech or remain silent as appropriate. The World Engine resolves the physical interaction and deterministic mechanics.
+
+## 10. Two special interaction points — recorded for later
 
 The current scene contains two additional fixed locations that LLM characters may eventually be allowed to use:
 
