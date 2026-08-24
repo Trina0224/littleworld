@@ -214,6 +214,62 @@ far zone        normally omitted
 
 Hearing is separately distance-bounded. Seeing a speaker does not imply hearing the words.
 
+### 9.1 Semantic destinations and engine-owned placement — decided
+
+LLMs reason about **social/semantic destinations**, not individual seat IDs or coordinates.
+
+The model-visible vocabulary should stay small and natural, for example:
+
+```text
+吧台 / cafe counter
+近桌 / near table
+遠桌 / far table
+公園長椅 / park bench
+公園空地 / park open area
+街邊 / street edge
+某個人
+某群正在聊天的人
+```
+
+The canonical physical anchors in `anchors.json` remain engine-only implementation detail. Existing IDs such as `table-near-3`, `counter-stool-2` and `bench-slot-1` are stable resources for movement, reservation and replay; they are **not** vocabulary the LLM is expected to learn or reason about.
+
+The design rule is:
+
+> **LLM chooses social destination; World Engine chooses physical placement.**
+
+Examples of valid Agent Brain proposals:
+
+```text
+go to the near table
+approach the woman in the white apron
+walk over to the group talking at the far table
+stand near the cafe counter
+```
+
+The World Engine / Activity Runtime then resolves the intention into the exact legal destination. It may choose a free seat, a standing position beside the table, or another nearby legal interaction point according to occupancy and geometry.
+
+Going to a table does **not** imply sitting down. Sitting is a separate decision/activity. If the seats are full, or if the character simply prefers not to sit, the engine may place the character at a legal standing interaction spot and conversation can continue normally.
+
+Conceptually a semantic area may expose internal interaction capacity such as:
+
+```text
+near-table
+  seats: table-near-1..4
+  standing-spots: engine-defined legal positions around the table
+```
+
+The LLM does not receive those IDs. It may receive a human-scale summary such as:
+
+> 近桌有三個人坐著，還有一個空位；桌邊也有可以站人的空間。
+
+or:
+
+> 遠桌已經坐滿，但旁邊還可以站人交談。
+
+Perception should describe spatial relationships that a sighted person would naturally understand, such as `在你右前方`, `同一張桌的另一側`, `靠近吧台`, or `公園另一邊`, but it must not expose raw coordinates or require the model to reconstruct geometry.
+
+When an agent targets a visible person rather than an area, the engine resolves an appropriate approach/interaction position around that person's current authoritative position. The target person's canonical identity remains server-side; the LLM refers to that person through the sensory description it was given.
+
 ## 10. Observation classes
 
 Phase 3C should support at least:
@@ -327,6 +383,8 @@ At minimum, automated tests must prove:
 8. The global event log cannot be passed directly as an Agent observation package.
 9. Movement coordinates remain server-side; model-visible spatial descriptions do not require raw world coordinates.
 10. Perception refresh does not dispatch or await an LLM call.
+11. LLM-visible destinations use semantic areas/person descriptions rather than canonical seat IDs.
+12. A full table can still admit a standing interaction position when geometry allows it; `go_to_area` must not imply `sit`.
 
 ## 15. Phase 3C acceptance scenario
 
@@ -343,6 +401,8 @@ Create a deterministic scenario with at least three present LLM characters and o
 All visible people are described only by appearance/public activity. No model-visible output contains their canonical names or internal IDs.
 
 Then move one character and repeat the perception query to prove that the same objective cast yields different subjective packages by position.
+
+Also exercise one semantic destination: ask a scripted/mock intention to approach a table or person, let the engine resolve the concrete physical position, and verify that a full set of seats does not prevent a legal standing interaction when standing space exists.
 
 No LLM is used anywhere in this acceptance test.
 
