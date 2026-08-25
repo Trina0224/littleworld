@@ -118,8 +118,15 @@ function main() {
     }
   }
 
-  // Weak while nothing draws from the rng, but in place so it fails the day
-  // something does.
+  // What this proves, and what it stops proving once brains exist.
+  //
+  // Today it covers the whole run, because the whole run is deterministic. Once
+  // Agent Brains are connected it covers the deterministic kernel only: provider
+  // outputs are recorded results, not reproducible ones, so the guarantee
+  // becomes `same seed + same recorded inputs = same deterministic behaviour`
+  // (simulation-replay-architecture.md 1.3). The assertion stays valid and its
+  // scope narrows - it is not broken, and it should not be deleted when it stops
+  // being a statement about everything.
   const again = runScenario({ anchors, grid });
   if (JSON.stringify(world.log.facts) !== JSON.stringify(again.log.facts)) {
     problems.push('same seed produced a different fact stream');
