@@ -1,4 +1,4 @@
-# World Engine — Phases 3A and 3C
+# World Engine — Phases 3A, 3C and 3D
 
 Plain ES modules, no dependencies, no build step. They run under Node today and
 in the browser later without change; only the scenario runner touches a host
@@ -11,6 +11,7 @@ node src/engine/nav.test.js
 node src/engine/days.test.js
 node src/engine/loop.test.js
 node src/engine/perception.test.js
+node src/engine/memory.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -25,6 +26,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `zones.js` | which semantic area a position is in |
 | `perception.js` | the sensory boundary between the world and one Brain |
 | `placement.js` | semantic destination in, physical position out |
+| `memory.js` | what a character remembers, and the context a Brain receives |
 | `nav.js` | A* over the painted walkable map |
 | `world.js` | authoritative state, resources, reservations, movement |
 | `activity.js` | the Activity Runtime |
@@ -34,6 +36,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `days.test.js` | days, absence, and the schedule that must not move |
 | `loop.test.js` | the tick order, and that perception in it moves no fact |
 | `perception.test.js` | every leak the 3C spec asks to be proved impossible |
+| `memory.test.js` | that a memory is the rememberer's and nobody else's |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -140,12 +143,72 @@ form of the wakeup mutation hung instead of failing, because returning before th
 clock advanced left the run unable to finish; it was replaced with one that fails
 cleanly, and the assertion was strengthened to compare audit as well as facts.
 
+## Memory (3D)
+
+> **What does this character remember about what it has perceived?** — and only
+> that. Whether two characters are now friends is a judgement, and it belongs to
+> the Brain reading its own memory, not to a number the engine computed.
+
+**`knows` is memory that existed before tick zero.** The seeded knowledge from 3B
+is not a second mechanism consulted alongside this one; it is the first entry in
+the store. That is what stops there being two answers to *does this character
+know that one*. A seeded model has no first-met tick, because a grandmother has
+always known the girl from the shop.
+
+**The engine writes encounters; the Brain writes meaning.** Presence, proximity
+and whether words passed are recorded deterministically every tick; prose and
+learned labels arrive as proposals. So when a provider is down **recognition
+keeps working and encounters keep counting** — only the interpretation is
+missing. Same invariant as everywhere: the world does not stop being a world
+when inference fails.
+
+**A label belongs to the observer.** What the brothers call the shopkeeper is
+theirs; her name is hers. 3B made this structurally hard by an accident worth
+keeping — `character.json` carries **no name field at all**, so a label can only
+come from the observer's own `knows` or from something heard in the world.
+Recognition is joined onto perception in `buildContext`, not inside perception,
+because perception may not know who anyone is; the join runs server-side on the
+entity behind a ref and the model still never sees an id.
+
+**Asymmetry is free and stays free.** Memory is per observer, so the grandmother
+calling her granddaughter 孫女 while the granddaughter calls her おばあちゃん
+needs no mechanism, and nothing reconciles the two stores. Ever.
+
+**Memory writes go to audit, never to facts.** It is private, so it is not a
+world fact — and audit is already the stream for *why*. The renderer and replay
+read facts only and never see it; the offline script pass may read audit, which
+is how interiority can reach an audience without touching that rule.
+
+**Length is a per-call cost.** `self.md` is a cached prefix at 0.1×; memory is
+the dynamic suffix, re-sent uncached every request. So episodes are bounded and
+evicted deterministically — and *deterministic is not the same as correct*:
+dropping the oldest is also deterministic and would throw away the thing worth
+keeping, so eviction ranks on value first and the test proves a first meeting
+survives eighty pieces of ordinary chatter.
+
+`dog-01` gets no store. A deterministic actor's personality is its parameters,
+and giving the dog an accumulating past would model a mind it does not have.
+
+### What the tests prove
+
+Every item in `phase-3d-memory.md` §11. Five mutations confirm they bite:
+routing memory writes to the fact stream, accepting an uncanonicalized ref into
+storage, giving seeded knowledge a first-met tick, evicting by age rather than by
+value, and borrowing a label from another character's store — that last one
+fails with *"the pastor recognised 3 people: 辰ちゃん, 孫女, 星さん"*, which is
+precisely the leak the phase exists to prevent.
+
+A sixth mutation was written first and **caught nothing**, because it turned out
+to be a no-op: nobody's `knows` contains themselves, so the fallback it added
+never fired. Recorded because a mutation that passes is not evidence — it has to
+be shown to change behaviour before its survival means anything.
+
 **Nothing outside the slice is here.** No perception, no memory, no zones, no
 conversation, no scheduler, no provider adapter — not even a mock one. See
 §17.1 of `docs/specs/engine/world-engine-2.5.md` for why that list is a fence
-rather than a to-do. 3C adds perception and nothing else: no memory, no
-conversation, no scheduler, no provider, no ray casting, and no model-generated
-prose.
+rather than a to-do. 3C added perception and 3D adds memory; still no
+conversation sessions, no scheduler, no provider, no ray casting, no
+model-generated prose, and no engine-computed affinity between characters.
 
 ## Five things worth knowing before reading the code
 
