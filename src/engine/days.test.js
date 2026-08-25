@@ -44,7 +44,7 @@ const SPEC = join(HERE, '..', '..', 'docs', 'specs', 'world');
 const TICKS_PER_DAY = 60;
 const DAYS = 5;
 const DOOR = [200, 250];
-const SEATS = ['bench-slot-2', 'bench-slot-4', 'table-near-1'];
+const SEATS = ['bench-slot-2', 'bench-slot-1', 'table-near-1'];
 
 // every: 1 is a fixture, 3 is the retired stationmaster's few days, 6 is the
 // old hand from the main shop looking in.
@@ -98,6 +98,18 @@ function main() {
   const anchors = JSON.parse(readFileSync(join(SPEC, 'anchors.json'), 'utf8'));
   const grid = JSON.parse(readFileSync(join(SPEC, 'navgrid.json'), 'utf8'));
   const problems = [];
+
+  // Named seats must exist. The first version of this test used bench-slot-4,
+  // which anchors.json does not have, so one of the three agents silently never
+  // sat down and a third of the scenario tested nothing. A missing resource is a
+  // typo, not a scenario.
+  {
+    const nav = createNav(grid);
+    const probe = createWorld({ anchors, nav, seed: 1 });
+    for (const id of SEATS) {
+      if (!probe.resource(id)) problems.push(`no such resource: ${id}`);
+    }
+  }
 
   const live = createView();
   const liveFrames = [];

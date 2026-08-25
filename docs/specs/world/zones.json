@@ -1,0 +1,209 @@
+{
+  "coordinateSystem": {
+    "width": 640,
+    "height": 360,
+    "note": "same world units as world.json"
+  },
+  "containment": {
+    "test": "even-odd point in polygon, sampled at cell centres (x+0.5, y+0.5)",
+    "priority": "backstage from backstage.png wins; then the first polygon in `zones` order that contains the point",
+    "tieBreak": "a point exactly on an edge resolves by the even-odd test above, which is deterministic; no separate rule is needed",
+    "walkability": "containment is purely geometric. A seat surface sits on furniture and is not a walkable cell, so a seated agent still has a zone. Coverage is asserted over walkable cells because those are the positions an agent can stand in; it is not a precondition of lookup."
+  },
+  "zones": [
+    {
+      "id": "cafe-counter",
+      "shape": "polygon",
+      "points": [
+        [
+          143,
+          156
+        ],
+        [
+          292,
+          143
+        ],
+        [
+          303,
+          199
+        ],
+        [
+          152,
+          214
+        ]
+      ],
+      "label": {
+        "zh": "吧台",
+        "en": "the cafe counter"
+      },
+      "neighbors": [
+        "near-table",
+        "far-table",
+        "backstage"
+      ],
+      "cells": 401
+    },
+    {
+      "id": "near-table",
+      "shape": "polygon",
+      "points": [
+        [
+          147,
+          199
+        ],
+        [
+          303,
+          193
+        ],
+        [
+          309,
+          268
+        ],
+        [
+          150,
+          279
+        ]
+      ],
+      "label": {
+        "zh": "近桌",
+        "en": "the near table"
+      },
+      "neighbors": [
+        "cafe-counter",
+        "street-edge",
+        "park-open",
+        "far-table"
+      ],
+      "cells": 5453
+    },
+    {
+      "id": "far-table",
+      "shape": "polygon",
+      "points": [
+        [
+          286,
+          140
+        ],
+        [
+          381,
+          133
+        ],
+        [
+          386,
+          201
+        ],
+        [
+          292,
+          207
+        ]
+      ],
+      "label": {
+        "zh": "遠桌",
+        "en": "the far table"
+      },
+      "neighbors": [
+        "cafe-counter",
+        "park-open",
+        "near-table"
+      ],
+      "cells": 1450
+    },
+    {
+      "id": "street-edge",
+      "shape": "polygon",
+      "points": [
+        [
+          0,
+          60
+        ],
+        [
+          160,
+          60
+        ],
+        [
+          160,
+          236
+        ],
+        [
+          150,
+          279
+        ],
+        [
+          309,
+          268
+        ],
+        [
+          300,
+          360
+        ],
+        [
+          0,
+          360
+        ]
+      ],
+      "label": {
+        "zh": "街邊",
+        "en": "the street edge"
+      },
+      "neighbors": [
+        "near-table",
+        "park-open"
+      ],
+      "cells": 14578
+    },
+    {
+      "id": "park-open",
+      "shape": "polygon",
+      "points": [
+        [
+          225,
+          60
+        ],
+        [
+          640,
+          60
+        ],
+        [
+          640,
+          360
+        ],
+        [
+          286,
+          360
+        ],
+        [
+          280,
+          240
+        ],
+        [
+          281,
+          130
+        ]
+      ],
+      "label": {
+        "zh": "公園空地",
+        "en": "the open ground"
+      },
+      "neighbors": [
+        "far-table",
+        "near-table",
+        "street-edge"
+      ],
+      "cells": 34405
+    },
+    {
+      "id": "backstage",
+      "shape": "mask",
+      "source": "backstage.png",
+      "label": {
+        "zh": "後臺",
+        "en": "out of sight"
+      },
+      "neighbors": [
+        "cafe-counter"
+      ],
+      "cells": 10468,
+      "note": "not a polygon on purpose - the region is painted, and drawing it twice is how two sources of truth drift apart"
+    }
+  ]
+}

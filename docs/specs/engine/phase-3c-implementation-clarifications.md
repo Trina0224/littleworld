@@ -62,6 +62,43 @@ Whichever policy is chosen must be deterministic and tested.
 
 A stale reference must fail cleanly rather than silently retargeting another entity.
 
+### 1.1a The server-side mapping outlives the reference — decided
+
+The lifetime above governs **when the model may use a ref**. It must not be read as
+governing how long the server keeps the mapping, because discarding the mapping at
+epoch end would make Phase 3D impossible to build.
+
+The problem is concrete. Memory will want to record something like *"I spoke with
+seen-2"*. If `seen-2 -> grandma-01` is thrown away when the next snapshot replaces it,
+that memory is a **dangling pointer** the moment it is written. Only two repairs exist,
+and one of them is not viable:
+
+| | |
+|---|---|
+| key memory on the appearance text | fragile — the model would have to string-match descriptions, and two similar people collide |
+| key memory on the canonical entity id, server-side | **the only workable option** |
+
+Therefore:
+
+> **When a Brain context snapshot is constructed, the `ref -> entityId` mapping is part
+> of that snapshot's server-only half, and is retained for at least as long as any
+> memory derived from that snapshot is retained.**
+
+Nothing changes on the model side. The Brain still never sees an entity id, still
+cannot address anyone by one, and refs still expire for the model exactly as §1.1 says.
+What changes is that the server can later answer *"which entity was the subject of this
+memory"* without asking the model, which is what makes recognition-over-time possible
+at all.
+
+This is also what keeps §5 of `phase-3c-perception.md` honest. Recognition is supposed
+to belong to the character rather than the sensory layer — but a character can only
+recognise someone it has a durable way of having met before. The durable half lives on
+the server; the fallible half lives in the Brain.
+
+**Required test (adds to §6):** a memory written against a ref in epoch N can still be
+resolved to the same canonical entity after the ref itself has expired in epoch N+1,
+and resolving it never places an entity id in any model-visible structure.
+
 ### 1.2 Stability inside one context
 
 Within one delivered Brain context, the same perceived entity must use the same reference everywhere. Do not describe the same person once as `seen-2` and later in the same context as `seen-5`.
@@ -279,6 +316,8 @@ In addition to the tests already listed in `phase-3c-perception.md`, implementat
 1. Two visually similar entities can still be targeted unambiguously through different ephemeral refs.
 2. A perception ref never exposes the mapped canonical entity ID.
 3. A stale perception ref fails rather than being rebound to another entity.
+3a. The server-side `ref -> entityId` mapping survives ref expiry for as long as memory
+    derived from that snapshot is retained, and never becomes model-visible (§1.1a).
 4. The same entity uses one stable ref throughout a single delivered context snapshot.
 5. A speech event perceived at tick N is still available at a later Brain wakeup even after many perception refreshes.
 6. An unperceived global fact never enters that observer's pending perceived-event queue.
@@ -301,9 +340,13 @@ Phase 3C may begin once the following are true:
 [x] pending perceived-event delivery contract is specified
 [x] canonical zone artifact requirement is specified
 [x] standing-placement ownership and determinism are specified
-[ ] actual zones.json geometry has been measured from the current scene
+[x] actual zones.json geometry has been measured from the current scene
 ```
 
-The remaining unchecked item is world-data authoring, not an architecture question. It should be completed as the first concrete implementation task before zone-dependent perception code is written.
+All items are now closed. The geometry was measured by
+`docs/specs/world/zones-derive.py`, which asserts what hand-authoring the JSON
+could not: every walkable cell lands in exactly one zone, and every seat and
+station in `anchors.json` lands in the zone its group says it should. Backstage
+is taken from `backstage.png` rather than drawn again, so the two cannot drift.
 
 Venue obligations, broadcast ordering, the public telephone and vending machine remain governed by `phase-3c-venue-interactions.md`; they do not change the contracts above.

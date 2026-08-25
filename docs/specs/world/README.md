@@ -267,3 +267,47 @@ python3 docs/specs/world/derive.py
 
 Rewrites `backstage.png` from the two painted masks. Re-run it after either mask
 changes, or after changing the threshold or the height ramp in `world.json`.
+
+## zones.json — semantic areas
+
+`python3 docs/specs/world/zones-derive.py`
+
+Phase 3C needs one source that answers *which semantic area is this position in?*
+Zone membership drives perception — who counts as being in the same area as whom —
+and the destination vocabulary an LLM is allowed to use. It is world data, not
+engine constants, so it lives here beside the painted maps.
+
+| zone | | |
+|---|---|---|
+| `cafe-counter` | 吧台 | the counter run and its stools |
+| `near-table` | 近桌 | the paved terrace in front of the shop |
+| `far-table` | 遠桌 | the table by the tree |
+| `park-open` | 公園空地 | the sand, the bench, the phone box, the vending machine |
+| `street-edge` | 街邊 | the road along the bottom and up the left |
+| `backstage` | 後臺 | taken from `backstage.png`, not drawn again |
+
+Three properties the script asserts, which hand-authoring the JSON could not:
+
+**Backstage is taken, not drawn.** The region is already painted and already packed
+into `navgrid.json`. A second hand-drawn copy is how two sources of truth drift
+apart the first time the paint changes, so backstage comes from the mask and wins
+over every polygon.
+
+**Coverage is asserted.** Every walkable cell must land in exactly one zone. A cell
+in none of them is a position an agent can stand in and perception cannot describe —
+the exact bug this file exists to prevent — so the script fails rather than shipping
+a hole. It found three of them on the first run: the strip behind the garden fence,
+the road at the top-left corner, and a seam between the terrace and the street.
+
+**The anchors check the polygons.** Each seat and station has an expected zone, taken
+from its anchor group. Draw a polygon slightly wrong and the script names the seat
+that landed in the wrong area, instead of the mistake surfacing much later as a
+character who cannot see the person across the table from them.
+
+Containment is even-odd point-in-polygon at cell centres. Overlap is allowed and
+resolved by the order zones are listed in, which is stated in `zones.json` rather
+than left to accident. Lookup is purely geometric: a seat surface sits on furniture
+and is not a walkable cell, so a seated agent still has a zone.
+
+`zones-check.png` renders the result over the scene; unassigned walkable cells are
+drawn in loud red.

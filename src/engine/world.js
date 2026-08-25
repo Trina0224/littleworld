@@ -165,14 +165,18 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
     /**
      * Take an agent out of the scene.
      *
-     * Anything it holds goes back first. A seat still reserved by someone who
-     * went home is the same leak a half-finished activity would cause, and the
-     * world runs out of seats either way.
+     * Everything it holds goes back first - everything, not just what it is
+     * sitting on. sitAndRest reserves before it walks, on purpose, so an agent
+     * can hold a reservation for the whole approach with `holding` still null.
+     * Releasing only `holding` stranded exactly that case, and the seat stayed
+     * reserved by someone who had gone home.
      */
     depart(id) {
       const agent = agents.get(id);
       if (!agent || !here.has(id)) return false;
-      if (agent.holding) world.release(agent.holding, id);
+      for (const rid of world.resourceIds()) {        // sorted: order cannot change a result
+        if (resources.get(rid).holder === id) world.release(rid, id);
+      }
       walks.delete(id);
       agent.activity = idle();
       agent.step = 0;

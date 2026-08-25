@@ -196,11 +196,19 @@ Candidate semantic zones remain:
 
 ```text
 cafe-counter
-cafe-terrace
+near-table
+far-table
 park-open
 street-edge
 backstage
 ```
+
+> Corrected: this list said `cafe-terrace` where §9.1 and
+> `phase-3c-implementation-clarifications.md` §3 say `near-table` / `far-table`.
+> The clarifications naming wins, because it matches the anchor groups that
+> already exist in `anchors.json` (`table-near-*`, `table-far-*`) and because a
+> single source of truth cannot have two spellings. The measured geometry is in
+> `docs/specs/world/zones.json`.
 
 Exact geometry and thresholds are implementation data, not prose embedded in Agent prompts.
 
@@ -337,6 +345,51 @@ Do not send the same unchanged scene description as a growing event history ever
 
 The global fact stream is not an agent's memory. Perceived events are derived from committed facts according to presence, distance, hearing and relevance.
 
+### 12.1 One exception, and it is not a loophole — decided
+
+`own_action_failed` (§10) cannot be derived from committed facts, because **a failed
+attempt is not a fact**. Nothing in the world changed. The engine already routes
+failures to the audit stream by design:
+
+```js
+// src/engine/activity.js
+log.note(world.tick, 'step_failed', { agent: id, activity: a.name, step: step.type });
+```
+
+and `src/engine/events.js` states that the renderer may never read audit. Promoting
+failures to facts to satisfy §10 would be the wrong repair: the fact stream is what
+replay plays back, so replay would start performing attempts that never happened.
+
+The correct reading is that **an agent's own failed attempt is private knowledge, not
+a world event**:
+
+```text
+committed fact   -> may be perceived by anyone the perception rules allow
+audit note       -> perceptible to exactly one agent: the one who attempted it
+```
+
+So the Perception Engine has **one** legitimate consumer of the audit stream besides
+debugging, and it is narrowly scoped:
+
+1. Only `own_action_failed` may be sourced this way.
+2. Only the acting agent may receive it. It is never visible to any other observer,
+   at any distance, under any salience rule.
+3. It never enters another agent's `pendingPerceivedEvents[]`.
+4. The renderer and replay still read facts only. This decision does not widen their
+   access by one field.
+
+This *strengthens* the facts/audit split rather than weakening it. Before this
+decision the audit stream had no defined consumer inside the simulation, and §10
+quietly required one. Now the boundary is stated: the world publishes what happened,
+and an agent additionally knows what it tried.
+
+`own_activity_changed` needs no exception — `activity_started` and `activity_ended`
+are already facts.
+
+**Required test (adds to §14):** a failed activity produces `own_action_failed` for
+the acting agent and appears in no other agent's observation package or pending
+queue, at any distance.
+
 ## 13. Subjective context output
 
 Phase 3C stops before LLM integration. It should nevertheless produce the dynamic sensory portion that a future Agent Context Builder can consume.
@@ -383,6 +436,8 @@ At minimum, automated tests must prove:
 8. The global event log cannot be passed directly as an Agent observation package.
 9. Movement coordinates remain server-side; model-visible spatial descriptions do not require raw world coordinates.
 10. Perception refresh does not dispatch or await an LLM call.
+10a. A failed activity yields `own_action_failed` to the acting agent only, and to no
+    other observer's package or pending queue at any distance (§12.1).
 11. LLM-visible destinations use semantic areas/person descriptions rather than canonical seat IDs.
 12. A full table can still admit a standing interaction position when geometry allows it; `go_to_area` must not imply `sit`.
 

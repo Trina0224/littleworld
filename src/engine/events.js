@@ -8,6 +8,12 @@
  * AUDIT is why - intentions, proposals, refusals, anything that explains a
  * decision without being one. Debugging reads it. The renderer may not.
  *
+ * Perception has exactly one narrow claim on it, and only from 3C onward: an agent
+ * may learn that its OWN attempt failed, because a failed attempt changed nothing
+ * and so is not a fact. That reaches the acting agent alone and never another
+ * observer, and it does not widen what the renderer or replay may read by one
+ * field. See phase-3c-perception.md 12.1.
+ *
  * Keeping both in one stream looks harmless and leaves replay quietly undecided
  * between re-executing commands and playing back what happened. Those are
  * different systems, and the ambiguity only surfaces once a command would
