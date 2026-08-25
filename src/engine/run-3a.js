@@ -15,6 +15,7 @@ import { createWorld } from './world.js';
 import { createActivityRuntime, sitAndRest } from './activity.js';
 import { createNav } from './nav.js';
 import { createView, replay } from './view.js';
+import { createLoop } from './loop.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SPEC = join(HERE, '..', '..', 'docs', 'specs', 'world');
@@ -39,23 +40,20 @@ export function runScenario({ anchors, grid, seed = 20260823, ticks = 280, onTic
   world.spawn('brother-01', [...CAFE]);
   world.spawn('brother-02', [CAFE[0] + 6, CAFE[1]]);
 
-  let seen = 0;
-  while (world.tick < ticks) {
-    for (const line of SCRIPT.filter((l) => l.t === world.tick)) {
-      // An intention is not a fact. Audit stream; the renderer never sees it.
-      world.log.note(world.tick, 'intent', {
-        agent: line.agent, activity: 'sit_and_rest', target: line.seat
-      });
-      runtime.assign(line.agent, sitAndRest(line.seat, line.rest));
-    }
-    world.stepMovement();
-    runtime.tick();
-    if (onTick) onTick(world.log.facts.slice(seen), world.tick);
-    seen = world.log.facts.length;
-    world.clock.advance();
-  }
-  world.stop();
-  if (onTick) onTick(world.log.facts.slice(seen), world.tick);
+  // The tick order lives in loop.js, not here. What belongs to a scenario is
+  // what it injects and when.
+  createLoop({ world, runtime }).run(ticks, {
+    beforeTick(t) {
+      for (const line of SCRIPT.filter((l) => l.t === t)) {
+        // An intention is not a fact. Audit stream; the renderer never sees it.
+        world.log.note(t, 'intent', {
+          agent: line.agent, activity: 'sit_and_rest', target: line.seat
+        });
+        runtime.assign(line.agent, sitAndRest(line.seat, line.rest));
+      }
+    },
+    onFrame: onTick
+  });
   return world;
 }
 

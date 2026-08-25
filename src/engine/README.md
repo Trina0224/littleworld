@@ -9,6 +9,7 @@ python3 docs/specs/world/navgrid-derive.py    # once, after the painted maps cha
 node src/engine/run-3a.js
 node src/engine/nav.test.js
 node src/engine/days.test.js
+node src/engine/loop.test.js
 node src/engine/perception.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
@@ -20,6 +21,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `resources.js` | the states a claimable thing can be in |
 | `events.js` | the two streams |
 | `attendance.js` | who is here today |
+| `loop.js` | one tick, in the order the spec says |
 | `zones.js` | which semantic area a position is in |
 | `perception.js` | the sensory boundary between the world and one Brain |
 | `placement.js` | semantic destination in, physical position out |
@@ -30,8 +32,44 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `run-3a.js` | the scripted scenario, and the checks it has to pass |
 | `nav.test.js` | the one navigation property that is easy to lose |
 | `days.test.js` | days, absence, and the schedule that must not move |
+| `loop.test.js` | the tick order, and that perception in it moves no fact |
 | `perception.test.js` | every leak the 3C spec asks to be proved impossible |
 | `run-3c.js` | the acceptance scenario, printed |
+
+## The tick
+
+`phase-3c-perception.md` §2 defines the canonical tick order, and for a while
+nothing implemented it: every scenario open-coded its own loop and perception was
+called by hand in a demo. `loop.js` is now the one place that owns it.
+
+```
+1  advance the integer world clock      5  commit the resulting world facts
+2  advance deterministic movement       6  refresh perception for each present agent
+3  advance deterministic activities     7  decide whether any agent needs a Brain wakeup
+4  update reservations / presence       8  dispatch those requests asynchronously
+```
+
+Steps 1–7 never wait for inference. **Step 8 is not here** — it belongs to the
+scheduler in 3F, and `onWakeup` is where it attaches. The contract is already
+enforced by the shape: the hook is handed a list and its return value is
+discarded, so there is nothing for a future implementer to await. `loop.test.js`
+proves it by running the same scenario twice with a hook that returns a promise,
+and comparing both streams.
+
+Steps 4 and 5 are not separate calls — reservations move because an activity step
+moved them, facts commit as they happen. They are named anyway because they are
+real stages of the tick even where no line corresponds to them.
+
+**Wiring perception in cannot change a fact,** because perception only ever reads
+the two streams. That is a claim, so it is asserted: the same scenario runs with
+and without perception and the fact *and* audit streams are compared byte for
+byte — over a run that covers movement, reservation, occupancy, release, speech,
+day boundaries and activity transitions, so the comparison is evidence rather
+than a coincidence of two empty logs.
+
+`speech_said` is a fact, so `view.js` carries it: an utterance shows for a fixed
+number of **ticks**, never milliseconds, so a bubble expires at the same instant
+live and in replay.
 
 ## Perception (3C)
 
@@ -90,12 +128,17 @@ character files: a test with invented appearance strings would still pass if the
 engine started reading `bible.md`, so the check that matters takes real sentences
 out of a real bible and a real self sheet and asserts none of them appear.
 
-Eleven mutations were run to confirm the assertions bite — leaking `entityId` into
+Fifteen mutations were run to confirm the assertions bite — including making
+perception append a fact, dropping step 6 from the loop, letting the loop observe
+what the wakeup hook returned, and stopping the speech bubble from expiring — — leaking `entityId` into
 the visible entry, hearing without distance, broadcasting `own_action_failed` to
 bystanders, never marking events delivered, dropping protected events from the
 queue, sourcing appearance from `self.md`, canonicalising without recursing,
 guessing at a stale ref instead of reporting it, making `canonicalize` a no-op,
-and making `releaseEpoch` do nothing. All eleven failed the suite.
+and making `releaseEpoch` do nothing. All fifteen failed the suite. One earlier
+form of the wakeup mutation hung instead of failing, because returning before the
+clock advanced left the run unable to finish; it was replaced with one that fails
+cleanly, and the assertion was strengthened to compare audit as well as facts.
 
 **Nothing outside the slice is here.** No perception, no memory, no zones, no
 conversation, no scheduler, no provider adapter — not even a mock one. See

@@ -36,6 +36,7 @@ import { createWorld } from './world.js';
 import { createActivityRuntime, sitAndRest } from './activity.js';
 import { createNav } from './nav.js';
 import { createView, replay } from './view.js';
+import { createLoop } from './loop.js';
 import { attends } from './attendance.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -66,31 +67,21 @@ function run({ anchors, grid, seed = 20260824, extra = null, onTick }) {
   for (const c of cast) world.roster(c.id, { at: [...DOOR], every: c.every });
   world.beginDay();
 
-  // Stops one tick short so the last advance stays inside day DAYS-1. Going all
-  // the way would step into a day the run never plays and log a day_started for
-  // it, and the trailing onTick below would repeat a tick that already had a
-  // frame - which replay, driving one frame per tick, would not.
-  const TICKS = TICKS_PER_DAY * DAYS;
-  let seen = 0;
-  while (world.tick < TICKS - 1) {
-    // Anyone here and doing nothing sits down for longer than a day lasts, so
-    // the boundary always lands on somebody holding a seat.
-    for (const id of world.presentIds()) {
-      const agent = world.agents.get(id);
-      if (agent.activity.name !== 'idle' || world.walking(id)) continue;
-      const seat = cast.find((c) => c.id === id)?.seat;
-      if (seat && world.resource(seat)?.holder === null) {
-        runtime.assign(id, sitAndRest(seat, TICKS_PER_DAY * 2));
+  createLoop({ world, runtime }).runInclusive(TICKS_PER_DAY * DAYS, {
+    beforeTick() {
+      // Anyone here and doing nothing sits down for longer than a day lasts, so
+      // the boundary always lands on somebody holding a seat.
+      for (const id of world.presentIds()) {
+        const agent = world.agents.get(id);
+        if (agent.activity.name !== 'idle' || world.walking(id)) continue;
+        const seat = cast.find((c) => c.id === id)?.seat;
+        if (seat && world.resource(seat)?.holder === null) {
+          runtime.assign(id, sitAndRest(seat, TICKS_PER_DAY * 2));
+        }
       }
-    }
-    world.stepMovement();
-    runtime.tick();
-    if (onTick) onTick(world.log.facts.slice(seen), world.tick);
-    seen = world.log.facts.length;
-    world.advance();                       // rolls the day over when it is due
-  }
-  world.stop();
-  if (onTick) onTick(world.log.facts.slice(seen), world.tick);
+    },
+    onFrame: onTick
+  });
   return world;
 }
 

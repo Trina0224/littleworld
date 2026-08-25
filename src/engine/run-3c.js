@@ -19,6 +19,8 @@ import { createNav } from './nav.js';
 import { createZones } from './zones.js';
 import { createPerception } from './perception.js';
 import { createPlacement } from './placement.js';
+import { createActivityRuntime } from './activity.js';
+import { createLoop } from './loop.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -65,8 +67,11 @@ for (const s of STAGE) {
 }
 console.log(`    ${ABSENT.id.padEnd(15)} rostered, not here today`);
 
+// Through the shared loop, so this is the tick order the spec describes rather
+// than a demo calling perception by hand.
+const loop = createLoop({ world, runtime: createActivityRuntime(world), perception });
 world.say('pastor-01', 'こんにちは、いいお天気ですね。', { scope: 'normal' });
-perception.tick();
+loop.step();
 
 function show(observerId, note) {
   const ctx = perception.contextFor(observerId);
@@ -88,7 +93,7 @@ show('shopkeeper-01', 'is at the counter, three hundred units away');
 
 // Same cast, different position, different subjective package.
 world.agents.get('shopkeeper-01').at = [478, 264];
-perception.tick();
+loop.step();
 show('shopkeeper-01', 'has walked over to the bench');
 
 // A semantic destination: the far table is full, and joining it is still legal.

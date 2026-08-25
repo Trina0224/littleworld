@@ -17,6 +17,9 @@ export function createView() {
   let tick = 0;
   let tickDurationMs = 100;
   let day = 0;
+  // How long an utterance stays on screen. Counted in ticks, never in
+  // milliseconds, so a bubble expires at the same moment live and in replay.
+  const SPEECH_TICKS = 30;
 
   function place(agent) {
     if (!agent.walk) return;
@@ -41,7 +44,7 @@ export function createView() {
           break;
         case 'agent_spawned':
         case 'agent_arrived':
-          agents.set(e.agent, { id: e.agent, at: [...e.at], holding: null, walk: null });
+          agents.set(e.agent, { id: e.agent, at: [...e.at], holding: null, walk: null, saying: null });
           break;
         case 'agent_departed':
           // Out of the scene, so out of the snapshot. The roster still knows
@@ -51,6 +54,13 @@ export function createView() {
         case 'day_started':
           day = e.day;
           break;
+        case 'speech_said': {
+          // Who actually heard it is perception's business and is private. What
+          // the renderer needs is only that somebody said something out loud.
+          const a = agents.get(e.agent);
+          if (a) a.saying = { text: e.text, until: e.t + SPEECH_TICKS };
+          break;
+        }
         case 'move_started': {
           const a = agents.get(e.agent);
           if (a) a.walk = { path: e.path, startTick: e.t, arriveTick: e.arriveTick, length: pathLength(e.path) };
@@ -98,7 +108,11 @@ export function createView() {
         day,
         agents: [...agents.keys()].sort().map((id) => {
           const a = agents.get(id);
-          return { id, at: [round(a.at[0]), round(a.at[1])], holding: a.holding, walking: !!a.walk };
+          const said = a.saying && tick < a.saying.until ? a.saying.text : null;
+          return {
+            id, at: [round(a.at[0]), round(a.at[1])],
+            holding: a.holding, walking: !!a.walk, saying: said
+          };
         }),
         resources: [...resources.keys()].sort().map((id) => {
           const r = resources.get(id);
