@@ -2,7 +2,31 @@
 
 **昭和時代の小公園と半開放喫茶店で暮らす、自律 AI Agent の共有世界。**
 
-LittleWorld is a small shared-world simulation where participants create autonomous AI characters and observe them live, rather than directly controlling them like conventional game avatars.
+LittleWorld is a small shared-world simulation where autonomous AI characters generate an ongoing world history. A separate replay/presentation system turns selected recordings into an audience-facing experience.
+
+## Project architecture: two major parts
+
+LittleWorld is intentionally split into two systems with different goals.
+
+### Part A — Simulation / World Generation
+
+The Simulation is the autonomous world itself. World Engine, perception, memory, conversations, LLM Brains, deterministic activities, attendance and human director inputs run here.
+
+It may run slowly or unattended for a long real-world time. LLM latency is acceptable: the world never blocks on inference, and the Simulation's job is to create a causally correct, believable recording rather than to entertain a viewer every second.
+
+A human director may change world-level conditions — for example requesting the next day, selecting arrivals, or introducing deterministic actors — without directly controlling an Agent's private mind.
+
+An initial unattended configuration may treat roughly one real hour as one simulation day, but day length is configuration rather than a presentation constraint.
+
+### Part B — Replay / Presentation
+
+Replay is the preferred demonstration path. It consumes committed Simulation facts and never reruns an LLM.
+
+Replay may remove provider-latency gaps, compress long idle spans, preserve readable dialogue and visible movement, and build a separate presentation timeline. Its core rule is:
+
+> **Replay preserves causality, not provider latency.**
+
+The formal contract is in `docs/specs/engine/simulation-replay-architecture.md`.
 
 ## Live preview
 
@@ -60,7 +84,7 @@ The MVP keeps four main gathering points:
 3. park bench;
 4. central tree / open park area.
 
-These locations will later provide interaction anchors, occupancy rules, and agent goals.
+These locations provide semantic areas, occupancy rules, and social destinations for the Simulation.
 
 ## Current status
 
@@ -68,28 +92,25 @@ These locations will later provide interaction anchors, occupancy rules, and age
 
 - Phaser scene with a fixed camera, drag-to-pan, wheel and pinch zoom, and Fit;
 - a clean 2560 × 1440 background with every person removed;
-- a **painted world spec** — walkable ground, backstage, scenery occluders, chair
-  backs, seat tops, tabletops — with seats, facings and a measured height ramp
-  derived from it;
-- **twelve characters standing and sitting in the live page**, each at its own
-  scale, on its own seat, facing the right way, and cut by whatever stands in
-  front of it;
-- a `層` button (or the `D` key) that overlays the whole spec on the scene.
+- a **painted world spec** — walkable ground, backstage, scenery occluders, chair backs, seat tops, tabletops — with seats, facings and a measured height ramp derived from it;
+- **twelve characters standing and sitting in the live page**, each at its own scale, on its own seat, facing the right way, and cut by whatever stands in front of it;
+- deterministic World Engine foundations: integer ticks, navigation, reservations, attendance, fact/audit streams and replay view;
+- Phase 3C perception: semantic zones, appearance-only observations, ephemeral `seen-N` refs, pending perceived events and semantic placement;
+- a `層` button (or the `D` key) that overlays the whole painted visual spec on the scene.
 
 ### Not implemented yet
 
-- walking, pathfinding, or any movement at all;
-- pose changes at runtime;
-- structured world state, memory, or relationships;
-- autonomous agent runtime;
-- Node.js server, persistence, MCP tools, LLM decision logic.
+- browser wiring from the current engine runtime into the production scene;
+- runtime pose changes / movement presentation;
+- Phase 3D private memory;
+- persistent conversation sessions and final speech transport;
+- deterministic café/venue runtime;
+- bounded LLM scheduler and provider integration;
+- presentation timeline builder for audience replay.
 
 ## How the world is described
 
-Everything the simulation needs to know about the scene is **painted by the
-project owner onto the background** and read back by scripts under
-`docs/specs/`. Nothing is hand-typed as coordinates, and nothing is guessed from
-the artwork by an algorithm that thinks it knows better.
+Everything the simulation needs to know about the scene is **painted by the project owner onto the background** and read back by scripts under `docs/specs/`. Nothing is hand-typed as coordinates, and nothing is guessed from the artwork by an algorithm that thinks it knows better.
 
 | Layer | Colour | What it means |
 |---|---|---|
@@ -101,20 +122,11 @@ the artwork by an algorithm that thinks it knows better.
 | `seatsurfaces.png` | blue | the surface a sitter's weight lands on |
 | `tables.png` | magenta | the two cafe tabletops |
 
-Two rules took far longer to get right than they look, and both are written down
-in `docs/specs/world/README.md` so they are not rediscovered the hard way:
+Two rules took far longer to get right than they look, and both are written down in `docs/specs/world/README.md` so they are not rediscovered the hard way:
 
-**Facing comes from what a seat is drawn up to** — a table chair faces its table,
-a stool faces the counter, the bench faces the open ground. Reading it off the
-painted chair backs was tried twice and failed twice; a back is an upright panel,
-so its pixels run far up the screen and it never points where you expect.
+**Facing comes from what a seat is drawn up to** — a table chair faces its table, a stool faces the counter, the bench faces the open ground. Reading it off the painted chair backs was tried twice and failed twice; a back is an upright panel, so its pixels run far up the screen and it never points where you expect.
 
-**Occlusion is per column, not per object.** Every vertical run of occluder
-pixels carries the screen row where it meets the floor, and a character is behind
-it exactly when its own ground row is smaller. That single rule gives a table
-that hides the person seated behind it and not the person walking in front, a
-chair back that covers its occupant only when it stands between them and the
-camera, and a bench whose near end behaves differently from its far end.
+**Occlusion is per column, not per object.** Every vertical run of occluder pixels carries the screen row where it meets the floor, and a character is behind it exactly when its own ground row is smaller. That single rule gives a table that hides the person seated behind it and not the person walking in front, a chair back that covers its occupant only when it stands between them and the camera, and a bench whose near end behaves differently from its far end.
 
 ## Important visual rule
 
@@ -159,6 +171,13 @@ docs/                                    Canonical GitHub Pages application
   assets/showa/scene-clean-2560.webp     Production background
   assets/characters/                     Cut sprites the live page loads
 
+  specs/engine/                          Simulation architecture and phase contracts
+    simulation-replay-architecture.md    Binding two-part project architecture
+    world-engine-2.5.md                  World Engine architecture
+    pacing-and-latency.md                Pacing / latency decisions
+    phase-3c-perception.md               Perception contract
+    phase-3c-venue-interactions.md       Café and venue interaction contract
+
   specs/world/                           The painted world spec
     world.json                           Coordinates, entrances, height ramp
     walkable.png  backstage.png          Ground and out-of-sight ground
@@ -167,6 +186,7 @@ docs/                                    Canonical GitHub Pages application
     tables.png                           Cafe tabletops
     occdepth.png                         Floor line per pixel, for the browser
     anchors.json                         Fourteen seats and one work station
+    zones.json                           Semantic zones used by Perception
     derive.py  seat-derive.py            Read the paintings into the spec
     tables-derive.py
     README.md                            Why each layer exists and what broke
@@ -180,14 +200,13 @@ docs/                                    Canonical GitHub Pages application
     placements.json                      Where each character stands, in world units
     README.md                            Sheet layouts and sizing rules
 
+src/engine/                              Deterministic Simulation engine slices
 assets/                                  Source masters, not published
   showa/scene-clean-2560.png             Lossless PNG master of the background
   characters/                            The twelve reference sheets
 ```
 
-Every file in the repository is now part of the active Showa direction. The
-Jerusalem / Bethesda material and the superseded root-level preview have been
-removed; they remain in git history if they are ever needed again.
+Every file in the repository is now part of the active Showa direction. The Jerusalem / Bethesda material and the superseded root-level preview have been removed; they remain in git history if they are ever needed again.
 
 ## Local preview
 
@@ -197,8 +216,7 @@ Serve the `docs/` directory through HTTP:
 python3 -m http.server 8000 --directory docs
 ```
 
-Phaser is loaded from a CDN, so the preview needs network access. To rebuild what
-the page loads after changing the spec or the cast:
+Phaser is loaded from a CDN, so the preview needs network access. To rebuild what the page loads after changing the spec or the cast:
 
 ```bash
 python3 docs/specs/world/seat-derive.py       # seats, facings, chair backs
@@ -228,27 +246,27 @@ Opening `docs/index.html` directly through `file://` is still not recommended; s
 
 1. ~~**Stabilize scene assets**~~ — done.
 
-2. ~~**Define scene semantics**~~ — done. World coordinates, walkable ground,
-   backstage, occluders, entrances, seats, facings, and a measured height ramp.
+2. ~~**Define scene semantics**~~ — done.
 
-3. ~~**Design the character system**~~ — done for standing and sitting. Twelve
-   characters, eight states each (stand/sit × front/back × mirrored), sized and
-   seated and occluded in the live page. **There is no walk cycle and none is
-   planned**: the owner's decision is that agents hop between positions.
+3. ~~**Design the character system**~~ — done for standing and sitting.
 
-4. **Build a deterministic simulation prototype** ← next
-   - one to three agents;
-   - movement and occupancy;
-   - sitting, ordering, working, resting, and simple conversations.
+4. ~~**Build deterministic Simulation foundations**~~ — engine clock, activities, reservations, navigation, attendance, recording/replay foundation and Phase 3C perception are working.
 
-5. **Add shared-world state**
-   - time;
-   - objects and inventory;
-   - memories and relationships;
-   - interaction history.
+5. **Continue Simulation intelligence** ← next
+   - Phase 3D private memory;
+   - Phase 3E persistent conversation + speech transport;
+   - Phase 3F-A deterministic café/venue runtime;
+   - Phase 3F-B scheduler + Mock Brain;
+   - Phase 3G real provider integration.
 
-6. **Add server, MCP, and LLM layers**
-   - only after the visual, navigation, and character foundations are stable.
+6. **Build Replay / Presentation as the audience-facing block**
+   - consume committed fact recordings only;
+   - construct presentation time separately from simulation ticks;
+   - compress provider latency and uninteresting idle spans;
+   - preserve readable speech, causal ordering and visible movement;
+   - add presentation UI/camera/subtitles only as needed.
+
+The Simulation and Replay workstreams share the recording contract but do not need to advance in lockstep.
 
 ## Planned agent actions
 
@@ -291,12 +309,12 @@ It defines:
 - handoff format;
 - communication rules for the project owner.
 
-Recommended parallel workstreams include:
+Recommended parallel workstreams now include:
 
+- Simulation engine / memory / conversation;
+- deterministic café and world activities;
+- Replay / presentation timeline and renderer integration;
 - live scene and asset integration;
-- walkable-map and hotspot specification;
-- character pose and animation design;
-- agent state/action schema;
 - projection, iPad, and browser QA.
 
 ## Scope principle
@@ -308,7 +326,7 @@ The project succeeds by being:
 - easy to understand;
 - easy for agents to navigate;
 - dense enough for frequent social encounters;
-- reliable enough to finish and demonstrate.
+- reliable enough to generate and present a coherent history.
 
 A finished small world is more valuable than an unfinished large simulation.
 
