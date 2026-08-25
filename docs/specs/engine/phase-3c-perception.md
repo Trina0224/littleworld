@@ -4,6 +4,11 @@
 **Created:** 2026-08-23 22:38 PT (`America/Los_Angeles`)  
 **Companion to:** `world-engine-2.5.md` §4 and §6, `character-identity.md` Phase 3B
 
+> **Implemented.** `src/engine/perception.js`, `zones.js` and `placement.js`;
+> proved by `src/engine/perception.test.js`; shown by `src/engine/run-3c.js`.
+> Every test in §14 and in the clarifications §6 is asserted. The zone geometry
+> §9 requires is measured in `docs/specs/world/zones.json`.
+
 Phase 3C does not invent a new architecture. It makes the existing World Engine 2.5 perception boundary precise enough to implement.
 
 The core rule is:

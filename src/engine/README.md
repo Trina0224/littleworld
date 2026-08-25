@@ -1,4 +1,4 @@
-# World Engine — Phase 3A, plus days
+# World Engine — Phases 3A and 3C
 
 Plain ES modules, no dependencies, no build step. They run under Node today and
 in the browser later without change; only the scenario runner touches a host
@@ -9,6 +9,8 @@ python3 docs/specs/world/navgrid-derive.py    # once, after the painted maps cha
 node src/engine/run-3a.js
 node src/engine/nav.test.js
 node src/engine/days.test.js
+node src/engine/perception.test.js
+node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
 | File | |
@@ -18,6 +20,9 @@ node src/engine/days.test.js
 | `resources.js` | the states a claimable thing can be in |
 | `events.js` | the two streams |
 | `attendance.js` | who is here today |
+| `zones.js` | which semantic area a position is in |
+| `perception.js` | the sensory boundary between the world and one Brain |
+| `placement.js` | semantic destination in, physical position out |
 | `nav.js` | A* over the painted walkable map |
 | `world.js` | authoritative state, resources, reservations, movement |
 | `activity.js` | the Activity Runtime |
@@ -25,11 +30,72 @@ node src/engine/days.test.js
 | `run-3a.js` | the scripted scenario, and the checks it has to pass |
 | `nav.test.js` | the one navigation property that is easy to lose |
 | `days.test.js` | days, absence, and the schedule that must not move |
+| `perception.test.js` | every leak the 3C spec asks to be proved impossible |
+| `run-3c.js` | the acceptance scenario, printed |
+
+## Perception (3C)
+
+> **The World Engine determines what an agent can perceive. The Agent Brain
+> determines what those perceptions mean.**
+
+Four decisions carry it.
+
+**The server knows who; the model is told what it looks like.** Even when the
+engine is certain an entity is `pastor-01`, the model-visible observation says
+only *身材高瘦、帶明顯西洋輪廓的中年男子…*. Recognition belongs to the character —
+to its own self sheet and memory — not to the world's eyes, and that is what
+permits uncertainty and honest mistakes. Sanitising is an **allowlist**: the
+model-visible object is rebuilt field by field, so a field added to the internal
+record later cannot leak by being forgotten.
+
+**Refs point, they do not name.** Inside one delivered context the same entity is
+always the same `seen-N`, so a Brain can say *approach seen-2* without ever being
+handed an id. Numbering follows the order the model reads, never entity id — if
+`seen-1` always meant "alphabetically first", the numbering would itself be an
+identity leak paid out slowly. The `ref -> entity` map is kept server-side after
+the ref expires, because a memory written against a ref would otherwise be a
+dangling pointer the moment it was written.
+
+**A queue, because perception and delivery run at different speeds.** Sensory
+state refreshes every tick; a Brain wakes rarely. A sentence spoken two hundred
+ticks before the next wakeup is still there. It is not memory and not a message
+broker: once an event reaches a successfully built context it counts as
+delivered even if inference later fails, so nobody is told the same old
+utterance again on every retry. A direct address is never displaced from the
+queue by ordinary visual noise.
+
+**Own failure is the one thing taken from audit.** A failed attempt changed
+nothing, so it is not a fact and cannot be derived from the fact stream at all.
+It reaches the agent that attempted it and nobody else, at any distance. That
+*narrows* the audit stream's contract rather than widening it — before this it
+had no defined consumer inside the simulation, and the spec quietly needed one.
+
+Zones come from `docs/specs/world/zones.json`, and `zones.js` re-evaluates the
+polygons rather than shipping a packed map: a byte per cell is ~300 KB base64
+against a few hundred bytes of polygon. Two implementations of one containment
+rule is where drift hides, so the JSON carries a 300-position sample the Python
+assigned and the test asserts the JS reproduces all of it.
+
+### What the tests prove
+
+Every property in `phase-3c-perception.md` §14 and the clarifications §6, each
+one asserted rather than promised. The leak tests run against the **real**
+character files: a test with invented appearance strings would still pass if the
+engine started reading `bible.md`, so the check that matters takes real sentences
+out of a real bible and a real self sheet and asserts none of them appear.
+
+Seven mutations were run to confirm the assertions bite — leaking `entityId` into
+the visible entry, hearing without distance, broadcasting `own_action_failed` to
+bystanders, discarding the ref map, never marking events delivered, dropping
+protected events from the queue, and sourcing appearance from `self.md`. All
+seven failed the suite.
 
 **Nothing outside the slice is here.** No perception, no memory, no zones, no
 conversation, no scheduler, no provider adapter — not even a mock one. See
 §17.1 of `docs/specs/engine/world-engine-2.5.md` for why that list is a fence
-rather than a to-do.
+rather than a to-do. 3C adds perception and nothing else: no memory, no
+conversation, no scheduler, no provider, no ray casting, and no model-generated
+prose.
 
 ## Five things worth knowing before reading the code
 

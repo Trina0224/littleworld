@@ -116,6 +116,12 @@ export function createNav(grid) {
   return {
     w, h,
     walkableAt: (x, y) => ok(Math.round(x), Math.round(y)),
+    /** the same painted region zones.json calls `backstage`, already unpacked here */
+    backstageAt: (x, y) => {
+      const xi = Math.round(x); const yi = Math.round(y);
+      if (xi < 0 || yi < 0 || xi >= w || yi >= h) return false;
+      return backstage[at(xi, yi)] === 1;
+    },
     nearestWalkable,
 
     /** @returns {[number,number][] | null} corner points from start to goal, inclusive */

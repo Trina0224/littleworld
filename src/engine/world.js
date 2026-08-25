@@ -199,6 +199,25 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
     },
 
     /**
+     * Say something.
+     *
+     * The words are a fact because they happened and a renderer may want to draw
+     * them. Who actually heard them is not stored here: perception decides that
+     * per observer, so the same utterance can reach one character as words and
+     * another as a voice too far off to make out.
+     *
+     * `scope` is a transport mode, not a social act. Whether the model should be
+     * allowed to choose it, or whether it should be derived from the structured
+     * social action instead, is an open question - see the review note in
+     * phase-3c-venue-interactions.md 2.
+     */
+    say(agentId, text, { scope = 'normal', to = null } = {}) {
+      if (!here.has(agentId)) return false;
+      log.fact(clock.tick, 'speech_said', { agent: agentId, text, scope, to });
+      return true;
+    },
+
+    /**
      * Claim a spot. Atomic in the sense that matters here: only the World
      * Engine may touch seat.state, and it reads and writes it without yielding,
      * so two agents cannot both find the same seat free.

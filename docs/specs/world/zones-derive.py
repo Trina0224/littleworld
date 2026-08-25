@@ -203,6 +203,22 @@ def main():
         d.ellipse([c[0]*S-4, c[1]*S-4, c[0]*S+4, c[1]*S+4], fill=(255, 255, 255), outline=(0, 0, 0))
     big.save(HERE / "zones-check.png")
 
+    # A sample the engine must reproduce. The engine cannot decode PNGs (which is
+    # why navgrid.json exists), so it re-evaluates these polygons itself rather
+    # than shipping a 300 KB packed zone map. Two implementations of the same
+    # containment rule is exactly where drift hides, so the JS side asserts it
+    # agrees with this Python on every one of these positions.
+    step = 977                                   # coprime with W*H: spreads the walk
+    samples = []
+    i = 0
+    while len(samples) < 300:
+        i += step
+        x, y = (i % W), ((i // W) * 7) % H
+        z = zone_of[y][x]
+        if z:
+            samples.append([x, y, z])
+    samples.sort()
+
     out = {
         "coordinateSystem": {"width": W, "height": H, "note": "same world units as world.json"},
         "containment": {
@@ -230,6 +246,12 @@ def main():
             "note": "not a polygon on purpose - the region is painted, and drawing it "
                     "twice is how two sources of truth drift apart",
         }],
+        "selfCheck": {
+            "note": "positions the engine's own zone lookup must reproduce exactly. "
+                    "The engine re-evaluates the polygons above rather than shipping a "
+                    "packed map; this is what stops the two implementations drifting.",
+            "samples": samples,
+        },
     }
     (HERE / "zones.json").write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
 
