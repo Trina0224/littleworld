@@ -335,6 +335,14 @@ ordinary nearby person          medium/low
 unchanged distant person        low
 ```
 
+> **Decided** (`pacing-and-latency.md` §1): the non-prose attention hint this
+> section asks for already exists — `knows` in `character.json` is structured
+> data, not prose. But perception still does not read it. It accepts an opaque
+> **numeric** hint (`attentionHint` in `perception.js`), a trivial provider
+> supplies that number from `knows` today, and 3D swaps the provider for memory.
+> Same door, one source of truth. The hint may never return a name: that would be
+> recognition, which §5 forbids.
+
 Do not use `known person` as an engine-side salience boost in Phase 3C if determining "known" would require reading the observer's private prose. Recognition/relationship interpretation belongs above perception. A later memory interface may provide an explicit non-prose attention hint if needed.
 
 Low-salience unchanged observations may be omitted from a Brain request even though they remain physically perceptible.

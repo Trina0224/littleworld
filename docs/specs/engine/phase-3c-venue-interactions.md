@@ -72,7 +72,23 @@ children shouting across the park
 urgent or conspicuously loud calls
 ```
 
-Ordinary conversation should remain local. The model should not default to broadcast for normal dialogue.
+Ordinary conversation should remain local.
+
+> **Decided** (`pacing-and-latency.md` §2): **scope is derived from the act, not
+> declared by the model.** An instruction not to default to broadcast is a rule
+> aimed at a model, and in a 640×360 scene broadcast always works, so a model
+> will find it — at which point everyone hears everything and the distance model
+> built and tested in 3C silently stops mattering.
+>
+> The teaching is the act vocabulary itself. The model receives a menu of acts
+> and only some of them carry (`order`, `call_across_park`, `raise_voice`);
+> `greet`, `ask`, `reply` and `chat` stay local. There is no `scope` field to
+> set, so there is no instruction to forget. This is the same rule §9.1 of the
+> perception spec already applies to movement: the Brain chooses the social act,
+> the World Engine chooses its physical extent.
+>
+> Deferred to 3F-A because it needs the act vocabulary. Available cheaply before
+> then: `world.say()` takes an act instead of a `scope`.
 
 This allows cafe customers to order without walking to the counter every time. The world can stay focused on social interaction rather than unnecessary navigation churn.
 
