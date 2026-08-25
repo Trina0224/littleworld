@@ -2,7 +2,8 @@
 
 **Status:** menu/runtime design baseline  
 **Created:** 2026-08-24 (`America/Los_Angeles`)  
-**Companion to:** `phase-3c-venue-interactions.md`
+**Updated:** 2026-08-25 — simulation/replay timing boundary clarified  
+**Companion to:** `phase-3c-venue-interactions.md`, `simulation-replay-architecture.md`
 
 This document defines the initial fictional menu and preparation-time model for the LittleWorld cafe. The historical target is **around 1960 (昭和35年前後), Fukushima**, not an exact reconstruction of one real shop.
 
@@ -12,12 +13,12 @@ The menu is intentionally broad enough to give Agent Brains meaningful choices, 
 
 The engine clock currently defaults to **100 ms per tick = 10 ticks per real second**. Simulation logic must still store durations in integer ticks rather than wall-clock seconds.
 
-Cafe service should use a configurable service-time compression rather than baking presentation speed into every menu item.
+Cafe service should use a configurable **Simulation service-time scale** rather than baking one historical duration into every runtime action.
 
 Initial baseline:
 
 ```text
-realistic service time × 0.1 = presentation service time
+realistic service time × 0.1 = Simulation service duration
 ```
 
 Equivalent formula at the current 10 ticks/sec clock:
@@ -31,13 +32,17 @@ Example:
 
 ```text
 3-minute tea steep
-180 real-world seconds
+180 realistic seconds
 → 180 × 10 × 0.1
 → 180 simulation ticks
-→ about 18 seconds of presentation time at the current default clock
+→ about 18 wall-clock seconds while the Simulation is running at the current default clock
 ```
 
 `service_time_scale` must be runtime/config data so the whole cafe can later be sped up or slowed down without rewriting the menu.
+
+**These ticks do not define audience replay duration.** Replay / Presentation may later compress deterministic service work, idle gaps, or provider latency according to its own presentation timeline while preserving causal order. See `simulation-replay-architecture.md`.
+
+Therefore this menu answers **how long the authoritative Simulation treats work as occupying the shopkeeper/runtime**, not how long a demonstration viewer must watch that work.
 
 ## 2. Preparation model
 
@@ -49,10 +54,10 @@ Example:
 
 ```text
 black tea: 180 ticks
-nerikiri plating/shaping work: 180 ticks
+nerikiri shaping work: 180 ticks
 ```
 
-A combined order should not blindly become `360 ticks`. If the shopkeeper can shape or plate the sweet while tea is steeping, the order duration is closer to the critical path plus handling overhead.
+A combined order should not blindly become `360 ticks`. If the shopkeeper can shape the sweet while tea is steeping, the order duration is closer to the critical path plus handling overhead.
 
 The Cafe Runtime owns this scheduling. The shopkeeper Brain does not decide preparation timing.
 
@@ -75,7 +80,7 @@ order received
 → serve
 ```
 
-This is intentionally a visible shopkeeper activity. It gives the stationary shopkeeper meaningful deterministic work without requiring an LLM call.
+This is intentionally a meaningful **Simulation** shopkeeper activity. It gives the stationary shopkeeper deterministic work without requiring an LLM call. The first Replay implementation does not need a bespoke hand-animation for every shaping step; it only needs enough committed facts to present or summarize what happened later.
 
 Initial time classes after the 0.1 service-time compression:
 
@@ -194,17 +199,20 @@ order combinations
 serving after preparation completes
 ```
 
-The runtime may expose visible preparation facts such as:
+The runtime should emit enough public committed facts for future Replay to reconstruct the meaningful visible history without rerunning Cafe Runtime. Candidate facts include:
 
 ```text
 shopkeeper starts shaping a nerikiri
 shopkeeper is finishing details with a small tool
-tea is steeping
-coffee is being prepared
-order is ready
+tea starts steeping / completes
+coffee preparation starts / completes
+order becomes ready
+service begins / completes
 ```
 
-Those are public world facts that Phase 3C perception may later surface according to position/salience. They are not private shopkeeper thoughts.
+Phase 3C perception may surface those facts according to position/salience. They are not private shopkeeper thoughts.
+
+Replay may later collapse several internal preparation facts into one shorter presentation beat if that preserves the causal story.
 
 ## 6. Brain boundary
 
