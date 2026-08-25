@@ -48,13 +48,19 @@ permits uncertainty and honest mistakes. Sanitising is an **allowlist**: the
 model-visible object is rebuilt field by field, so a field added to the internal
 record later cannot leak by being forgotten.
 
-**Refs point, they do not name.** Inside one delivered context the same entity is
-always the same `seen-N`, so a Brain can say *approach seen-2* without ever being
-handed an id. Numbering follows the order the model reads, never entity id — if
-`seen-1` always meant "alphabetically first", the numbering would itself be an
-identity leak paid out slowly. The `ref -> entity` map is kept server-side after
-the ref expires, because a memory written against a ref would otherwise be a
-dangling pointer the moment it was written.
+**Refs point, they do not name — and they are transport, not storage.** Inside one
+delivered context the same entity is always the same `seen-N`, so a Brain can say
+*approach seen-2* without ever being handed an id. Numbering follows the order the
+model reads, never entity id — if `seen-1` always meant "alphabetically first", the
+numbering would itself be an identity leak paid out slowly.
+
+A ref is valid for one request and its answer. Anything that outlives that round
+trip — an action target, a memory — is **canonicalised at commit**: `canonicalize()`
+resolves every ref in the reply to its entity, and the entity is what gets stored.
+So memory never holds a ref and never depends on an epoch surviving. The epoch
+cache is a transport window; the test shrinks it to a single entry, evicts
+everything, and proves a committed record is untouched. A ref that is stale at
+commit is reported, never repaired by guessing at somebody nearby.
 
 **A queue, because perception and delivery run at different speeds.** Sensory
 state refreshes every tick; a Brain wakes rarely. A sentence spoken two hundred
@@ -84,11 +90,12 @@ character files: a test with invented appearance strings would still pass if the
 engine started reading `bible.md`, so the check that matters takes real sentences
 out of a real bible and a real self sheet and asserts none of them appear.
 
-Seven mutations were run to confirm the assertions bite — leaking `entityId` into
+Eleven mutations were run to confirm the assertions bite — leaking `entityId` into
 the visible entry, hearing without distance, broadcasting `own_action_failed` to
-bystanders, discarding the ref map, never marking events delivered, dropping
-protected events from the queue, and sourcing appearance from `self.md`. All
-seven failed the suite.
+bystanders, never marking events delivered, dropping protected events from the
+queue, sourcing appearance from `self.md`, canonicalising without recursing,
+guessing at a stale ref instead of reporting it, making `canonicalize` a no-op,
+and making `releaseEpoch` do nothing. All eleven failed the suite.
 
 **Nothing outside the slice is here.** No perception, no memory, no zones, no
 conversation, no scheduler, no provider adapter — not even a mock one. See

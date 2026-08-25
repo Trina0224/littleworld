@@ -20,13 +20,19 @@
  * from scratch, so a field added to the internal record later cannot leak by
  * being forgotten.
  *
- * REFS POINT, THEY DO NOT NAME. Within one delivered context the same entity is
- * always the same `seen-N`, so the model can say "approach seen-2" without ever
- * being handed an id. Refs are ordered by distance rather than by entity id: if
- * seen-1 were always the alphabetically first character present, the ordering
- * would itself be a slow identity leak. The ref -> entity mapping is kept
- * server-side after the ref expires, because memory written against a ref would
- * otherwise be a dangling pointer the moment it was written (clarifications 1.1a).
+ * REFS POINT, THEY DO NOT NAME - AND THEY ARE TRANSPORT, NOT STORAGE. Within one
+ * delivered context the same entity is always the same `seen-N`, so the model can
+ * say "approach seen-2" without ever being handed an id. Numbering follows the
+ * order the model reads rather than entity id: if seen-1 always meant
+ * "alphabetically first", the numbering would itself be a slow identity leak.
+ *
+ * A ref is valid for one request and its answer. Anything that outlives that
+ * round trip - an action target, a memory - is CANONICALISED at the moment it is
+ * committed: the ref is resolved to the entity, and the entity is what gets
+ * stored. Long-term memory therefore never holds a ref and never depends on an
+ * epoch still existing. The epoch cache below is a transport window that may be
+ * evicted at any size without affecting anything already committed, which is
+ * exactly the property that makes the two layers independent (clarifications 1.1a).
  *
  * A QUEUE, BECAUSE PERCEPTION AND DELIVERY RUN AT DIFFERENT SPEEDS. Sensory
  * state refreshes every tick; a Brain wakes up rarely. A sentence spoken two
@@ -72,7 +78,11 @@ export const DEFAULTS = {
   personalSpace: 6,
   queueLimit: 40,
   visibleLimit: 8,          // how many people one request describes, most salient first
-  epochHistory: 64          // how many ref maps stay resolvable for memory
+  // A transport window, not a retention policy. Refs only have to survive from a
+  // request to its answer; anything durable is canonicalised at commit, so
+  // shrinking this to 1 must not break a single committed record. The test does
+  // exactly that.
+  epochHistory: 8
 };
 
 /** Model-visible salience order, from phase-3c-perception.md 11. */
@@ -369,13 +379,55 @@ export function createPerception(world, zones, {
     /**
      * ref -> canonical entity, server-side only.
      *
-     * Kept after the ref has expired for the model, because a memory written
-     * against a ref would otherwise be unresolvable the moment it was written.
      * @returns {string|null} null for a stale or unknown ref - never a guess at
      * a different entity.
      */
     resolve(epochId, ref) {
       return epochs.get(epochId)?.refs.get(ref) ?? null;
+    },
+
+    /**
+     * Turn a Brain's reply into something that can be stored.
+     *
+     * Every ref in the reply is replaced by the canonical entity it pointed at,
+     * so what the caller gets back holds no refs at all. That is the whole
+     * point: a memory that kept `seen-2` would mean "whoever seen-2 happened to
+     * be in an epoch that may since have been evicted", which makes what an
+     * agent remembers depend on a cache size. Memory stores entities.
+     *
+     * Unresolvable refs are reported rather than guessed at. A stale ref must
+     * fail cleanly, never silently retarget somebody else.
+     *
+     * @returns {{value: any, unresolved: string[]}}
+     */
+    canonicalize(epochId, reply) {
+      const unresolved = [];
+      const walk = (v) => {
+        if (typeof v === 'string' && /^(seen|heard)-\d+$/.test(v)) {
+          const id = this.resolve(epochId, v);
+          if (id === null) { unresolved.push(v); return null; }
+          return id;
+        }
+        if (Array.isArray(v)) return v.map(walk);
+        if (v && typeof v === 'object') {
+          return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+        }
+        return v;
+      };
+      return { value: walk(reply), unresolved };
+    },
+
+    /**
+     * Done with this round trip.
+     *
+     * Safe to call the moment a reply has been canonicalised, and safe never to
+     * call at all - the cache evicts on its own. Nothing committed depends on an
+     * epoch surviving, so releasing one can never orphan a memory.
+     */
+    releaseEpoch(epochId) {
+      epochs.delete(epochId);
+      const i = epochOrder.indexOf(epochId);
+      if (i !== -1) epochOrder.splice(i, 1);
     },
 
     pendingFor(observerId) {

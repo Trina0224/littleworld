@@ -223,9 +223,63 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   check(p3.resolve('e-nonexistent', 'seen-1') === null, 'an unknown epoch resolved to something');
   check(p3.resolve(ctx.epochId, 'seen-99') === null, 'an out-of-range ref resolved to something');
 
-  // 1.1a  the mapping outlives the ref, so memory can still be resolved
-  check(p3.resolve(ctx.epochId, refs[0]) === resolved[0],
-    'the ref mapping was discarded when the epoch was superseded');
+}
+
+// -------------------------- 1.1a  refs are transport; memory holds entities ---
+// The earlier draft of this contract said the ref mapping must be retained for
+// as long as any memory derived from it. That coupled how long an agent can
+// remember something to how big a cache is. Canonicalising at commit removes the
+// coupling: the ref is resolved when the reply is processed, the entity is what
+// gets stored, and the epoch becomes disposable that instant.
+{
+  const nav = createNav(grid);
+  const zones = createZones(zoneSpec, nav);
+  const w8 = createWorld({ anchors, nav, seed: 20260825 });
+  // One epoch of history. If anything committed depended on retention, a cache
+  // this small would destroy it immediately.
+  const p8 = createPerception(w8, zones, {
+    entities: entityTable(), config: { epochHistory: 1 }
+  });
+  w8.start();
+  w8.spawn('grandma-01', [470, 262]);
+  w8.spawn('pastor-01', [480, 262]);
+  w8.spawn('shopkeeper-01', [490, 262]);
+  p8.tick();
+
+  const ctx = p8.contextFor('grandma-01');
+  const target = ctx.forModel.sensoryState.visible[0].ref;
+  const expected = p8.resolve(ctx.epochId, target);
+
+  // A Brain replies in refs, as it must - it has never been told an id.
+  const reply = {
+    activity: 'approach',
+    target,
+    remember: { about: target, note: 'this person greeted me' }
+  };
+  const committed = p8.canonicalize(ctx.epochId, reply);
+
+  check(committed.unresolved.length === 0, 'a live ref failed to canonicalize');
+  check(committed.value.target === expected, 'canonicalize did not resolve the action target');
+  check(committed.value.remember.about === expected, 'canonicalize missed a nested ref');
+  check(!/\b(seen|heard)-\d+\b/.test(JSON.stringify(committed.value)),
+    'a ref survived canonicalization into something that would be stored');
+
+  // Now destroy every trace of the epoch, several times over.
+  p8.releaseEpoch(ctx.epochId);
+  for (let i = 0; i < 20; i += 1) { p8.tick(); p8.contextFor('grandma-01'); }
+
+  check(p8.resolve(ctx.epochId, target) === null,
+    'a released epoch still resolves; the transport window is not actually bounded');
+  check(committed.value.remember.about === expected,
+    'the committed record changed when its epoch was evicted');
+  check(committed.value.remember.about === 'pastor-01' || committed.value.remember.about === 'dog-01'
+     || committed.value.remember.about === 'shopkeeper-01',
+    'the committed record does not name a real entity');
+
+  // And the failure mode: a stale ref is reported, never guessed at.
+  const late = p8.canonicalize(ctx.epochId, { target });
+  check(late.unresolved.includes(target), 'a stale ref was not reported as unresolved');
+  check(late.value.target === null, 'a stale ref was silently retargeted');
 }
 
 // -------------------------------------------------- the pending queue -------
