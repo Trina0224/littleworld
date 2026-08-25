@@ -124,6 +124,31 @@ The speech becomes an observable/audible world fact according to its transport s
 
 The runtime therefore does not need NLP to infer that `紅茶をお願いします` means `black_tea`. The Brain has already expressed its semantic intention in structured form.
 
+> **Refinement — the Brain selects, it does not author.** Asking a model to
+> construct a schema has a failure rate; asking it to pick from a list the engine
+> just sent does not, because the engine validates against the list it supplied
+> and an invalid choice is impossible by construction.
+>
+> So the request carries the legal actions for this moment:
+>
+> ```text
+> [ order:coffee_house, order:tea_ceylon, ask_shopkeeper:recommendation,
+>   leave, nothing ]
+> ```
+>
+> and the reply is **one choice plus free prose**. The engine builds the
+> `social_action` from the chosen item — the model never writes a structure.
+> `nothing` is always present and always legal, and its fallback is the one the
+> architecture already has: continue the current deterministic activity.
+>
+> This strengthens rather than weakens the rule above. A selection is not natural
+> language parsing; it is a discrete choice, so §4.3's ban on repairing invalid
+> structured data by guessing from the speech text still holds and now has almost
+> nothing left to guess about.
+>
+> **The list and the act vocabulary of §2 are the same object.** Which acts carry
+> a voice, and which actions are legal right now, are two views of one menu.
+
 This pattern is not cafe-specific. Future public-telephone, vending-machine, payment and other world interactions may use the same boundary: natural language for the fiction, structured semantic action for execution.
 
 ## 4. Deterministic semantic router — decided

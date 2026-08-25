@@ -173,6 +173,84 @@ Replay does not reduce the generation cost. It only prevents provider latency fr
 
 ---
 
+## 6b. What running cost actually is, and what it is not
+
+Estimated once properly rather than asserted, because it had been invoked
+repeatedly without arithmetic.
+
+Measured inputs: a self sheet averages 1,943 characters; a model-visible
+perception package in a seven-person scene is 840 characters of JSON. At Opus 5
+rates ($5/M in, $25/M out, cache reads 0.1×), one decision costs roughly
+**$0.025 at low effort and $0.06 at default effort**, and latency itself caps
+throughput — eleven agents at 15 s per call cannot exceed ~2,640 calls an hour.
+That gives **$10–50 an hour realistically and about $165 flat out**.
+
+Two things this corrected:
+
+**The self sheet is not the budget.** It had been described that way repeatedly.
+Cache reads are 0.1×, so a stable prefix is about 8% of input cost. **The dynamic
+suffix and the output are the cost** — which is why `visibleLimit` and a small
+perception package matter, and why they are worth keeping for reasons beyond
+tidiness.
+
+**`effort` is the largest single lever and had never been mentioned.** Thinking
+tokens bill as output at $25/M, and at default effort they can be several times
+the visible reply.
+
+**And the estimate is an upper bound on a scenario that does not occur.** The
+owner runs this shape of workload professionally and has not seen a bill over
+$100 for it. Measured invoices beat computed ceilings; the arithmetic above is
+useful for knowing which knob matters, not for predicting a bill.
+
+Separately: **the game's runtime does not touch a Claude Code subscription at
+all.** Backend inference is API billing. Those are two meters, and conflating
+them is what produced the earlier warnings.
+
+## 6c. Mixed models across the cast — not a problem
+
+Considered and dropped. Running different characters on different providers was
+raised as a risk to the world's consistency of voice. It is not: **the characters
+are supposed to sound different.** 菅野 is verbose, 京子 waits until she is sure,
+渡辺 does not want to talk. Model-to-model variation lands on top of variation
+that is already intended, and is an asset rather than a defect.
+
+This also argues for **3G being a thin, swappable provider adapter** rather than
+a Claude-specific integration, so the backend can point at whatever endpoint is
+cheapest or free.
+
+## 6d. The finding that actually matters: conversations go cold
+
+From the owner's own experiment, not from theory. Eleven agents each producing
+one line in turn, then waiting, then a few replying — **boring to watch, and the
+conversation does not sustain itself.**
+
+This is neither a cost problem nor a model-choice problem. Two mechanical causes,
+both fixable in 3F:
+
+**Round-robin means nobody is driving.** Real conversation has someone who wants
+something and someone avoiding something; giving everyone an equal turn makes
+every participant passive. The wakeup policy should be **"who has a reason"**, not
+"whose turn is it" — and perception already computes that: `direct_address`
+scores 100 against ordinary presence at 30.
+
+**Saying nothing must be a legal choice.** With `nothing` always in the action
+menu, a quiet moment becomes a legitimate outcome rather than a failure, and the
+deterministic layer fills the picture. Forcing every agent to produce a line is
+itself the thing that makes the result read as cold.
+
+There is a third cause the cast was built to avoid: characters go quiet when
+nobody has anything at stake. Every character here carries something wanted or
+withheld — two silences pointing opposite ways with a graduation clock behind
+them, a concealed errand, a venture that has to prove itself, a man who comes
+because the house is empty, a man who does not want to learn anyone's name.
+
+> **If conversations still go cold, that is the signal worth reading:** it means
+> the self sheets are not putting those stakes into the model's hands, not that
+> models cannot converse.
+
+Finally, "boring to watch live" is the observation that produced the
+simulation/replay split in the first place. Replay exists to solve exactly it.
+
 ## 7. Current decisions
 
 | Topic | Decision |
@@ -184,5 +262,9 @@ Replay does not reduce the generation cost. It only prevents provider latency fr
 | human day change | allowed as recorded world-level input |
 | audience experience | prefer Replay / Presentation rather than live provider timing |
 | replay timing | preserve causality; compress provider wait and boring idle spans |
+| structured actions | Brain **selects** from an engine-supplied menu; never authors a schema |
+| mixed providers | fine — characters are meant to sound different; 3G is a thin adapter |
+| running cost | ~$0.025–0.06 a decision, $10–50 an hour; `effort` and the dynamic suffix are the levers, not the self sheet |
+| cold conversation | wake by reason not by turn; `nothing` must always be legal |
 
 The unresolved question is no longer "what exact day length makes a live demo entertaining?" That requirement has been removed by the two-system architecture.

@@ -163,6 +163,48 @@ rerun Agent Brains to improve a recording
 reinterpret rejected proposals as events
 ```
 
+### 3.0 The script pass, and the one thing it may not do
+
+The owner's intent is that a completed recording may be handed **whole** to an
+LLM, which re-times it, inserts readable intervals, and gives each character a
+reply rhythm and tone drawn from who they are. That produces a better result than
+any rule the simulation could follow, because pacing is a judgement about the
+whole scene rather than about one tick.
+
+It also makes the recorded gaps disposable rather than something to annotate: if
+the script pass assigns all dialogue timing, the original wait carries no
+information beyond **order**. Only inference silence is disposable — deterministic
+durations (a walk, a steeping tea, a nerikiri being shaped) are world facts and
+stay.
+
+The script pass is offline and is **not the renderer**, so unlike the renderer it
+may read the audit stream. That is how interiority reaches an audience — a
+subtitle drawn from what a character actually recorded — without the renderer's
+fact-only rule being touched.
+
+The constraint, agreed with the owner:
+
+```text
+may   re-time, insert intervals, set per-character rhythm and tone
+may   add presentation-only material: subtitles, camera, interiority from audit
+may   select a span, drop a dull stretch
+must not   change an utterance's words
+must not   change who said it
+must not   change causal order
+must not   invent an event
+```
+
+**This is checkable, and should be checked rather than instructed.** A model given
+a whole transcript will improve the dialogue if allowed to, and it will do it
+well, which is exactly the danger — the output looks better and is no longer what
+the agents said. The assertion is cheap:
+
+> the script's dialogue lines are a subsequence of the recording's, unchanged.
+
+Same discipline as the rest of this project: block it with a check, not a rule.
+
+Detailed design is deferred until there is a recording worth scripting.
+
 ### 3.1 Replay preserves causality, not provider latency
 
 This is the central presentation rule.
