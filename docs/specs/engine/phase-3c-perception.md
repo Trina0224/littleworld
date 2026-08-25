@@ -58,11 +58,19 @@ The conceptual tick order is:
 4. update reservations / occupancy / presence
 5. commit resulting world facts
 6. refresh perception state for each present agent
-7. evaluate whether any agent needs a Brain wakeup
-8. dispatch eligible Brain requests asynchronously through the scheduler
+7. accumulate private memory from what was perceived      (added by 3D)
+8. evaluate whether any agent needs a Brain wakeup
+9. dispatch eligible Brain requests asynchronously through the scheduler
 ```
 
-Steps 1–7 never wait for inference. Step 8 cannot block the next world tick.
+Steps 1–8 never wait for inference. Step 9 cannot block the next world tick.
+
+Step 7 was added when 3D landed, and its position is load-bearing rather than
+tidy. It is after 6 because it reads what perception has just refreshed and
+queued. It is before 8 because building a Brain context **drains** the perception
+queue; memory reads that queue without draining it, and reading it first is what
+makes "each perceived event is remembered exactly once" true regardless of how
+rarely a Brain is woken. See `phase-3d-memory.md` §2.1.
 
 `presentIds()` is the candidate population for perception. A rostered character who is absent today is not visible, audible, targetable or otherwise perceptible inside this scene.
 

@@ -2,6 +2,8 @@
 
 **Status:** implementation contract
 **Created:** 2026-08-25
+**Updated:** 2026-08-25 — memory is a stage of the canonical tick; consumption,
+encounter and mind-gate contracts made explicit after review
 **Companion to:** `character-identity.md` (3B), `phase-3c-perception.md`, `phase-3c-implementation-clarifications.md` §1.1a, `simulation-replay-architecture.md`
 
 3C answered *what can this character perceive right now?* 3D answers the next
@@ -34,6 +36,33 @@ grandmother has always known the girl from the shop.
 
 ---
 
+## 1.1 Who has a memory at all is declared, not inferred
+
+`createMemory` requires an explicit **`minds`** set. There is no default, and
+that is deliberate:
+
+- inferring it from `seeds` would leave a character who knows nobody yet
+  (`man-01`) with no memory at all;
+- inferring it from the roster would hand the dog one.
+
+Both are wrong in a way that only shows up phases later. The scenario says.
+
+An observer outside `minds` can never acquire a person model, an episode or an
+audit line — not from standing beside somebody all day, not from being spoken
+to, and not from a Brain proposal that should never have been made for it.
+Seeding knowledge for something outside `minds` is refused at construction.
+
+**The gate is on the observer only.** Everybody else still remembers the dog
+perfectly well; that is what makes it a character rather than scenery.
+
+There are exactly three doors into the store and exactly three checks — the
+deterministic tick, `note()` and `learnLabel()` — plus the constructor's refusal.
+Deeper belt-and-braces guards were written and then removed: a redundant guard
+cannot be shown to bite, so removing it is a mutation the suite passes, and a
+gate no test can hold is a gate that rots.
+
+---
+
 ## 2. Two shapes, because they answer different questions
 
 **Person model** — one per entity this observer has ever encountered.
@@ -41,13 +70,61 @@ grandmother has always known the girl from the shop.
 ```text
 entityId          server-only join key
 label             what THIS observer calls them
-encounters        how many times
-lastSeenTick      when
+encounters        how many distinct meetings
+lastSeenTick      when contact last held
+firstMetTick      null for seeded knowledge
 seeded            true if it came from knows rather than from the world
+open              whether a meeting is going on right now
 ```
 
 Small, permanent, and at most one per cast member. **This is what makes
 recognition work.**
+
+### 2.0 An encounter is a meeting, not a sample
+
+Two people who spend the afternoon at one table met **once**.
+
+So an encounter is explicit state, not a gap heuristic:
+
+```text
+open      when contact begins        -> encounters += 1
+stays open while contact continues   -> no matter how long
+closes    only after the two have been apart for separationTicks
+```
+
+`lastSeenTick` never moves backwards, because a queued utterance can carry an
+older tick than the proximity seen on the same tick, and letting it move
+backwards makes the next tick look like a fresh meeting after a long gap.
+
+Contact means proximity within `nearRange`, **or** words passing between the
+two. It does not mean a Brain wrote something down: `note()` and `learnLabel()`
+create the person model if it is missing and never open an encounter. Otherwise
+encounter timing would depend on which tick the scheduler happened to fire on,
+and a character could "meet" somebody at the other end of the park by thinking
+about them.
+
+Required: **continuous proximity counts 1; leaving, staying away, and returning
+counts 2.**
+
+### 2.1 Perceived events are consumed without being taken
+
+Perception's pending queue has two readers with different rights:
+
+| reader | may drain | must see each event |
+|---|---|---|
+| Brain delivery (`contextFor`) | **yes** — delivery is what drains it | once |
+| memory | **never** | exactly once |
+
+Memory therefore carries a **per-observer cursor** over the monotonic `seq`
+perception stamps on every queued event, and ingests only `seq > cursor`. A
+position in the array cannot work, because the array is being emptied by
+somebody else.
+
+The consequence that has to hold:
+
+> **A sentence can be remembered on the tick it was heard and still be waiting
+> in the queue for a wakeup three hundred ticks later.** Neither consumer's
+> timing can duplicate or erase the other's work.
 
 **Episodes** — one per thing that happened.
 
@@ -63,8 +140,22 @@ Many, and they must fade. **This is what gives a conversation a past.**
 
 | | writes | when |
 |---|---|---|
-| **the engine** | encounter facts — this entity was present, at this tick, we were near, we spoke | deterministically, every tick |
+| **the engine** | encounter facts — this entity was present, at this tick, we were near, we spoke | deterministically, **as step 7 of every tick** |
 | **the Brain** | prose — what I made of it, and what I now call someone | as a proposal, at commit |
+
+### 3.1 Accumulation is a stage of the tick, not a call a scenario remembers
+
+Memory accumulation is **step 7 of the canonical tick order**
+(`phase-3c-perception.md` §2), owned by `loop.js` and passed `memory` at
+construction. A scenario author never calls `memory.tick()`.
+
+This is the same gap perception was in before `loop.js` existed: a thing that
+works in the scenario that thought about it, and silently does not run anywhere
+else. A loop given `memory` without `perception` is refused rather than running
+and recording nothing.
+
+Its position is load-bearing, not tidy — see `phase-3c-perception.md` §2 and
+§2.1 above.
 
 The consequence that matters:
 
@@ -173,6 +264,13 @@ not grow. This is 3B §8 unchanged: **a deterministic actor's personality is its
 parameters**, and giving the dog an accumulating past would be modelling a mind
 it does not have.
 
+Starting empty is not the property. **Staying empty is.** The dog is not in
+`minds` (§1.1), so being spawned in the middle of the people it would most
+plausibly grow a past around — seen by them, spoken near, spoken to, for
+hundreds of ticks — must still produce no person model, no episode and no audit
+line, and a Brain proposal aimed at it must fail loudly rather than write
+nowhere.
+
 ---
 
 ## 9. `attentionHint` finds its source
@@ -216,7 +314,18 @@ life out of the character.
 7. A memory written in epoch N still names the right entity after every epoch has
    been evicted.
 8. Episode eviction is deterministic: same state, same survivors.
-9. `dog-01` has no memory store, and nothing creates one for it.
+9. `dog-01` has no memory store, and **nothing creates one for it** — spawned
+   among people, seen, spoken near and spoken to for hundreds of ticks, it holds
+   no person model, no episode and no audit line; and everybody else still
+   remembers the dog.
 10. Recognition reaches the context only for an observer that has the person
     model — a stranger's package is unchanged.
 11. The attention hint returns a number and never a name.
+12. Accumulation happens because the loop runs, with no `memory.tick()` anywhere
+    in the scenario; and a loop given memory without perception is refused.
+13. A perceived utterance is remembered **exactly once** however long it waits,
+    and is **still delivered** to the Brain afterwards.
+14. Continuous proximity is **one** encounter; leaving, staying away past
+    `separationTicks`, and returning is **two**; a brief absence is still one.
+15. A Brain note or label about someone creates the person model and counts **no**
+    meeting.

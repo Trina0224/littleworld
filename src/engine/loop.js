@@ -13,13 +13,23 @@
  *     4  update reservations / occupancy / presence
  *     5  commit the resulting world facts
  *     6  refresh perception for each present agent
- *     7  decide whether any agent needs a Brain wakeup
- *     8  dispatch those requests asynchronously
+ *     7  accumulate private memory from what was perceived
+ *     8  decide whether any agent needs a Brain wakeup
+ *     9  dispatch those requests asynchronously
  *
- * Steps 1-7 never wait for inference. Step 8 belongs to the scheduler in 3F and
+ * Steps 1-8 never wait for inference. Step 9 belongs to the scheduler in 3F and
  * is not here; `onWakeup` is where it will attach, and the contract is already
  * enforced by the shape - it is handed a list and its return value is ignored,
  * so there is nothing for a future implementer to await.
+ *
+ * STEP 7 IS A STAGE OF THE TICK, NOT SOMETHING A SCENARIO REMEMBERS TO DO. It
+ * was written by hand in tests first, which is the same gap perception was in
+ * before this file existed: a thing that works in the scenario that thought
+ * about it and silently does not run anywhere else. It sits after 6 because it
+ * reads what perception just refreshed, and before 8 because a wakeup drains the
+ * perception queue when it builds a context - memory reads that queue without
+ * draining it, and reading it first is what makes "remembered exactly once" true
+ * no matter how rarely a Brain is woken.
  *
  * Steps 4 and 5 are not separate calls. Reservations move because an activity
  * step moved them, presence moves because the day rolled over, and facts commit
@@ -36,9 +46,23 @@
  * audit streams; it appends to neither. So adding step 6 to a loop that already
  * ran is guaranteed not to move a single byte of any recording, and loop.test.js
  * asserts exactly that rather than trusting the claim.
+ *
+ * NEITHER CAN MEMORY, and there the claim is narrower and worth stating exactly:
+ * memory is private, so it appends to the audit stream and never to the fact
+ * stream. Step 7 therefore leaves the recording a renderer or a replay reads
+ * byte for byte identical, while audit gains the memory_written lines that make
+ * a run explicable. loop.test.js asserts the fact half; memory.test.js asserts
+ * the other half of it - that nothing private ever crosses into facts.
  */
 
-export function createLoop({ world, runtime, perception = null, onWakeup = null }) {
+export function createLoop({
+  world, runtime, perception = null, memory = null, onWakeup = null
+}) {
+  if (memory && !perception) {
+    // Memory accumulates from perception and from nothing else. A loop given one
+    // without the other would run, record nothing, and look like it was working.
+    throw new Error('a loop with memory needs perception: memory has no other source');
+  }
   let seen = 0;
 
   /** facts committed since the last time anyone asked */
@@ -57,8 +81,9 @@ export function createLoop({ world, runtime, perception = null, onWakeup = null 
       world.stepMovement();                       // 2
       runtime.tick();                             // 3, and 4 and 5 as it goes
       if (perception) perception.tick();          // 6
+      if (memory) memory.tick(perception);        // 7
 
-      // 7. Who would need to think? The list is produced synchronously and the
+      // 8. Who would need to think? The list is produced synchronously and the
       // return value is discarded, so a scheduler attaching here in 3F cannot
       // make the world wait for one.
       if (onWakeup) onWakeup(world.presentIds(), world.tick);

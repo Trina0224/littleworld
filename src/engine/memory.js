@@ -6,7 +6,7 @@
  * judgement belongs to the Brain reading its own memory, not to a number the
  * engine computed.
  *
- * Five things carry the design.
+ * Seven things carry the design.
  *
  * `knows` IS MEMORY THAT EXISTED BEFORE TICK ZERO. The seeded knowledge from 3B
  * is not a second mechanism consulted alongside this one; it is the first entry
@@ -31,6 +31,38 @@
  * needs no mechanism. Nothing reconciles two stores, ever - two people
  * remembering the same evening differently is what this cast is for.
  *
+ * WHO HAS A MEMORY AT ALL IS DECLARED, NOT INFERRED. `minds` is required, and
+ * an observer outside it can never acquire a person model, an episode or an
+ * audit line - not by standing next to somebody for a day, not by being spoken
+ * to, not through a Brain call that should never have been made for it. The dog
+ * is a deterministic actor whose personality is its parameters (3B section 8),
+ * and the way to be sure it never grows a past is to have nothing that could
+ * give it one. The gate is on the OBSERVER only: everybody else still remembers
+ * the dog perfectly well, which is why it is a character and not scenery.
+ *
+ * There are exactly three doors into this store and exactly three checks, one on
+ * each: the deterministic tick, note(), and learnLabel() - plus a refusal to
+ * even construct a memory that was seeded for something with no mind. Deeper
+ * belt-and-braces checks were written first and taken out again: a redundant
+ * guard cannot be shown to bite, so removing it is a mutation the suite passes,
+ * and a gate no test can hold is a gate that quietly rots.
+ *
+ * AN ENCOUNTER IS A MEETING, NOT A SAMPLE. Two people who spend the afternoon at
+ * one table met once. So an encounter opens when contact begins, stays open
+ * while it continues however long that is, and closes only after they have been
+ * apart for `separationTicks`. Counting "still nearby after another cooldown"
+ * instead would make `timesMet` a stopwatch wearing a counter's name, and a
+ * Brain reading "we have met 40 times" about one long conversation would be
+ * reading something false.
+ *
+ * PERCEIVED EVENTS ARE CONSUMED WITHOUT BEING TAKEN. Perception's queue belongs
+ * to Brain delivery, which drains it; memory only reads it, and remembers each
+ * event exactly once by carrying a per-observer cursor over the monotonic `seq`
+ * perception stamps on every queued event. So a sentence can be remembered on
+ * the tick it was heard and still be waiting in the queue for a wakeup that
+ * happens three hundred ticks later - the two consumers do not interfere, and
+ * neither one's timing can duplicate or erase the other's work.
+ *
  * LENGTH IS A PER-CALL COST. self.md is a cached prefix at 0.1x; memory is the
  * dynamic suffix, re-sent uncached on every request. A long memory is expensive
  * in a way a long self sheet is not, which is why episodes are bounded and
@@ -39,8 +71,10 @@
 
 export const DEFAULTS = {
   episodeLimit: 24,          // per observer; the dynamic suffix is what costs
-  nearTicks: 1,              // an encounter needs the two to be perceptible now
-  encounterCooldown: 60      // don't count the same continuous meeting repeatedly
+  // How long two people must be out of contact before the next contact is a new
+  // meeting rather than the same one continuing. Not a cooldown: it never
+  // re-counts a meeting that is still going on.
+  separationTicks: 60
 };
 
 /** Salience for what is worth keeping when the episode budget is full. */
@@ -54,14 +88,26 @@ const KEEP = {
   note: 70                    // something the Brain chose to remember
 };
 
-export function createMemory(world, { seeds = new Map(), config = {} } = {}) {
+export function createMemory(world, { seeds = new Map(), minds, config = {} } = {}) {
+  if (minds === undefined) {
+    // Deliberately not defaulted. Inferring it from `seeds` would give a
+    // character who knows nobody yet (man-01) no memory, and inferring it from
+    // the roster would give the dog one. Both are wrong in a way that would
+    // only show up much later, so the scenario has to say.
+    throw new Error('createMemory needs an explicit `minds` set: who has a memory at all');
+  }
   const cfg = { ...DEFAULTS, ...config };
+  const enabled = new Set(minds);
 
   // observerId -> Map(entityId -> person model). Never merged across observers.
   const people = new Map();
   // observerId -> episodes, oldest first
   const episodes = new Map();
-  let seen = 0;                                  // perception events consumed
+  // observerId -> highest perception `seq` already remembered. A cursor rather
+  // than a count, because the queue it reads is being emptied by somebody else.
+  const consumed = new Map();
+
+  const isMind = (observerId) => enabled.has(observerId);
 
   function store(observerId) {
     if (!people.has(observerId)) people.set(observerId, new Map());
@@ -73,6 +119,9 @@ export function createMemory(world, { seeds = new Map(), config = {} } = {}) {
    * character starts the world already holding.
    */
   for (const [observerId, entries] of seeds) {
+    if (!isMind(observerId)) {
+      throw new Error(`${observerId} was seeded with knowledge but has no memory`);
+    }
     const m = store(observerId);
     for (const { who, as } of entries) {
       m.set(who, {
@@ -81,7 +130,8 @@ export function createMemory(world, { seeds = new Map(), config = {} } = {}) {
         encounters: 0,
         lastSeenTick: null,
         firstMetTick: null,                      // seeded knowledge has no first time
-        seeded: true
+        seeded: true,
+        open: false                              // never met in the world yet
       });
     }
   }
@@ -108,52 +158,101 @@ export function createMemory(world, { seeds = new Map(), config = {} } = {}) {
     });
   }
 
-  function touch(observerId, entityId, tick) {
+  /**
+   * Make sure this observer has a model of this entity, without claiming they
+   * met just now.
+   *
+   * The Brain writing a note about someone is not the two of them meeting, and
+   * letting it count would put encounter timing in the hands of whatever the
+   * scheduler happened to call this tick.
+   */
+  function ensure(observerId, entityId, tick) {
     const m = store(observerId);
     let p = m.get(entityId);
     if (!p) {
       p = {
         entityId, label: null, encounters: 0,
-        lastSeenTick: null, firstMetTick: tick, seeded: false
+        lastSeenTick: null, firstMetTick: tick, seeded: false, open: false
       };
       m.set(entityId, p);
       remember(observerId, { tick, kind: 'first_meeting', entityId, gist: 'met for the first time' });
     }
-    const fresh = p.lastSeenTick === null || (tick - p.lastSeenTick) > cfg.encounterCooldown;
-    if (fresh) p.encounters += 1;
-    p.lastSeenTick = tick;
     return p;
+  }
+
+  /**
+   * Record contact: we are near, or words passed between us.
+   *
+   * Opens an encounter if none is open, and otherwise only extends the one that
+   * is. `lastSeenTick` never moves backwards, because a queued utterance may
+   * carry an older tick than the proximity seen this same tick.
+   */
+  function observe(observerId, entityId, tick) {
+    const p = ensure(observerId, entityId, tick);
+    if (!p.open) {
+      p.open = true;
+      p.encounters += 1;
+    }
+    p.lastSeenTick = p.lastSeenTick === null ? tick : Math.max(p.lastSeenTick, tick);
+    return p;
+  }
+
+  /** An encounter ends by absence, which is the only thing that can end one. */
+  function closeStale(observerId, tick) {
+    for (const p of people.get(observerId)?.values() ?? []) {
+      if (!p.open) continue;
+      if (tick - p.lastSeenTick > cfg.separationTicks) p.open = false;
+    }
   }
 
   return {
     config: cfg,
 
+    /** who was declared to have a memory at all */
+    minds() {
+      return [...enabled].sort();
+    },
+
     /**
-     * Deterministic half. Consumes what perception has queued and records that
+     * Deterministic half, and a stage of the canonical tick (loop.js step 7).
+     *
+     * Reads what perception has already refreshed and queued, and records that
      * these people were here and what passed between them. No Brain involved,
      * which is the point: this keeps running when inference does not.
      */
     tick(perception) {
       for (const observerId of world.presentIds()) {
+        if (!isMind(observerId)) continue;
+
+        // Who has been gone long enough that the next sighting is a new
+        // meeting. Done before recording contact, so a meeting still in
+        // progress is never closed and immediately reopened.
+        closeStale(observerId, world.tick);
+
         // Encounters from what is perceptible right now.
         for (const v of perception.sensoryState(observerId).visible) {
           if (v.distance > perception.config.nearRange) continue;
-          touch(observerId, v.entityId, world.tick);
+          observe(observerId, v.entityId, world.tick);
         }
-      }
-      // And from what was heard, which reaches further than "near".
-      for (const observerId of world.presentIds()) {
-        for (const e of perception.pendingFor(observerId).slice(seen)) {
+
+        // And from what was heard, which reaches further than "near". The queue
+        // is read, not drained - delivery to a Brain owns the draining. The
+        // cursor is what makes reading it repeatedly safe.
+        let high = consumed.get(observerId) ?? 0;
+        for (const e of perception.pendingFor(observerId)) {
+          if (e.seq === undefined) throw new Error('a queued perceived event carries no seq');
+          if (e.seq <= high) continue;
+          high = e.seq;
           if (!e.entityId || e.entityId === observerId) continue;
           if (e.kind !== 'speech_heard' && e.kind !== 'direct_address') continue;
-          touch(observerId, e.entityId, e.t);
+          observe(observerId, e.entityId, e.t);
           remember(observerId, {
             tick: e.t, kind: e.kind, entityId: e.entityId,
             gist: e.text ?? null
           });
         }
+        consumed.set(observerId, high);
       }
-      seen = 0;                                  // pendingFor is drained by delivery
     },
 
     /** @returns the observer's model of one entity, or null */
@@ -174,12 +273,17 @@ export function createMemory(world, { seeds = new Map(), config = {} } = {}) {
      * The Brain's half. Both take entity ids, because the caller canonicalized
      * the reply before committing it - a ref must never reach storage
      * (clarifications 1.1a).
+     *
+     * Both refuse an observer with no memory rather than quietly doing nothing:
+     * a Brain proposal arriving for a deterministic actor means the scheduler
+     * woke something that has no mind, and that is worth failing loudly.
      */
     note(observerId, entityId, text) {
+      if (!isMind(observerId)) throw new Error(`${observerId} has no memory to write to`);
       if (/^(seen|heard)-\d+$/.test(String(entityId))) {
         throw new Error(`a perception ref reached memory uncanonicalized: ${entityId}`);
       }
-      touch(observerId, entityId, world.tick);
+      ensure(observerId, entityId, world.tick);
       remember(observerId, { tick: world.tick, kind: 'note', entityId, gist: text });
     },
 
@@ -190,10 +294,11 @@ export function createMemory(world, { seeds = new Map(), config = {} } = {}) {
      * files, and there is nothing to consult: character.json carries no name.
      */
     learnLabel(observerId, entityId, label) {
+      if (!isMind(observerId)) throw new Error(`${observerId} has no memory to write to`);
       if (/^(seen|heard)-\d+$/.test(String(entityId))) {
         throw new Error(`a perception ref reached memory uncanonicalized: ${entityId}`);
       }
-      const p = touch(observerId, entityId, world.tick);
+      const p = ensure(observerId, entityId, world.tick);
       p.label = label;
       world.log.note(world.tick, 'label_learned', { agent: observerId, about: entityId });
       return p;

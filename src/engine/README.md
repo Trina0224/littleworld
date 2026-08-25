@@ -36,7 +36,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `days.test.js` | days, absence, and the schedule that must not move |
 | `loop.test.js` | the tick order, and that perception in it moves no fact |
 | `perception.test.js` | every leak the 3C spec asks to be proved impossible |
-| `memory.test.js` | that a memory is the rememberer's and nobody else's |
+| `memory.test.js` | that a memory is the rememberer's and nobody else's, and accrues from the loop |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -46,26 +46,43 @@ nothing implemented it: every scenario open-coded its own loop and perception wa
 called by hand in a demo. `loop.js` is now the one place that owns it.
 
 ```
-1  advance the integer world clock      5  commit the resulting world facts
-2  advance deterministic movement       6  refresh perception for each present agent
-3  advance deterministic activities     7  decide whether any agent needs a Brain wakeup
-4  update reservations / presence       8  dispatch those requests asynchronously
+1  advance the integer world clock      6  refresh perception for each present agent
+2  advance deterministic movement       7  accumulate private memory from what was perceived
+3  advance deterministic activities     8  decide whether any agent needs a Brain wakeup
+4  update reservations / presence       9  dispatch those requests asynchronously
+5  commit the resulting world facts
 ```
 
-Steps 1–7 never wait for inference. **Step 8 is not here** — it belongs to the
+Steps 1–8 never wait for inference. **Step 9 is not here** — it belongs to the
 scheduler in 3F, and `onWakeup` is where it attaches. The contract is already
 enforced by the shape: the hook is handed a list and its return value is
 discarded, so there is nothing for a future implementer to await. `loop.test.js`
 proves it by running the same scenario twice with a hook that returns a promise,
 and comparing both streams.
 
+**Step 7 is a stage, not a courtesy.** Memory accumulation was called by hand in
+tests first, which is exactly the gap perception was in before this file existed:
+a thing that works in the scenario that thought about it and silently does not
+run anywhere else. `createLoop({world, runtime, perception, memory})` owns it,
+and a loop handed memory without perception is refused rather than left to record
+nothing and look busy. Its position is load-bearing: after 6 because it reads
+what perception just refreshed, and before 8 because building a Brain context
+**drains** the perception queue — memory reads that queue without draining it,
+and reading first is what makes *remembered exactly once* true however rarely a
+Brain is woken.
+
 Steps 4 and 5 are not separate calls — reservations move because an activity step
 moved them, facts commit as they happen. They are named anyway because they are
 real stages of the tick even where no line corresponds to them.
 
 **Wiring perception in cannot change a fact,** because perception only ever reads
-the two streams. That is a claim, so it is asserted: the same scenario runs with
-and without perception and the fact *and* audit streams are compared byte for
+the two streams. Memory is the same claim one step narrower: it is private, so it
+appends to **audit** and never to facts — step 7 leaves the recording a renderer
+or a replay reads byte for byte identical, and gains the `memory_written` lines
+that make a run explicable.
+
+That is a claim, so it is asserted: the same scenario runs with and without
+perception and the fact *and* audit streams are compared byte for
 byte — over a run that covers movement, reservation, occupancy, release, speech,
 day boundaries and activity transitions, so the comparison is evidence rather
 than a coincidence of two empty logs.
@@ -186,22 +203,81 @@ dropping the oldest is also deterministic and would throw away the thing worth
 keeping, so eviction ranks on value first and the test proves a first meeting
 survives eighty pieces of ordinary chatter.
 
+**Who has a memory at all is declared.** `minds` is required — inferring it from
+`seeds` would leave 渡辺, who knows nobody yet, with no memory; inferring it from
+the roster would hand the dog one. There are exactly three doors into the store
+and exactly three checks on them (the deterministic tick, `note`, `learnLabel`),
+plus a constructor that refuses to seed knowledge for something with no mind.
+Deeper belt-and-braces guards were written and then taken out again: a redundant
+guard cannot be shown to bite, so removing it is a mutation the suite passes, and
+a gate no test can hold is a gate that rots.
+
 `dog-01` gets no store. A deterministic actor's personality is its parameters,
-and giving the dog an accumulating past would model a mind it does not have.
+and giving the dog an accumulating past would model a mind it does not have. And
+*starting* empty proves nothing — the test spawns the dog in the middle of the
+people it would most plausibly grow a past around, has it seen, spoken near and
+spoken to for four hundred ticks, and asserts no person model, no episode and no
+audit line. The gate is on the observer only: everybody else remembers the dog
+perfectly well, which is what makes it a character rather than scenery.
+
+**An encounter is a meeting, not a sample.** Two people who spend the afternoon
+at one table met once, so an encounter opens when contact begins, stays open
+however long it continues, and closes only after they have been apart for
+`separationTicks`. Continuous proximity counts 1; leaving, staying away and
+coming back counts 2; stepping away for ten ticks still counts 1. A Brain writing
+a note about someone creates the person model and counts **no** meeting —
+otherwise encounter timing would depend on which tick the scheduler fired on, and
+a character could meet somebody across the park by thinking about them.
+
+**A perceived event is consumed without being taken.** Perception's queue has two
+readers with different rights: delivery to a Brain drains it, memory may never.
+So memory carries a per-observer cursor over the monotonic `seq` perception
+stamps on every queued event. A position in the array cannot work, because the
+array is being emptied by somebody else — and the old count-based version
+re-remembered the same sentence on every tick until delivery happened to drain
+it, which also dragged `lastSeenTick` backwards and made encounters climb by one
+a tick. A sentence is now remembered on the tick it is heard and is still waiting
+in the queue for a wakeup three hundred ticks later.
 
 ### What the tests prove
 
-Every item in `phase-3d-memory.md` §11. Five mutations confirm they bite:
-routing memory writes to the fact stream, accepting an uncanonicalized ref into
-storage, giving seeded knowledge a first-met tick, evicting by age rather than by
-value, and borrowing a label from another character's store — that last one
-fails with *"the pastor recognised 3 people: 辰ちゃん, 孫女, 星さん"*, which is
-precisely the leak the phase exists to prevent.
+Every item in `phase-3d-memory.md` §11, now fifteen items rather than eleven.
+Thirteen mutations confirm they bite. The first five: routing memory writes to
+the fact stream, accepting an uncanonicalized ref into storage, giving seeded
+knowledge a first-met tick, evicting by age rather than by value, and borrowing a
+label from another character's store — that last one fails with *"the pastor
+recognised 3 people: 辰ちゃん, 孫女, 星さん"*, which is precisely the leak the
+phase exists to prevent.
 
-A sixth mutation was written first and **caught nothing**, because it turned out
-to be a no-op: nobody's `knows` contains themselves, so the fallback it added
-never fired. Recorded because a mutation that passes is not evidence — it has to
-be shown to change behaviour before its survival means anything.
+Eight more came out of the review that found the four integration bugs above:
+
+| mutation | fails with |
+|---|---|
+| drop step 7 from the loop | *two hundred ticks side by side produced no memory* |
+| let the loop take memory with no perception | *a loop accepted memory with no perception* |
+| never advance the ingestion cursor | *one utterance was remembered 24 times* |
+| restore the original `touch()` in full | *an utterance in the queue inflated encounters to 140* |
+| remove the mind gate from the tick | *the dog acquired 2 person models · 18 memory writes were made for the dog* |
+| never close an encounter | *leaving and coming back counted 1* |
+| let a Brain note count as a meeting | *thinking about someone across the park counted 1 meetings* |
+| make reading the queue drain it | *memory ate the utterance before the Brain saw it* |
+
+Three further mutations were written and **caught nothing**, and are recorded
+because a mutation that passes is not evidence:
+
+- one added a fallback that never fired — nobody's `knows` contains themselves;
+- two removed belt-and-braces mind gates that a third gate already covered. Both
+  were genuine no-ops, which is the argument for having removed the redundant
+  gates rather than the argument for keeping them.
+
+The encounter mutation is worth one more line, because it corrected the review's
+own reading. Restoring the gap heuristic **alone** changes nothing: while contact
+is sampled every tick, "last seen more than a cooldown ago" and an explicit open
+encounter are the same predicate. The inflation was never the cooldown — it was
+the un-advancing cursor feeding the same stale event tick back in, dragging
+`lastSeenTick` backwards so the next tick looked like a fresh meeting after a
+long gap. Bugs 2 and 4 were one bug wearing two faces, and only the combined
+mutation shows it.
 
 **Nothing outside the slice is here.** No perception, no memory, no zones, no
 conversation, no scheduler, no provider adapter — not even a mock one. See

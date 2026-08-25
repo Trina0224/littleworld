@@ -41,6 +41,12 @@
  * built context it counts as delivered even if inference later fails, so an
  * agent is never told the same old utterance again on every retry.
  *
+ * It has two readers with different rights. Delivery to a Brain DRAINS it; 3D
+ * memory only READS it, every tick, and must still see each event exactly once.
+ * That is why every queued event carries a monotonic `seq`: a reader that may
+ * not drain cannot track its progress as a position in an array somebody else
+ * is emptying. The seq is server-side and never reaches a model.
+ *
  * OWN FAILURE IS THE ONE THING TAKEN FROM AUDIT. A failed attempt changed
  * nothing, so it is not a fact, so it cannot be derived from the fact stream at
  * all. It reaches the agent that attempted it and nobody else - not another
@@ -134,6 +140,10 @@ export function createPerception(world, zones, {
   let nextEpoch = 1;
   let factCursor = 0;
   let auditCursor = 0;
+  // Monotonic across every observer. Delivery to a Brain drains the queue, but
+  // memory reads it without draining, so "have I taken this one" cannot be a
+  // position in an array that somebody else is emptying.
+  let nextSeq = 1;
 
   const describe = (id) => entities.get(id)?.appearance ?? 'someone';
   const kindOf = (id) => (entities.get(id)?.kind === 'animal' ? 'animal_seen' : 'person_seen');
@@ -159,7 +169,7 @@ export function createPerception(world, zones, {
   function queue(observerId, event) {
     if (!world.present(observerId)) return;
     const q = pending.get(observerId) ?? [];
-    q.push(event);
+    q.push({ ...event, seq: nextSeq++ });
     if (q.length > cfg.queueLimit) {
       // Drop the oldest unprotected event rather than the oldest event, so a
       // direct address is never displaced by a crowd walking past.
@@ -430,6 +440,11 @@ export function createPerception(world, zones, {
       if (i !== -1) epochOrder.splice(i, 1);
     },
 
+    /**
+     * Read the queue without taking it, for a consumer that may not drain -
+     * today that is 3D memory. Each event carries `seq`; ingest only what is
+     * above your own cursor. Draining belongs to contextFor and to nothing else.
+     */
     pendingFor(observerId) {
       return (pending.get(observerId) ?? []).slice();
     }
