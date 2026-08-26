@@ -6,5 +6,27 @@
   "knows": [
     { "who": "grandma-01", "as": "星さん" }
   ],
-  "_note": "appearance 是世界真相，不含名字。森牧師與星さん在教會附設的文化教室已認識多年；其他角色若未在 knows 中，必須在世界裡實際認識。"
+  "social": {
+    "initiative": 0.60,
+    "conversationDrive": 0.80,
+    "curiosity": 0.90,
+    "questionTendency": 0.70,
+    "talkativeness": 0.65,
+    "socialInhibition": 0.25,
+    "persistence": 0.80,
+    "responsiveness": 0.95,
+    "selfDisclosure": 0.55,
+    "topicSwitching": 0.35
+  },
+  "interests": [
+    "信仰",
+    "人生故事",
+    "舊書",
+    "歷史",
+    "古典音樂",
+    "教育",
+    "散步",
+    "人的孤單與盼望"
+  ],
+  "_note": "appearance 是世界真相，不含名字。森牧師與星さん在教會附設的文化教室已認識多年；其他角色若未在 knows 中，必須在世界裡實際認識。高 responsiveness 表示他很會接住別人真正想談的內容，不代表每次都主動傳教。"
 }
