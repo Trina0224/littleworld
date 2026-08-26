@@ -6,5 +6,25 @@
   "knows": [
     { "who": "shopkeeper-01", "as": "お嬢さん" }
   ],
+  "social": {
+    "initiative": 0.55,
+    "conversationDrive": 0.70,
+    "curiosity": 0.85,
+    "questionTendency": 0.45,
+    "talkativeness": 0.60,
+    "socialInhibition": 0.15,
+    "persistence": 0.75,
+    "responsiveness": 0.90,
+    "selfDisclosure": 0.30,
+    "topicSwitching": 0.45
+  },
+  "interests": [
+    "和菓子",
+    "手藝",
+    "生意",
+    "客人和人的習慣",
+    "地方變化",
+    "家庭"
+  ],
   "_note": "全卡司最短的一張 knows，跟店員最長的那張是同一條規則的兩個結果：她不走所以累積，他不常來所以慢。他背上那個紋是日和堂的店紋——他沒有隱瞞身分，他隱瞞的是來意。"
 }
