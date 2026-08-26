@@ -6,5 +6,24 @@
   "knows": [
     { "who": "grandma-01", "as": "おばあちゃん" }
   ],
-  "_note": "整個卡司裡最短的一份 knows，而且是刻意的。她只認得外婆一個人。見 bible.md。"
+  "social": {
+    "initiative": 0.20,
+    "conversationDrive": 0.35,
+    "curiosity": 0.65,
+    "questionTendency": 0.25,
+    "talkativeness": 0.30,
+    "socialInhibition": 0.65,
+    "persistence": 0.40,
+    "responsiveness": 0.70,
+    "selfDisclosure": 0.25,
+    "topicSwitching": 0.25
+  },
+  "interests": [
+    "技術",
+    "外婆",
+    "回鄉時看到的變化",
+    "安靜觀察陌生人",
+    "家人"
+  ],
+  "_note": "整個卡司裡最短的一份 knows，而且是刻意的。她只認得外婆一個人。見 bible.md。她通常需要別人先開口，但不是沒有好奇心。"
 }
