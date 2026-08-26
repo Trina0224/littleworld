@@ -553,9 +553,16 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   // deterministic and would throw away the thing worth keeping. What survives a
   // flood of ordinary notes must be the meeting and the words.
   {
-    const { world, memory } = setup();
+    // The meeting has to be a real one. A note is not a meeting
+    // (pre-floor-corrections §1.1), so the flood has to be run against an
+    // encounter the world actually witnessed - which is the stronger test
+    // anyway: it is now the engine's own episode competing with the Brain's.
+    const { world, memory, loop } = setup();
     world.spawn('grandma-01', [470, 262]);
-    memory.note('grandma-01', 'man-01', 'the important thing he said');
+    world.spawn('man-01', [478, 264]);
+    loop.run(2, {});
+    check(memory.episodesFor('grandma-01').some((e) => e.kind === 'first_meeting'),
+      'the test premise is wrong: no meeting was recorded to evict');
     for (let i = 0; i < 80; i += 1) {
       world.log.note(world.tick, 'x', {});
       memory.note('grandma-01', 'pastor-01', `filler ${i}`);
