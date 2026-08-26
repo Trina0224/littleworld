@@ -10,5 +10,25 @@
     { "who": "brother-02", "as": "タタちゃん" },
     { "who": "dog-01", "as": "ハナ" }
   ],
+  "social": {
+    "initiative": 0.55,
+    "conversationDrive": 0.75,
+    "curiosity": 0.65,
+    "questionTendency": 0.50,
+    "talkativeness": 0.65,
+    "socialInhibition": 0.20,
+    "persistence": 0.70,
+    "responsiveness": 0.75,
+    "selfDisclosure": 0.65,
+    "topicSwitching": 0.40
+  },
+  "interests": [
+    "鐵路",
+    "地方歷史",
+    "以前的生活",
+    "養蠶",
+    "街坊變化",
+    "孩子和年輕人的去向"
+  ],
   "_note": "他穿的是西式的衣服——退休老人的開襟外套。這是刻意跟和服男對照的：小野一輩子穿制服，熊田一輩子穿和服，兩個人的衣服說出他們的行業。他跟星さん是互相認得的（她那邊也有他），全卡司第二組雙向關係。"
 }
