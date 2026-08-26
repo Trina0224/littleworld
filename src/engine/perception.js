@@ -92,6 +92,9 @@ export const DEFAULTS = {
   nearRange: 40,
   personalSpace: 6,
   queueLimit: 40,
+  // How many contexts may be waiting to settle at once. Not a tuning knob: a
+  // caller that never settles is a bug, and this is where it stops being silent.
+  heldLimit: 16,
   visibleLimit: 8,          // how many people one request describes, most salient first
   // A transport window, not a retention policy. Refs only have to survive from a
   // request to its answer; anything durable is canonicalised at commit, so
@@ -148,6 +151,11 @@ export function createPerception(world, zones, {
   // contradict the recorded `heardBy`.
   const cfg = { ...DEFAULTS, ...config, ...world.hearing.config };
   const pending = new Map();            // observerId -> perceived events
+  // epochId -> events taken out of a queue but not yet confirmed delivered.
+  // Deliberately NOT bounded by epochHistory: what an agent is owed must never
+  // depend on the size of a transport cache (clarifications 1.1a, the same
+  // lesson memory learned about refs).
+  const held = new Map();
   const epochs = new Map();             // epochId -> { observer, tick, refs: Map }
   const epochOrder = [];
   let nextEpoch = 1;
@@ -179,17 +187,21 @@ export function createPerception(world, zones, {
     return 'across the way';
   }
 
+  /** Drop the oldest unprotected event rather than the oldest event, so a
+   *  direct address is never displaced by a crowd walking past. */
+  function trim(q) {
+    while (q.length > cfg.queueLimit) {
+      const i = q.findIndex((e) => !PROTECTED.has(e.kind));
+      q.splice(i === -1 ? 0 : i, 1);
+    }
+    return q;
+  }
+
   function queue(observerId, event) {
     if (!world.present(observerId)) return;
     const q = pending.get(observerId) ?? [];
     q.push({ ...event, seq: nextSeq++ });
-    if (q.length > cfg.queueLimit) {
-      // Drop the oldest unprotected event rather than the oldest event, so a
-      // direct address is never displaced by a crowd walking past.
-      const i = q.findIndex((e) => !PROTECTED.has(e.kind));
-      q.splice(i === -1 ? 0 : i, 1);
-    }
-    pending.set(observerId, q);
+    pending.set(observerId, trim(q));
   }
 
   /** Can `observer` see `subject` at all? Zone first, then distance. */
@@ -336,15 +348,30 @@ export function createPerception(world, zones, {
      * Build one delivered context: the model-visible half, plus the server-only
      * half that keeps it resolvable.
      *
-     * Everything included is marked delivered. If inference later fails the
-     * agent falls back deterministically; it is not told the same utterance
-     * again on the next attempt (clarifications 2.2).
+     * Everything included is taken out of the queue PROVISIONALLY, and stays
+     * out only once the round trip settles (clarifications 8.2). The old rule -
+     * delivered the moment a context was built - was right while every context
+     * led to a turn, and stops being right the moment a floor may be offered to
+     * three characters at once and only the highest-ranked speaks: the two
+     * losers would have had their queues drained for a turn they never took,
+     * and a sentence addressed to one of them would simply vanish.
+     *
+     * Call `settle(epochId, { delivered })` when the round trip resolves.
+     * Answered and failed both count as delivered, so nobody is told the same
+     * old utterance again on a retry; only a context that was never used gives
+     * its events back.
      */
     contextFor(observerId) {
       const epochId = `e${nextEpoch++}`;
       const state = this.sensoryState(observerId);
       const events = pending.get(observerId) ?? [];
       pending.set(observerId, []);
+      held.set(epochId, { observerId, events });
+      if (held.size > cfg.heldLimit) {
+        throw new Error(`${held.size} contexts are waiting to settle; `
+          + `somebody built a context and never settled it: `
+          + `${[...held.keys()].slice(0, 5).join(',')}...`);
+      }
 
       // Rank first, then number, so seen-1 is the first thing the model reads.
       // Ranking is by salience and distance, never by entity id: if seen-1 always
@@ -454,16 +481,57 @@ export function createPerception(world, zones, {
     },
 
     /**
-     * Done with this round trip.
+     * Done with this round trip, and say whether it was used.
      *
-     * Safe to call the moment a reply has been canonicalised, and safe never to
-     * call at all - the cache evicts on its own. Nothing committed depends on an
-     * epoch surviving, so releasing one can never orphan a memory.
+     *     delivered: true    answered, or failed after being genuinely taken up
+     *     delivered: false   the context was never used - it lost the floor, or
+     *                        was dropped before dispatch
+     *
+     * A false settlement puts the events back where they came from, in `seq`
+     * order, so the agent is still owed exactly what it was owed. That is what
+     * lets a losing parallel offer commit nothing AND lose nothing
+     * (clarifications 3 and 8.2).
+     *
+     * 3D needs no part in this: memory reads the queue with a cursor and never
+     * drains it, so a restored event cannot be ingested twice. The two consumers
+     * were given different rights precisely so one of them could be rolled back.
+     */
+    settle(epochId, { delivered } = {}) {
+      if (typeof delivered !== 'boolean') {
+        throw new Error('settle() needs an explicit delivered: true or false');
+      }
+      const h = held.get(epochId);
+      if (!h) {
+        throw new Error(`settle() for an epoch that was never built, or is `
+          + `already settled: ${epochId}`);
+      }
+      held.delete(epochId);
+      if (!delivered && h.events.length) {
+        const q = [...h.events, ...(pending.get(h.observerId) ?? [])]
+          .sort((a, b) => a.seq - b.seq);
+        pending.set(h.observerId, trim(q));
+      }
+      return true;
+    },
+
+    /**
+     * Let go of this epoch's refs.
+     *
+     * Deliberately NOT the same call as settle(), because the two have different
+     * lifetimes and conflating them is how a caller ends up unable to resolve a
+     * ref it still needs. Refs are a transport cache that evicts on its own and
+     * is safe to release at any moment or never; the queued events are what an
+     * agent is owed, and only settle() may dispose of those.
      */
     releaseEpoch(epochId) {
       epochs.delete(epochId);
       const i = epochOrder.indexOf(epochId);
       if (i !== -1) epochOrder.splice(i, 1);
+    },
+
+    /** How many contexts are still waiting to settle. A leak detector. */
+    heldCount() {
+      return held.size;
     },
 
     /**

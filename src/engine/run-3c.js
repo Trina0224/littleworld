@@ -75,6 +75,7 @@ loop.step();
 
 function show(observerId, note) {
   const ctx = perception.contextFor(observerId);
+  perception.settle(ctx.epochId, { delivered: true });
   console.log(`\n  ${observerId} ${note}`);
   console.log(`  what the model receives (${ctx.epochId}):`);
   for (const v of ctx.forModel.sensoryState.visible) {

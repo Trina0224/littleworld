@@ -299,6 +299,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   // Memory read the queue; it did not take it. The Brain has not been woken yet
   // and the words must still be waiting for it.
   const ctx = buildContext(perception, memory, 'grandma-01');
+  perception.settle(ctx.epochId, { delivered: true });
   const said = ctx.forModel.recentPerceivedEvents.filter((e) => e.said === 'こんにちは');
   check(said.length === 1,
     `memory ate the utterance before the Brain saw it (${said.length} delivered)`);
@@ -483,6 +484,36 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
     'a call that carried did not count on the other side');
 }
 
+// --- 3E-2: a restored perceived event is not ingested a second time ---
+{
+  const { world, memory, perception, loop } = setup();
+  // 渡辺 knows nobody and nobody knows him, so every count here came from the
+  // world rather than from what he arrived holding.
+  world.spawn('man-01', [470, 262]);
+  world.spawn('pastor-01', [480, 262]);
+  loop.run(5, {});
+  world.say('pastor-01', 'こんにちは。', { to: 'man-01' });
+  loop.run(10, {});
+
+  const before = memory.recall('man-01', 'pastor-01').spokenWith;
+  check(before === 1, `the test premise is wrong: spokenWith is ${before}`);
+
+  // He was offered the floor and lost it, so the context was never used and his
+  // queue is given back (clarifications 8.2). Memory read that queue with a
+  // cursor rather than draining it, so the same words must not count again.
+  const ctx = perception.contextFor('man-01');
+  perception.settle(ctx.epochId, { delivered: false });
+  check(perception.pendingFor('man-01').some((e) => e.kind === 'direct_address'),
+    'the test premise is wrong: nothing came back');
+  loop.run(30, {});
+  check(memory.recall('man-01', 'pastor-01').spokenWith === before,
+    'a restored event was ingested a second time');
+  check(memory.recall('man-01', 'pastor-01').encounters === 1,
+    'a restored event opened a second meeting');
+  check(memory.episodesFor('man-01').filter((e) => e.kind === 'first_meeting').length === 1,
+    'a restored event produced a second first_meeting');
+}
+
 // --- 11.5  no ref may reach storage ---
 {
   const { memory } = setup();
@@ -505,8 +536,12 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   const committed = perception.canonicalize(ctx.epochId, { about: ref });
   memory.note('grandma-01', committed.value.about, 'said it was fine weather');
 
+  perception.settle(ctx.epochId, { delivered: true });
   perception.releaseEpoch(ctx.epochId);
-  for (let i = 0; i < 30; i += 1) { perception.tick(); perception.contextFor('grandma-01'); }
+  for (let i = 0; i < 30; i += 1) {
+    perception.tick();
+    perception.settle(perception.contextFor('grandma-01').epochId, { delivered: true });
+  }
   check(perception.resolve(ctx.epochId, ref) === null, 'the epoch was not really released');
   check(memory.recall('grandma-01', committed.value.about) !== null,
     'the note did not survive its epoch');
@@ -587,6 +622,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   perception.tick();
 
   const hers = buildContext(perception, memory, 'grandma-01');
+  perception.settle(hers.epochId, { delivered: true });
   const text = JSON.stringify(hers.forModel);
   const seenBy = (label) => hers.forModel.sensoryState.visible.find((v) => v.youCallThem === label);
   check(!!seenBy('孫女'), 'the grandmother did not recognise her own granddaughter');
@@ -599,6 +635,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   // The stranger's side: he was seeded knowing only her, so the children are
   // still just children to him.
   const his = buildContext(perception, memory, 'pastor-01');
+  perception.settle(his.epochId, { delivered: true });
   const known = his.forModel.sensoryState.visible.filter((v) => v.recognised);
   check(known.length === 1 && known[0].youCallThem === '星さん',
     `the pastor recognised ${known.length} people: ${known.map((k) => k.youCallThem)}`);

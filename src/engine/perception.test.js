@@ -102,6 +102,8 @@ perception.tick();
 
 const ctxA = perception.contextFor('grandma-01');
 const ctxC = perception.contextFor('shopkeeper-01');
+// Settled at the very end of the file: the scenario keeps resolving refs out of
+// these two epochs, and settling ends the round trip including the refs.
 const textA = modelText(ctxA);
 const textC = modelText(ctxC);
 
@@ -180,6 +182,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   check(mine.length === 1, 'the acting agent was not told its own attempt failed');
   check(theirs.length === 0, 'a bystander was told about someone else\'s failed attempt');
   const ctx = p2.contextFor('grandma-01');
+  p2.settle(ctx.epochId, { delivered: true });
   check(!modelText(ctx).includes('own_action_failed'),
     'own_action_failed reached another observer\'s package');
 }
@@ -191,6 +194,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   world.agents.get('shopkeeper-01').at = [478, 264];   // C walks over to the bench
   perception.tick();
   const after = perception.contextFor('shopkeeper-01');
+  perception.settle(after.epochId, { delivered: true });
   const nowDistances = JSON.stringify(after.forModel.sensoryState.visible.map((v) => v.distance));
   check(before !== nowDistances,
     'moving an observer did not change what it perceives');
@@ -208,6 +212,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   w3.spawn('shopkeeper-01', [490, 262]);
   p3.tick();
   const ctx = p3.contextFor('grandma-01');
+  p3.settle(ctx.epochId, { delivered: true });
   const refs = ctx.forModel.sensoryState.visible.map((v) => v.ref);
   check(new Set(refs).size === refs.length, 'two entities shared one ref in a single snapshot');
   check(refs.length === 2, `expected 2 visible, got ${refs.length}`);
@@ -219,6 +224,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
 
   // 6.3  a stale ref fails rather than being rebound
   const later = p3.contextFor('grandma-01');
+  p3.settle(later.epochId, { delivered: true });
   check(later.epochId !== ctx.epochId, 'a second context reused the first epoch id');
   check(p3.resolve('e-nonexistent', 'seen-1') === null, 'an unknown epoch resolved to something');
   check(p3.resolve(ctx.epochId, 'seen-99') === null, 'an out-of-range ref resolved to something');
@@ -265,8 +271,12 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
     'a ref survived canonicalization into something that would be stored');
 
   // Now destroy every trace of the epoch, several times over.
+  p8.settle(ctx.epochId, { delivered: true });
   p8.releaseEpoch(ctx.epochId);
-  for (let i = 0; i < 20; i += 1) { p8.tick(); p8.contextFor('grandma-01'); }
+  for (let i = 0; i < 20; i += 1) {
+    p8.tick();
+    p8.settle(p8.contextFor('grandma-01').epochId, { delivered: true });
+  }
 
   check(p8.resolve(ctx.epochId, target) === null,
     'a released epoch still resolves; the transport window is not actually bounded');
@@ -294,11 +304,13 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   p4.tick();
   for (let i = 0; i < 200; i += 1) { w4.advance(); p4.tick(); }
   const ctx = p4.contextFor('grandma-01');
+  p4.settle(ctx.epochId, { delivered: true });
   check(modelText(ctx).includes('大事な一言'),
     'a sentence spoken 200 ticks before the wakeup was lost');
 
   // 6.8  delivered once. A second context does not resend it.
   const again = p4.contextFor('grandma-01');
+  p4.settle(again.epochId, { delivered: true });
   check(!modelText(again).includes('大事な一言'),
     'the same utterance was delivered twice');
 
@@ -322,6 +334,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
     p5.tick();
   }
   const ctx = p5.contextFor('grandma-01');
+  p5.settle(ctx.epochId, { delivered: true });
   const addressed = ctx.forModel.recentPerceivedEvents.find((e) => e.kind === 'direct_address');
   check(!!addressed, 'a direct address was flushed out by ordinary visual noise');
   check(ctx.forModel.recentPerceivedEvents[0].kind === 'direct_address',
@@ -456,6 +469,81 @@ console.log(`    C sees      ${ctxC.forModel.sensoryState.visible.length} others
 console.log(`    D (absent)  in nobody's package`);
 console.log('    A\'s package, as the model would receive it:');
 console.log('      ' + JSON.stringify(ctxA.forModel.sensoryState.visible[0]));
+
+// ---------------------------- 3E-2: a context can be withdrawn unused -------
+// A floor may be offered to three characters at once and only the highest-ranked
+// speaks (clarifications 3, 8.2). The two losers must commit nothing - and must
+// lose nothing either, which is the half that used to go wrong silently.
+{
+  const { world: w9, perception: p9 } = setup();
+  w9.spawn('grandma-01', [470, 262]);
+  w9.spawn('pastor-01', [480, 262]);
+  w9.say('pastor-01', 'おばあさん、こちらへ。', { scope: 'normal', to: 'grandma-01' });
+  w9.advance();
+  w9.say('pastor-01', 'お茶でもいかがですか。', { scope: 'normal' });
+  p9.tick();
+
+  const before = p9.pendingFor('grandma-01');
+  check(before.length >= 2, `the test premise is wrong: ${before.length} queued`);
+
+  const ctx = p9.contextFor('grandma-01');
+  check(p9.pendingFor('grandma-01').length === 0, 'building a context did not take the queue');
+  check(p9.heldCount() === 1, 'the taken events are not being held for settlement');
+
+  // She lost the floor. The context was never used.
+  p9.settle(ctx.epochId, { delivered: false });
+  const after = p9.pendingFor('grandma-01');
+  check(after.length === before.length,
+    `a withdrawn context lost ${before.length - after.length} events`);
+  check(JSON.stringify(after.map((e) => e.seq)) === JSON.stringify(before.map((e) => e.seq)),
+    'restored events came back in the wrong order');
+  check(after.some((e) => e.kind === 'direct_address'),
+    'the direct address addressed to her was the thing that vanished');
+  check(p9.heldCount() === 0, 'settling did not clear the held entry');
+
+  // Offered again and used this time: gone for good, as before.
+  const ctx2 = p9.contextFor('grandma-01');
+  check(modelText(ctx2).includes('こちらへ'), 'the restored words were not offered again');
+  p9.settle(ctx2.epochId, { delivered: true });
+  check(p9.pendingFor('grandma-01').length === 0, 'a delivered context gave its events back');
+
+  // Failure is still delivery. The rule 2.2 was written for has not changed:
+  // an agent that was genuinely woken and whose provider died is not told the
+  // same old sentence again on every retry.
+  w9.say('pastor-01', '大事な一言。', { scope: 'normal' });
+  p9.tick();
+  const ctx3 = p9.contextFor('grandma-01');
+  p9.settle(ctx3.epochId, { delivered: true });   // timed out / errored
+  check(p9.pendingFor('grandma-01').length === 0, 'a failed request resent its events');
+
+  // Settling is a contract, and breaking it fails loudly rather than leaking.
+  let threw = false;
+  try { p9.settle(ctx3.epochId, { delivered: true }); } catch (e) { threw = true; }
+  check(threw, 'the same context settled twice');
+  threw = false;
+  try { p9.settle('e999', { delivered: false }); } catch (e) { threw = true; }
+  check(threw, 'an epoch that was never built could be settled');
+  const ctx4 = p9.contextFor('grandma-01');
+  threw = false;
+  try { p9.settle(ctx4.epochId); } catch (e) { threw = true; }
+  check(threw, 'settle() accepted no verdict at all');
+  p9.settle(ctx4.epochId, { delivered: true });   // and it is still settleable after
+
+  // A caller that never settles is a bug, and the guard says so.
+  const { world: wA, perception: pA } = setup();
+  wA.spawn('grandma-01', [470, 262]);
+  let blew = false;
+  try {
+    for (let i = 0; i < pA.config.heldLimit + 2; i += 1) pA.contextFor('grandma-01');
+  } catch (e) { blew = true; }
+  check(blew, 'contexts could pile up unsettled forever');
+}
+
+// The acceptance contexts were built to be read, and now they have been.
+perception.settle(ctxA.epochId, { delivered: true });
+perception.settle(ctxC.epochId, { delivered: true });
+check(perception.heldCount() === 0,
+  `${perception.heldCount()} contexts were built and never settled`);
 
 console.log('');
 if (problems.length) {
