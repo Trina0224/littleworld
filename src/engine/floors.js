@@ -11,11 +11,6 @@ import { SOCIAL_FACTS } from './events.js';
 import { SEAT } from './resources.js';
 import { ANIMAL_ACTS } from './animals.js';
 
-/**
- * Transport is derived from the act and never read from a model's reply
- * (phase-3e-conversation.md 4.1). A model that could set `scope` would
- * gradually make every conversation scene-wide.
- */
 export const ACTS = {
   greet: { target: true, scope: 'normal' },
   reply: { target: true, scope: 'normal' },
@@ -202,7 +197,18 @@ export function createFloors(world, zones, perception, {
     if (pendingAddress.has(entityId) || f.addressed === entityId) return ADDRESSED;
     if (f.openQuestion?.asker === entityId) return ASKED;
     if (nudgeSource(entityId)) return OVERHEARD;
-    return ORDINARY + (weigh ? weigh(entityId, { zone: f.zone, round: f.round }) : 0);
+
+    // 3E owns floor ranking, so it must supply the real structural situation to
+    // the injected social policy. Private relationship knowledge stays outside
+    // this module: participants are ids for the adapter, not model-visible data.
+    const situation = {
+      zone: f.zone,
+      participants: heads(f.zone).filter((id) => id !== entityId),
+      quietRounds: f.quietRounds,
+      roundIndex: f.round,
+      lastSpeakerWasMe: f.lastSpeaker === entityId
+    };
+    return ORDINARY + (weigh ? weigh(entityId, situation) : 0);
   }
 
   function ranked(f) {
@@ -286,10 +292,6 @@ export function createFloors(world, zones, perception, {
     const expired = world.tick - f.offeredAt > cfg.offerExpiry;
     if (!f.offeredTo.every(answered) && !expired) return;
 
-    // Timeout is semantically a decline. If the timed-out offer was the one-shot
-    // response opportunity created by a heard direct address, resolve that
-    // pending address too; otherwise the same actor would be re-offered Rank 1
-    // until addressExpiry even though this offer already expired.
     for (const id of f.offeredTo) {
       if (answered(id)) continue;
       if (f.why.get(id) === 'addressed') pendingAddress.delete(id);
@@ -317,12 +319,8 @@ export function createFloors(world, zones, perception, {
     world.say(winner, said.speak, { scope: said.scope, to: said.target ?? null });
     const i = world.log.facts.length - 1;
     const committed = world.log.facts[i];
-    // The words are what people hear; the act is what the world executes. The
-    // engine never reads the prose to work out what was asked for.
     if (said.animal) animals.respond(winner, said.target, said.act, { scope: said.scope });
 
-    // A question is a conversational debt only if the target actually heard
-    // the asking utterance. Same-zone membership is not an audibility guarantee.
     if (said.asks && said.target && committed.heardBy.includes(said.target)) {
       f.openQuestion = { asker: winner, asked: said.target, sinceTick: world.tick };
     } else if (said.act === 'reply') {
