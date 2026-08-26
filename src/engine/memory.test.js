@@ -310,8 +310,8 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   world.say('man-01', 'いい天気ですね');
   loop.run(215, {});
   const q = memory.recall('grandma-01', 'man-01');
-  check(q.encounters === 1 && q.spokenWith === 1,
-    `a second sentence in one meeting counted ${q.encounters}/${q.spokenWith}`);
+  check(q?.encounters === 1 && q?.spokenWith === 1,
+    `a second sentence in one meeting counted ${q?.encounters}/${q?.spokenWith}`);
   check(memory.episodesFor('grandma-01').every((e) => e.kind === 'first_meeting'),
     'an episode appeared for the second sentence');
 }
@@ -374,16 +374,16 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
     if (t === 165) world.say('man-01', 'どうも', { to: 'grandma-01' });
   } });
   const again = memory.recall('grandma-01', 'man-01');
-  check(again.encounters === 2 && again.spokenWith === 1,
-    `leaving, returning and speaking counted ${again.encounters}/${again.spokenWith}`);
+  check(again?.encounters === 2 && again?.spokenWith === 1,
+    `leaving, returning and speaking counted ${again?.encounters}/${again?.spokenWith}`);
 
   world.depart('man-01');
   loop.run(40 + 120 + 20 + 120, {});
   world.arrive('man-01');
   loop.run(40 + 120 + 20 + 120 + 20, {});
   const third = memory.recall('grandma-01', 'man-01');
-  check(third.encounters === 3 && third.spokenWith === 1,
-    `a third silent meeting counted ${third.encounters}/${third.spokenWith}`);
+  check(third?.encounters === 3 && third?.spokenWith === 1,
+    `a third silent meeting counted ${third?.encounters}/${third?.spokenWith}`);
 
   // And a meeting that has words after an earlier one did counts again. The
   // flag belongs to the open encounter, not to the pair.
@@ -394,8 +394,8 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
     if (t === 445) world.say('man-01', 'また', { to: 'grandma-01' });
   } });
   const fourth = memory.recall('grandma-01', 'man-01');
-  check(fourth.encounters === 4 && fourth.spokenWith === 2,
-    `a second meeting with words counted ${fourth.encounters}/${fourth.spokenWith}`);
+  check(fourth?.encounters === 4 && fourth?.spokenWith === 2,
+    `a second meeting with words counted ${fourth?.encounters}/${fourth?.spokenWith}`);
 }
 
 // --- 11.5  no ref may reach storage ---
