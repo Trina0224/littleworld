@@ -28,13 +28,12 @@ export const ACTS = {
 export const DEFAULTS = {
   transcriptWindow: 12,
   speechLimit: 240,
-  addressExpiry: 200,      // how long an unanswered heard address keeps a zone qualified
-  offerExpiry: 400,        // an offer nobody answers becomes a decline
-  batch: 3,                // K when the floor is open; 1 when there is an addressee
-  quietLimit: 1            // rounds with no taker before the floor sleeps
+  addressExpiry: 200,
+  offerExpiry: 400,
+  batch: 3,
+  quietLimit: 1
 };
 
-/** Stable non-identity-revealing tie-break. Same shape as attendance.js. */
 function hash01(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i += 1) {
@@ -61,12 +60,12 @@ export function createFloors(world, zones, perception, {
 
   const cfg = { ...DEFAULTS, ...config };
   const llm = new Set(minds);
-  const floors = new Map();          // zoneId -> Floor
-  const spoken = new Map();          // zoneId -> indices into world.log.facts
-  const pendingAddress = new Map();  // entityId -> { tick, from, zone }
-  const spent = new Set();           // `${observer}|${sourceZone}|${sourceSpell}`
-  const recorded = new Set();        // fact indices already folded into a floor
-  const opened = [];                 // offers opened this tick, drained by offers()
+  const floors = new Map();
+  const spoken = new Map();
+  const pendingAddress = new Map();
+  const spent = new Set();
+  const recorded = new Set();
+  const opened = [];
   let spell = 0;
   let factCursor = 0;
 
@@ -83,21 +82,15 @@ export function createFloors(world, zones, perception, {
     return occupants(zoneId).filter((id) => llm.has(id));
   }
 
-  /** The three physical clauses. The overheard nudge is separate, below. */
   function qualifiesPhysically(zoneId) {
     const here = occupants(zoneId);
     const mine = here.filter((id) => llm.has(id));
     if (mine.length >= 2) return true;
     if (mine.length === 0) return false;
-    if (here.length > mine.length) return true;           // an addressable animal
-    return pendingAddress.has(mine[0]);                   // clarifications 9.3
+    if (here.length > mine.length) return true;
+    return pendingAddress.has(mine[0]);
   }
 
-  /**
-   * A conversation this actor can hear but is not part of, worth one offer
-   * (clarifications 10). Only for somebody who has nobody to talk to where they
-   * are - a deliberate narrowing of 10.3, recorded in the spec.
-   */
   function nudgeSource(entityId) {
     const mine = zoneOf(entityId);
     if (!mine || qualifiesPhysically(mine)) return null;
@@ -159,10 +152,6 @@ export function createFloors(world, zones, perception, {
       const wanted = qualifies(zoneId);
       if (wanted === floors.has(zoneId)) continue;
       if (wanted) { open(zoneId); continue; }
-      // A temporary floor exists to carry one offer, and spending the nudge or
-      // answering the address is what stops it qualifying - so without this it
-      // would be revoked in the same breath as the offer it was opened for.
-      // Only that case: an ordinary open-floor offer in an emptying zone goes.
       if (carriesLiveOffer(floors.get(zoneId), zoneId)) continue;
       close(zoneId);
     }
@@ -186,7 +175,6 @@ export function createFloors(world, zones, perception, {
     f.addressed = e.to && e.heardBy.includes(e.to) ? e.to : null;
   }
 
-  /** Which zones a committed fact makes socially live again. */
   function rearmedBy(e) {
     if (!SOCIAL_FACTS.has(e.type)) return [];
     if (e.type === 'speech_said') {
@@ -198,7 +186,7 @@ export function createFloors(world, zones, perception, {
     }
     if (e.type === 'resource_occupied' || e.type === 'resource_released') {
       const r = world.resource(e.resource);
-      if (!r || r.kind !== SEAT) return [];          // a station is machinery
+      if (!r || r.kind !== SEAT) return [];
       const z = zones.at(r.at[0], r.at[1]);
       return z ? [z] : [];
     }
@@ -261,10 +249,6 @@ export function createFloors(world, zones, perception, {
     }
   }
 
-  /**
-   * The legal choices for this moment. A Brain selects one of these strings; it
-   * never authors an action, a scope, an id or a coordinate.
-   */
   function menuOf(entityId, ctx) {
     const mine = zoneOf(entityId);
     const menu = ['nothing'];
@@ -276,8 +260,6 @@ export function createFloors(world, zones, perception, {
         anyHere = true;
         for (const act of ['reply', 'ask', 'greet', 'change_topic']) menu.push(`${act}:${v.ref}`);
       } else if (world.hearing.canHear(target, entityId, 'broadcast')) {
-        // You may go there or call across, never take a floor you do not stand
-        // on (floor-clarifications 10.4).
         menu.push(`call_across:${v.ref}`);
       }
     }
@@ -294,15 +276,24 @@ export function createFloors(world, zones, perception, {
     const answered = (id) => f.claims.has(id) || f.declines.has(id);
     const expired = world.tick - f.offeredAt > cfg.offerExpiry;
     if (!f.offeredTo.every(answered) && !expired) return;
-    for (const id of f.offeredTo) if (!answered(id)) f.declines.add(id);
+
+    // Timeout is semantically a decline. If the timed-out offer was the one-shot
+    // response opportunity created by a heard direct address, resolve that
+    // pending address too; otherwise the same actor would be re-offered Rank 1
+    // until addressExpiry even though this offer already expired.
+    for (const id of f.offeredTo) {
+      if (answered(id)) continue;
+      if (f.why.get(id) === 'addressed') pendingAddress.delete(id);
+      f.declines.add(id);
+    }
 
     const takers = f.offeredTo.filter((id) => f.claims.has(id));
-    const winner = takers[0] ?? null;                    // offeredTo is rank-ordered
+    const winner = takers[0] ?? null;
     const said = winner ? f.claims.get(winner) : null;
     for (const id of f.offeredTo) {
       const lost = takers.includes(id) && id !== winner;
       if (lost) world.log.note(world.tick, 'floor_lost', { zone: f.zone, agent: id });
-      settleQuietly(id, f.epochs.get(id), !lost);        // a loser's context was never used
+      settleQuietly(id, f.epochs.get(id), !lost);
       f.epochs.delete(id);
     }
     f.offeredTo = [];
@@ -311,25 +302,26 @@ export function createFloors(world, zones, perception, {
     f.menus.clear();
     f.state = 'open';
 
-    if (!winner) return;                                 // all declined: try the next batch
+    if (!winner) return;
     pendingAddress.delete(winner);
-    if (said.asks && said.target) {
+
+    world.say(winner, said.speak, { scope: said.scope, to: said.target ?? null });
+    const i = world.log.facts.length - 1;
+    const committed = world.log.facts[i];
+
+    // A question is a conversational debt only if the target actually heard
+    // the asking utterance. Same-zone membership is not an audibility guarantee.
+    if (said.asks && said.target && committed.heardBy.includes(said.target)) {
       f.openQuestion = { asker: winner, asked: said.target, sinceTick: world.tick };
     } else if (said.act === 'reply') {
-      // The question lives on the ASKER's floor, which may not be this one.
       for (const other of floors.values()) {
         if (other.openQuestion?.asked === winner
             && other.openQuestion.asker === said.target) other.openQuestion = null;
       }
     }
-    world.say(winner, said.speak, { scope: said.scope, to: said.target ?? null });
-    // Fold it in now rather than next tick. The offer that follows in this same
-    // tick has to know who was just spoken to, or the person who owes an answer
-    // is asked as one of a crowd (floor-clarifications 9.1). Ingestion dedupes,
-    // so the ordinary pass still handles waking a dormant zone elsewhere.
-    const i = world.log.facts.length - 1;
-    registerAddress(world.log.facts[i]);
-    record(world.log.facts[i], i);
+
+    registerAddress(committed);
+    record(committed, i);
     f.round += 1;
     f.quietRounds = 0;
     f.asked.clear();
@@ -338,7 +330,6 @@ export function createFloors(world, zones, perception, {
   return {
     config: cfg,
 
-    /** Stage 8 of the canonical tick. */
     tick() {
       for (const [id, a] of [...pendingAddress.entries()].sort()) {
         if (world.tick - a.tick > cfg.addressExpiry) pendingAddress.delete(id);
@@ -375,16 +366,10 @@ export function createFloors(world, zones, perception, {
       }
     },
 
-    /** Offers opened this tick. Drained, like fresh() in loop.js. */
     offers() {
       return opened.splice(0, opened.length);
     },
 
-    /**
-     * "I will speak." A claim, not an utterance: the highest-ranked claimant in
-     * the batch speaks and every other claim is a counterfactual that commits
-     * nothing (clarifications 3).
-     */
     commit(entityId, { pick, text = null } = {}) {
       const f = floors.get(zoneOf(entityId));
       if (!f || !f.offeredTo.includes(entityId)) {
@@ -404,13 +389,11 @@ export function createFloors(world, zones, perception, {
       }
       f.claims.set(entityId, {
         act: name, target, scope: act.scope, asks: !!act.asks,
-        // Truncated, never rejected: a model that ran long has not malfunctioned.
         speak: text.slice(0, cfg.speechLimit)
       });
       return { act: name, target, spoken: true };
     },
 
-    /** The choices this actor's current offer supplied, or null. */
     menuFor(entityId) {
       const f = floors.get(zoneOf(entityId));
       return f?.menus.get(entityId)?.slice() ?? null;
@@ -419,10 +402,6 @@ export function createFloors(world, zones, perception, {
     decline(entityId) {
       const f = floors.get(zoneOf(entityId));
       if (!f || !f.offeredTo.includes(entityId)) return false;
-      // A direct address is a one-shot response opportunity. Explicitly
-      // declining that addressed offer resolves the address just as surely as
-      // speaking would. Ordinary open-floor declines must not erase unrelated
-      // pending addresses, so this is gated by the offer's recorded reason.
       if (f.why.get(entityId) === 'addressed') pendingAddress.delete(entityId);
       f.declines.add(entityId);
       world.log.note(world.tick, 'floor_declined', { zone: f.zone, agent: entityId });
@@ -453,15 +432,6 @@ export function createFloors(world, zones, perception, {
       });
     },
 
-    /**
-     * The utterances this observer may be shown: heard, and either on their own
-     * floor or spoken by or to them (floor-clarifications 9.4). An overheard
-     * conversation next door reaches them as perception, which is what it is.
-     *
-     * Server-side - it carries entity ids. Rendering it safely is the context
-     * builder's job, because only that knows the refs and this observer's own
-     * memory.
-     */
     utterancesFor(entityId, limit = cfg.transcriptWindow) {
       const mine = zoneOf(entityId);
       const facts = world.log.facts;
@@ -493,7 +463,6 @@ export function createFloors(world, zones, perception, {
       return pendingAddress.delete(entityId);
     },
 
-    /** Spent against the SOURCE zone's spell, never a target floor's lifetime. */
     spendNudge(observerId, sourceZone) {
       const f = floors.get(sourceZone);
       if (!f) return false;
