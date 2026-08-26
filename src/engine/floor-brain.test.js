@@ -294,19 +294,33 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   world.spawn('pastor-01', [600, 290]);        // same zone, ~340 units: out of hearing
   world.spawn('man-01', [316, 114]);           // so the zone qualifies and stays open
   let asked = false;
+  let qAtCommit = 'unchecked';
+  // Sampled in the very tick the ask resolves. The periodic guard would clear a
+  // wrongly-created debt on the NEXT tick, so only this catches a question that
+  // existed long enough to rank its asker up for one round.
   drive(loop, floors, 10, (o) => {
-    if (asked || o.entityId !== 'grandma-01') return 'decline';
+    if (asked) {
+      if (qAtCommit === 'unchecked' && world.log.facts.some(
+        (e) => e.type === 'speech_said' && e.to === 'pastor-01')) {
+        qAtCommit = floors.openQuestionIn('park-open');
+      }
+      return 'decline';
+    }
+    if (o.entityId !== 'grandma-01') return 'decline';
     const p = pickAt(o, 'ask', 'pastor-01');
     if (!p) return 'decline';
     asked = true;
     return { pick: p, text: '牧師さん、聞こえますか' };
   });
+  if (qAtCommit === 'unchecked') qAtCommit = floors.openQuestionIn('park-open');
   check(asked, 'she was never offered a way to ask him');
   const call = world.log.facts.find((e) => e.type === 'speech_said' && e.to === 'pastor-01');
   check(call && !call.heardBy.includes('pastor-01'),
     'the test premise is wrong: he heard it after all');
   check(floors.openQuestionIn('park-open') === null,
     'a question shouted across a zone he could not hear became a debt');
+  check(qAtCommit === null,
+    'the debt existed for the tick it was created in, and ranked her up for it');
   check(floors.pendingAddressFor('pastor-01') === null,
     'an unheard address created a response opportunity');
 }
