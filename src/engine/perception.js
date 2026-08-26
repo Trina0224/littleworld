@@ -163,7 +163,7 @@ export function createPerception(world, zones, {
   let auditCursor = 0;
   // Monotonic across every observer. Delivery to a Brain drains the queue, but
   // memory reads it without draining, so "have I taken this one" cannot be a
-  // position in an array that somebody else is emptying.
+  // position in an array somebody else is emptying.
   let nextSeq = 1;
 
   const describe = (id) => entities.get(id)?.appearance ?? 'someone';
@@ -362,16 +362,21 @@ export function createPerception(world, zones, {
      * its events back.
      */
     contextFor(observerId) {
+      // Capacity is checked before creating an epoch, reading sensory state,
+      // draining pending events, or mutating any delivery state. A failed call
+      // must be a true no-op: the caller receives no epochId, so nothing from
+      // that failed attempt may require a later settle().
+      if (held.size >= cfg.heldLimit) {
+        throw new Error(`${held.size} contexts are waiting to settle; `
+          + `somebody built a context and never settled it: `
+          + `${[...held.keys()].slice(0, 5).join(',')}...`);
+      }
+
       const epochId = `e${nextEpoch++}`;
       const state = this.sensoryState(observerId);
       const events = pending.get(observerId) ?? [];
       pending.set(observerId, []);
       held.set(epochId, { observerId, events });
-      if (held.size > cfg.heldLimit) {
-        throw new Error(`${held.size} contexts are waiting to settle; `
-          + `somebody built a context and never settled it: `
-          + `${[...held.keys()].slice(0, 5).join(',')}...`);
-      }
 
       // Rank first, then number, so seen-1 is the first thing the model reads.
       // Ranking is by salience and distance, never by entity id: if seen-1 always
