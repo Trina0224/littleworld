@@ -320,6 +320,11 @@ export function createFloors(world, zones, perception, {
     decline(entityId) {
       const f = floors.get(zoneOf(entityId));
       if (!f || !f.offeredTo.includes(entityId)) return false;
+      // A direct address is a one-shot response opportunity. Explicitly
+      // declining that addressed offer resolves the address just as surely as
+      // speaking would. Ordinary open-floor declines must not erase unrelated
+      // pending addresses, so this is gated by the offer's recorded reason.
+      if (f.why.get(entityId) === 'addressed') pendingAddress.delete(entityId);
       f.declines.add(entityId);
       world.log.note(world.tick, 'floor_declined', { zone: f.zone, agent: entityId });
       return true;
