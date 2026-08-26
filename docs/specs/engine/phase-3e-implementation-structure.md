@@ -4,6 +4,9 @@
 **Created:** 2026-08-26
 **Revised:** 2026-08-26 — rebuilt around the **offered floor**; the session
 object and half of this document were deleted rather than fixed
+**Amended by:** `phase-3e-floor-clarifications.md`, which wins over this file.
+Its §1–§7 close five edge cases; its §8 carries four consequences found when
+reviewing them, of which §8.2 changes a 3C contract.
 **Companion to:** `phase-3e-conversation.md`, `social-personality.md`,
 `phase-3c-perception.md`, `phase-3c-venue-interactions.md` §3,
 `phase-3d-memory.md`, `world-engine-2.5.md` §11–§12
@@ -109,6 +112,13 @@ addressed         entityId | null      may be a deterministic actor    §8
 heardBy           [entityId]           sorted, server-side only         §7
 ```
 
+**This is a cache, not a record.** Committed `speech_said` facts are the
+authoritative transcript (clarifications §2), so a Floor's copy is derived,
+disposable and rebuildable, and `heardBy` therefore rides on the fact itself
+(clarifications §8.1) rather than living only here. Deleting every Floor's
+working state and rebuilding from facts must produce identical
+`transcriptFor()` output.
+
 ### 2.3 The store
 
 ```text
@@ -178,6 +188,16 @@ if all K decline -> next batch, same round
 if the round exhausts the zone -> quietRounds += 1
 ```
 
+A loser commits **nothing** — not speech, not an action, and **not a private
+memory proposal** (clarifications §3). A character does not remember deciding
+something it never got to decide.
+
+And a loser must lose nothing either: its perception queue is restored, because
+building the context provisionally drained it and the offer was withdrawn before
+use (clarifications §8.2). Without that, a sentence addressed to 澄子 could
+disappear because she was offered a floor at the same moment as somebody who
+outranked her.
+
 Discarding a generated utterance costs tokens. That is the price of paying
 latency once instead of K times, it is bounded by K, and in this project latency
 is the scarce resource and tokens are not (`pacing-and-latency.md` §6b).
@@ -233,14 +253,19 @@ happens next is the only place this design can waste real money:
 quietRounds >= quietLimit  ->  state = dormant
 ```
 
-A dormant floor re-arms on an event, not on a timer:
+A dormant floor re-arms on a **socially salient** event, not on a timer and not
+on any event at all. The binding whitelist is clarifications §4; the mechanism is
+clarifications §8.3 — *social* is a declared property of the fact type, defaulting to false, so
+a new cafe fact cannot start polling eleven Brains by accident. Seats re-arm a
+floor and stations do not, because the shopkeeper claiming her workstation is
+exactly the machinery this excludes.
 
 ```text
-somebody arrives in the zone
-somebody leaves the zone
-a committed act inside the zone            sat down, ordered, stood up
-a loud utterance audible from the zone     call_across_park, raise_voice
-an animal does something notable           §8
+somebody arrives in / leaves the zone
+a SEAT became occupied or released         not a station
+a directed or loud utterance changed the local situation
+an order was placed / service was requested                    3F-A
+an addressable animal did something notable                    §8
 a human director input
 ```
 
@@ -399,7 +424,12 @@ occupied      what the dog is doing right now
 act           what was asked
 ```
 
-The asymmetry falls out for free and is exactly right: 辰 and タタ are at
+Audibility comes first and is a hard gate, not a term inside the calculation: a
+call the dog could not hear is `ignored` for the ordinary physical reason, and it
+uses the same `canHear` with `dog-01` as the observer (clarifications §1, §8.5).
+Only a call that arrived is scored.
+
+The asymmetry then falls out for free and is exactly right: 辰 and タタ are at
 familiarity 1.0, everyone else is at 0. **星さん calling ハナ mostly does not
 work, and 辰 calling ハナ mostly does.** Nobody had to write that rule; it is
 already in the character file.
@@ -543,10 +573,17 @@ separates. No scripted choices are involved, which is what that test needs.
 floors iterated in sorted zone id order
 offer batches ranked deterministically; ties by hash01, never by rng stream
 the taker is chosen by rank, never by response arrival                §3.2
-animal compliance by hash01, never by the shared rng                  §8.3
+animal compliance by hash01, never by the shared rng            this file §8.3
 no Date anywhere in this phase
-same seed + same recorded choices = same fact stream, byte for byte
+same seed + same recorded choices AND recorded scheduler drops
+   = same fact stream, byte for byte
 ```
+
+The last line gained a clause. A 3F-B drop under budget pressure resolves as a
+decline and the round moves on, so infrastructure pressure really does change who
+speaks — which is legal, and is recorded with its tick like human director input
+(clarifications §8.4). Timing never changes the winner; a recorded drop changes
+who was eligible, and replays identically.
 
 The last line is the acceptance test that catches the rest.
 
@@ -633,18 +670,26 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 ```text
 3E-0  the 3D transcript boundary: no episode per utterance, add spokenWith,
       keep the exactly-once cursor                      phase-3d-memory.md 6.1
-3E-1  publish perception.canHear as a pure query                          §7
-3E-2  Floor store: qualification, creation, destruction, ingestion of
-      speech_said with zone and heardBy                                §2, §5
-3E-3  offer rounds: ranking, batching, rank-decides-the-taker           §3
-3E-4  quiet, dormancy, event re-arming                                  §4
-3E-5  transcriptFor() per-observer rendering                            §7.2
-3E-6  menuFor() / commit(), act-derived scope, refusals                  §9
-3E-7  openQuestion                                                      §10
-3E-8  addressing a deterministic actor, compliance, animal_responded     §8
-3E-9  socialWeight() and the asymmetry test                             §11
-3E-10 scripted acceptance scenarios + mutations, view.js replay support  §13
+3E-1  publish perception.canHear as a pure query; compute heardBy at commit
+      and carry it on speech_said; perception reads it       §7, clar. §8.1
+3E-2  move perception delivery from context-built to offer-settled:
+      contextFor + settle(epochId, {delivered})              clar. §8.2
+3E-3  Floor store: qualification, creation, destruction, ingestion of
+      speech_said with zone and heardBy; transcript as a cache §2, §5, clar. §2
+3E-4  offer rounds: ranking, batching, rank-decides-the-taker,
+      losers commit nothing and lose nothing                  §3, clar. §3, §8.2
+3E-5  quiet, dormancy, social re-arm as a fact-type property  §4, clar. §4, §8.3
+3E-6  transcriptFor() per-observer rendering                            §7.2
+3E-7  menuFor() / commit(), act-derived scope, refusals                  §9
+3E-8  openQuestion, gated on audibility                     §10, clar. §1, §6
+3E-9  addressing a deterministic actor, compliance, animal_responded     §8
+3E-10 socialWeight() and the asymmetry test                             §11
+3E-11 scripted acceptance scenarios + mutations, view.js replay support  §13
 ```
+
+3E-2 is early and on its own because it changes a shipped 3C contract, and every
+offer round after it depends on being able to withdraw a context without
+consuming anything.
 
 3E-0 first because it is the only step that removes behaviour. 3E-1 second
 because everything downstream needs one implementation of audibility, and adding

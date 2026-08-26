@@ -252,3 +252,145 @@ Before Phase 3E is considered complete, scripted/mutation tests must cover all o
 6. floor ranking is stable under 3F-B/provider timing differences — infrastructure timing never changes the rank-defined winner.
 
 These are pre-implementation contract tests, not optional polish.
+
+---
+
+## 8. Consequences found on review
+
+Added on review of §1–§7. Each of the four below follows from a clarification
+above and is not closed by it. §1–§7 are unchanged and still win.
+
+### 8.1 §2 forces `heardBy` into the fact stream
+
+§2 requires that destroying the Floor cache and rebuilding it from committed
+facts reproduces the same `transcriptFor()` output. `transcriptFor()` filters by
+`heardBy`. So `heardBy` has to survive the cache being thrown away.
+
+It cannot be recomputed at rebuild time: audibility depends on where everybody
+was standing at *that* tick, and recovering those positions means replaying
+movement, which is re-simulation and is forbidden.
+
+Therefore:
+
+> **`speech_said` carries `heardBy`, computed once at commit.**
+
+The same argument that kept `zone` on the fact (`phase-3e-implementation-
+structure.md` §6) applies here more strongly. It is server-side truth — who was
+in earshot really is a property of the world — and no model ever reads a fact.
+
+Two things fall out of computing it at commit rather than later:
+
+- **positions are current**, which is the only moment the answer is cheap and
+  correct;
+- **perception reads it instead of recomputing it.** `canHear` is then evaluated
+  in exactly one place per utterance, which is the §7 single-implementation rule
+  of the structure document taken all the way rather than most of the way.
+  Perception still computes its own *saw-but-did-not-hear* branch, which is a
+  different question.
+
+`heardBy` is computed over **every present agent**, not only the zone's, because
+a loud act reaches past the zone edge. That does not put a cross-zone listener
+into anybody's transcript: `transcriptFor()` renders the observer's **own**
+floor, and an utterance overheard from another zone reaches them through
+perception. Transport is not membership (`phase-3e-conversation.md` §4), and this
+is the place that rule would most easily be lost.
+
+### 8.2 §3 leaks perceived events unless delivery moves to settlement
+
+This is the one that silently loses data.
+
+Building a Brain context **drains** that observer's perception queue —
+`phase-3c-implementation-clarifications.md` §2.2: *once an event has been
+included in a successfully constructed context it is considered delivered even
+if inference later fails.* That rule exists so a failed call does not make an
+agent hear the same old sentence again on every retry, and it was correct while
+every context led to a turn.
+
+Parallel offers break it. Offer to three, one wins: **the two losers have had
+their queues drained for a turn they never took.** Nothing tells them again. A
+sentence spoken to 澄子 can vanish because she happened to be offered a floor at
+the same moment as somebody who outranked her — and §3 is right that the loser
+commits nothing, which is exactly why the drain must not stand.
+
+The boundary moves from *context built* to *offer settled*:
+
+```text
+answered (speech, or nothing)   -> delivered
+timed out / provider error      -> delivered      unchanged; do not resend
+lost the floor                  -> NOT delivered  events return to the queue
+dropped before use              -> NOT delivered  the context was never used
+```
+
+Mechanically: `contextFor()` provisionally removes the events and the offer
+carries its epoch; `settle(epochId, { delivered })` either drops them or returns
+them. Restoration re-inserts by `seq`, so order is exact and deterministic; if
+the queue then exceeds `queueLimit`, the ordinary eviction rule applies — oldest
+unprotected first, and a `direct_address` is never the one dropped.
+
+3D needs no change and that is the payoff of its cursor: memory already ingested
+those events without draining, so returning them to the queue cannot make
+anything be remembered twice. The two consumers were built with different rights
+precisely so one of them could be rolled back.
+
+Required test: three parallel offers, two losers, and every event in the losers'
+queues is still pending afterwards — including the utterance that was addressed
+to one of them.
+
+### 8.3 §4's whitelist has to live in one place, and it is not a list in 3E
+
+§4 is right that background machinery must not re-arm a floor, and right that a
+later runtime opts in explicitly. But a whitelist maintained *inside 3E* is a
+list that 3F-A will forget to update, and the failure is silent in the expensive
+direction: a new cafe fact quietly polls eleven Brains.
+
+So it is a **property of the fact type, declared where the fact is defined**, and
+3E reads it:
+
+```text
+a fact type not marked social never re-arms a dormant floor
+marking one is a one-line, reviewable opt-in by whoever added the fact
+the default for anything new is: not social
+```
+
+One refinement to §4's list. *Seat / social place became occupied or released* is
+whitelisted, but the same events fire for **stations** — the shopkeeper claiming
+her workstation is the machinery §4 exists to exclude. Seats and stations are
+deliberately one thing to a reservation (`resources.js`), so the whitelist
+discriminates on `kind === SEAT`, not on the event name.
+
+### 8.4 A dropped offer is a recorded input
+
+§5 says 3F-B may decline to dispatch under budget pressure and must not rerank.
+Both hold. But a dropped offer does change who speaks — the round moves on and
+the next-ranked character takes the floor — so infrastructure pressure is a real
+input to world history.
+
+That is legal and already has a home: `pacing-and-latency.md` §4.1 requires any
+input that changes world history to be recorded with its simulation tick, the
+same treatment human director input gets. So:
+
+```text
+a dropped offer resolves as a DECLINE, and the round continues
+the drop is recorded with its tick
+determinism claim: same seed + same recorded choices AND drops = same stream
+```
+
+Without the recording, §7.6's *infrastructure timing never changes the
+rank-defined winner* is true only while nothing is ever dropped. With it, the
+claim is exact: **timing never changes the winner; a recorded drop changes who
+was eligible, and replays identically.**
+
+### 8.5 The dog's audibility is the same question
+
+§1's closing paragraph is right that an animal-directed act must not assume the
+target heard it. That needs no new mechanism: `dog-01` is a present agent, so
+
+```text
+canHear('dog-01', speaker, scope)
+```
+
+is the same predicate, and a call the dog could not hear produces
+`animal_responded { outcome: 'ignored' }` for the ordinary physical reason rather
+than through a compliance roll. Distance was already an input to compliance
+(`phase-3e-implementation-structure.md` §8.2); this makes inaudibility a hard
+gate in front of it rather than a term inside it.

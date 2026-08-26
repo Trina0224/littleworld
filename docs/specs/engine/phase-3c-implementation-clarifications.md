@@ -176,6 +176,26 @@ If a Brain request later fails, times out or is dropped, delivery bookkeeping mu
 
 > Once an event has been included in a successfully constructed Brain context snapshot, it is considered delivered even if inference later fails; the Agent's deterministic fallback continues. Do not repeatedly resend the same old utterance on every retry.
 
+> **Amended by 3E (`phase-3e-floor-clarifications.md` §8.2).** Parallel offers
+> made *context built* the wrong boundary: a floor may be offered to several
+> characters at once and only the highest-ranked taker speaks, so a losing
+> context is one that was never used. Delivery is therefore confirmed when the
+> offer **settles**:
+>
+> ```text
+> answered (speech, or nothing)   -> delivered
+> timed out / provider error      -> delivered      unchanged; do not resend
+> lost the floor                  -> NOT delivered; events return to the queue
+> dropped before use              -> NOT delivered; the context was never used
+> ```
+>
+> The rule above is unchanged in the case it was written for — a context that was
+> genuinely taken up and then failed still counts as delivered, and nobody hears
+> the same sentence twice. What changed is that a context can now be withdrawn
+> before it is used at all, and a withdrawn one must not consume anything.
+> Restoration re-inserts by `seq`, so order is exact; 3D memory is unaffected
+> because its cursor reads the queue without draining it.
+
 This keeps the queue a perception-delivery mechanism rather than a reliable message broker.
 
 ### 2.3 Bounded growth
