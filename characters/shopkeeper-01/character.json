@@ -10,5 +10,25 @@
     { "who": "dog-01", "as": "ハナ" },
     { "who": "boy-01", "as": "菅野さん" }
   ],
-  "_note": "全卡司最長的一張 knows，這是刻意的：她是唯一不走的人，別人來來去去，她累積。注意方向都不對稱——外婆叫她「店の子」、小朋友只當她是店裡的姊姊、菅野大概講不出她姓什麼。她站 STATION 不坐 SEAT，sprite 有 clipY 因為她在櫃檯後面。"
+  "social": {
+    "initiative": 0.45,
+    "conversationDrive": 0.60,
+    "curiosity": 0.75,
+    "questionTendency": 0.40,
+    "talkativeness": 0.50,
+    "socialInhibition": 0.30,
+    "persistence": 0.60,
+    "responsiveness": 0.90,
+    "selfDisclosure": 0.35,
+    "topicSwitching": 0.40
+  },
+  "interests": [
+    "和菓子",
+    "練切",
+    "季節和菓子的名字與造型",
+    "店務",
+    "客人的偏好",
+    "地方上的工作和生意"
+  ],
+  "_note": "全卡司最長的一張 knows，這是刻意的：她是唯一不走的人，別人來來去去，她累積。注意方向都不對稱——外婆叫她「店の子」、小朋友只當她是店裡的姊姊、菅野大概講不出她姓什麼。她站 STATION 不坐 SEAT，sprite 有 clipY 因為她在櫃檯後面。她適合別人來找她時很會接話，不應被 social vector 推成四處找人聊天。"
 }
