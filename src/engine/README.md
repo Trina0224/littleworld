@@ -12,6 +12,7 @@ node src/engine/days.test.js
 node src/engine/loop.test.js
 node src/engine/perception.test.js
 node src/engine/memory.test.js
+node src/engine/meeting-boundary.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -38,6 +39,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `loop.test.js` | the tick order, and that perception in it moves no fact |
 | `perception.test.js` | every leak the 3C spec asks to be proved impossible |
 | `memory.test.js` | that a memory is the rememberer's and nobody else's, and accrues from the loop |
+| `meeting-boundary.test.js` | that knowing of somebody is not having met them |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -134,6 +136,24 @@ cache is a transport window; the test shrinks it to a single entry, evicts
 everything, and proves a committed record is untouched. A ref that is stale at
 commit is reported, never repaired by guessing at somebody nearby.
 
+**A context can be withdrawn without consuming anything.** Building a context
+takes that observer's queued events *provisionally*; `settle(epochId, {delivered})`
+either drops them or puts them back in `seq` order. Answered and failed both
+count as delivered — nobody is told the same old sentence again on a retry — and
+only a context that was never used gives its events back. That exists because a
+floor may be offered to three characters at once and only the highest-ranked
+speaks: without it the two losers would have had their queues drained for a turn
+they never took, and a sentence addressed to one of them would simply vanish.
+
+`settle` is deliberately **not** `releaseEpoch`. Refs are a transport cache that
+may be dropped at any moment or never; the queued events are what an agent is
+owed, and `held` is bounded by `heldLimit` rather than by `epochHistory` for the
+reason 3C already learned about refs. A caller that never settles is a bug, not a
+load, so exceeding the limit throws — and `perception.test.js` asserts
+`heldCount()` is zero at the end, which is what makes the contract enforceable
+rather than merely stated. 3D needed no change at all: memory reads the queue
+with a cursor and never drains it, so a restored event cannot be ingested twice.
+
 **A queue, because perception and delivery run at different speeds.** Sensory
 state refreshes every tick; a Brain wakes rarely. A sentence spoken two hundred
 ticks before the next wakeup is still there. It is not memory and not a message
@@ -161,6 +181,18 @@ one asserted rather than promised. The leak tests run against the **real**
 character files: a test with invented appearance strings would still pass if the
 engine started reading `bible.md`, so the check that matters takes real sentences
 out of a real bible and a real self sheet and asserts none of them appear.
+
+Eight more came from 3E-2 and all eight bite: a withdrawn context keeping the
+events anyway, a delivered one giving them back, restoring in queue order rather
+than `seq` order, restoring past the queue limit, settling twice, settling with
+no verdict, and letting unsettled contexts pile up silently. The eighth — removing
+the held store entirely — crashes on the first `settle` in the file with
+*settle() for an epoch that was never built*, which is loud but is a crash rather
+than a clean failure; recorded rather than contorted around.
+
+Three of these first caught nothing and needed the tests sharpened: the ordering
+and queue-limit ones because the restored queue was empty, and the no-verdict one
+because the following line threw and killed the run before the failure printed.
 
 Seven more came from 3E-1 and all seven bite: `say` stamping an empty audience
 (*A stood beside the speaker and heard nothing*), the speaker listed as their own

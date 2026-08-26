@@ -719,11 +719,11 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 
 ```text
 3E-0  the 3D transcript boundary: no episode per utterance, add spokenWith,
-      keep the exactly-once cursor                      phase-3d-memory.md 6.1
+      keep the exactly-once cursor           DONE      phase-3d-memory.md 6.1
 3E-1  hearing.js as the single audibility predicate; compute heardBy at
-      commit and carry it on speech_said; perception reads it §7, clar. §8.1
+      commit and carry it on speech_said     DONE        §7, clar. §8.1
 3E-2  move perception delivery from context-built to offer-settled:
-      contextFor + settle(epochId, {delivered})              clar. §8.2
+      contextFor + settle(epochId, {delivered})   DONE      clar. §8.2
 3E-3  Floor store (the "3E-2" of pre-floor-corrections §3, which gates it):
       qualification including the cross-zone address clause,
       creation, destruction, ingestion of speech_said with zone

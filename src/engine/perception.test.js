@@ -474,7 +474,10 @@ console.log('      ' + JSON.stringify(ctxA.forModel.sensoryState.visible[0]));
 // A floor may be offered to three characters at once and only the highest-ranked
 // speaks (clarifications 3, 8.2). The two losers must commit nothing - and must
 // lose nothing either, which is the half that used to go wrong silently.
-{
+// Wrapped, so a mutation that makes settle() throw where it should not reports a
+// failure instead of killing the run. A crash is not a passing suite, but it is
+// not a readable one either.
+try {
   const { world: w9, perception: p9 } = setup();
   w9.spawn('grandma-01', [470, 262]);
   w9.spawn('pastor-01', [480, 262]);
@@ -529,6 +532,33 @@ console.log('      ' + JSON.stringify(ctxA.forModel.sensoryState.visible[0]));
   check(threw, 'settle() accepted no verdict at all');
   p9.settle(ctx4.epochId, { delivered: true });   // and it is still settleable after
 
+  // Restored events are older than anything queued while the context was out, so
+  // they have to go back in front of it - and a queue that overflows still drops
+  // ordinary noise rather than the thing that was said to her.
+  const { world: wC, perception: pC } = setup();
+  wC.spawn('grandma-01', [470, 262]);
+  wC.spawn('pastor-01', [480, 262]);
+  wC.say('pastor-01', '最初の一言。', { scope: 'normal', to: 'grandma-01' });
+  pC.tick();
+  const out = pC.contextFor('grandma-01');
+  for (let i = 0; i < pC.config.queueLimit + 5; i += 1) {   // noise while she was out
+    wC.advance();
+    wC.log.fact(wC.tick, 'move_started', {
+      agent: 'pastor-01', from: [480, 262], path: [[480, 262], [481, 262]],
+      arriveTick: wC.tick + 1
+    });
+    pC.tick();
+  }
+  pC.settle(out.epochId, { delivered: false });
+  const back = pC.pendingFor('grandma-01');
+  const seqs = back.map((e) => e.seq);
+  check(JSON.stringify(seqs) === JSON.stringify([...seqs].sort((a, b) => a - b)),
+    'restored events were spliced in out of order');
+  check(back.length <= pC.config.queueLimit,
+    `restoring pushed the queue to ${back.length}, past the limit`);
+  check(back.some((e) => e.kind === 'direct_address'),
+    'the restored direct address was evicted by the noise that arrived while she was out');
+
   // A caller that never settles is a bug, and the guard says so.
   const { world: wA, perception: pA } = setup();
   wA.spawn('grandma-01', [470, 262]);
@@ -537,6 +567,8 @@ console.log('      ' + JSON.stringify(ctxA.forModel.sensoryState.visible[0]));
     for (let i = 0; i < pA.config.heldLimit + 2; i += 1) pA.contextFor('grandma-01');
   } catch (e) { blew = true; }
   check(blew, 'contexts could pile up unsettled forever');
+} catch (e) {
+  problems.push(`the withdraw-a-context scenario threw: ${e.message}`);
 }
 
 // The acceptance contexts were built to be read, and now they have been.

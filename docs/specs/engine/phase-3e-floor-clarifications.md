@@ -313,6 +313,20 @@ is the place that rule would most easily be lost.
 
 ### 8.2 §3 leaks perceived events unless delivery moves to settlement
 
+> **Implemented** in 3E-2. `src/engine/perception.js`; proved by the 3E-2 block
+> of `src/engine/perception.test.js` and the restored-event test in
+> `memory.test.js`, with eight mutations.
+>
+> **One refinement, found by building it.** `settle()` must **not** also release
+> the epoch's refs. They have different lifetimes — refs are a transport cache
+> that may be dropped at any moment or never, while the queued events are what
+> an agent is owed — and conflating them left a caller unable to resolve a ref it
+> still needed. `held` is likewise not bounded by `epochHistory`, for the reason
+> §1.1a already established about refs: what an agent is owed must never depend
+> on the size of a transport cache. It is bounded by `heldLimit` instead, and
+> exceeding it throws, because a caller that never settles is a bug rather than
+> a load.
+
 This is the one that silently loses data.
 
 Building a Brain context **drains** that observer's perception queue —
