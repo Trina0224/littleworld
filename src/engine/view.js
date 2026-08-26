@@ -44,7 +44,10 @@ export function createView() {
           break;
         case 'agent_spawned':
         case 'agent_arrived':
-          agents.set(e.agent, { id: e.agent, at: [...e.at], holding: null, walk: null, saying: null });
+          agents.set(e.agent, {
+            id: e.agent, at: [...e.at], holding: null, walk: null,
+            saying: null, responded: null
+          });
           break;
         case 'agent_departed':
           // Out of the scene, so out of the snapshot. The roster still knows
@@ -59,6 +62,13 @@ export function createView() {
           // the renderer needs is only that somebody said something out loud.
           const a = agents.get(e.agent);
           if (a) a.saying = { text: e.text, until: e.t + SPEECH_TICKS };
+          break;
+        }
+        case 'animal_responded': {
+          // A dog that visibly does not come is as much a thing to draw as one
+          // that does, so the outcome is kept either way and expires on a tick.
+          const a = agents.get(e.animal);
+          if (a) a.responded = { to: e.to, act: e.act, outcome: e.outcome, until: e.t + SPEECH_TICKS };
           break;
         }
         case 'move_started': {
@@ -109,9 +119,12 @@ export function createView() {
         agents: [...agents.keys()].sort().map((id) => {
           const a = agents.get(id);
           const said = a.saying && tick < a.saying.until ? a.saying.text : null;
+          const reply = a.responded && tick < a.responded.until
+            ? { act: a.responded.act, outcome: a.responded.outcome } : null;
           return {
             id, at: [round(a.at[0]), round(a.at[1])],
-            holding: a.holding, walking: !!a.walk, saying: said
+            holding: a.holding, walking: !!a.walk, saying: said,
+            ...(reply ? { responded: reply } : {})
           };
         }),
         resources: [...resources.keys()].sort().map((id) => {

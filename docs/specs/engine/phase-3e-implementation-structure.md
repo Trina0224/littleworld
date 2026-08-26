@@ -772,7 +772,8 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 3E-9  addressing a deterministic actor, compliance, animal_responded
                                                   DONE                  §8
 3E-10 socialWeight() and the asymmetry test           DONE            §11
-3E-11 scripted acceptance scenarios + mutations, view.js replay support  §13
+3E-11 scripted acceptance scenarios + mutations, view.js replay support
+                                                  DONE                 §13
 ```
 
 3E-0 first because it is the only step that removes behaviour. 3E-1 second

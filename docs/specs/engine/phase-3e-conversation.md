@@ -722,6 +722,11 @@ out of scope for 3E   concurrency, quotas, priority, dropping, retry   (3F-B)
 
 Nothing inside 3E may call it to decide anything. It exists so that §7.1's eligibility inputs are real and checkable before a scheduler exists to consume them, and so that 3F-B inherits a function rather than a paragraph.
 
+> **Done.** All eighteen are asserted by `src/engine/run-3e.js` and the floor
+> test files, with no provider anywhere. The engine slice of Phase 3E is
+> complete; `phase-3e-implementation-structure.md` §17 lists what each step
+> built.
+
 Phase 3E is not complete until scripted participants demonstrate all of these without a real provider:
 
 > **Tests 1, 2, 3, 5 and 6 are restated for the floor model — structure §3–§5.**

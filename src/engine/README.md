@@ -1,4 +1,4 @@
-# World Engine — Phases 3A, 3C and 3D
+# World Engine — Phases 3A, 3C, 3D and 3E
 
 Plain ES modules, no dependencies, no build step. They run under Node today and
 in the browser later without change; only the scenario runner touches a host
@@ -20,7 +20,9 @@ node src/engine/floors-address-decline.test.js
 node src/engine/floor-brain.test.js
 node src/engine/animals.test.js
 node src/engine/social.test.js
+node src/engine/social.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
+node src/engine/run-3e.js          # a scripted afternoon, and the fifteen 3E acceptance items
 ```
 
 | File | |
@@ -57,7 +59,8 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `floor-brain.test.js` | what a Brain is shown, and what it is allowed to pick |
 | `animals.test.js` | that 辰's dog comes when he calls, and mostly not otherwise |
 | `social.test.js` | that the cast stays asymmetric and nothing repairs a low trait |
-| `run-3c.js` | the acceptance scenario, printed |
+| `run-3c.js` | the 3C acceptance scenario, printed |
+| `run-3e.js` | a scripted afternoon: the 3E acceptance list, printed |
 
 ## The tick
 
@@ -354,9 +357,44 @@ floor that happens to be showing the nudge. A cross-zone overhearer gets one
 created and destroyed any number of times in between without resetting that. The
 spell is what ends it, and the spell belongs to the room the conversation is in.
 
+### The acceptance run
+
+`run-3e.js` is a scripted afternoon at the near table, and it prints what
+happened:
+
+```
+t=  1  near-table   normal    辰ちゃん、宿題は終わったの
+t=  2  near-table   normal    うん、もう終わった
+t=  3  near-table   broadcast 澄子さん、お茶をもう一杯
+t=  4  near-table   normal    いいお天気ね
+t=  5  cafe-counter broadcast はい、ただいま
+t=  8  near-table   normal    ハナ、おいで
+t=  8  (ハナ)        call_over complied
+```
+
+Twenty-six offers produced nine utterances. **渡辺 was asked five times and
+never spoke.** 澄子 heard every word from her counter, was nudged **once** in the
+whole conversation, and said nothing until she was called by name — and when she
+answered she *called back across*, because she was not standing at their table
+and the menu therefore never offered her a reply into it. ハナ came when 辰
+called her, and would mostly not have for anyone else.
+
+**Scripted, not mocked.** Every choice is written in the file. A stand-in that
+*decided* would make the run pass for reasons the run does not control, and 3E is
+about session mechanics rather than about judgement (clarifications §17.0). The
+script reacts to committed facts rather than to its own claims, because a claim
+that lost the floor did not happen — which is a mistake the first version of it
+made and the fact stream caught.
+
+All fifteen items of `phase-3e-conversation.md` §17 are asserted there, and
+**live and replay produce an identical frame every tick** — the live view fed
+facts as they are emitted, the replay view fed the same facts through `view.js`
+alone, which now also carries `animal_responded` so a dog coming or visibly not
+coming survives into a recording.
+
 ### What the tests prove
 
-Fifty-two mutations, all biting. The store: dropping step 8 from the loop, not
+Fifty-eight mutations, all biting. The store: dropping step 8 from the loop, not
 stamping the zone, letting an unheard address qualify a zone, letting a pending
 address not qualify one, opening a floor for one person alone, refusing one for a
 person and their dog, clearing the utterance index when a floor closes, copying
@@ -386,6 +424,10 @@ than a different rule: a stale ref that the *menu* check had already refused; a
 transport test that only asserted the loud case; a truncation test with no long
 line; a stranger who never spoke; and a question whose floor was closing anyway,
 so the floor rather than the rule was doing the clearing.
+
+The adapter between the two: never asking memory who is a stranger, guessing at
+one when it has no memory to ask, and dropping the floor's situation on the way
+through.
 
 The dog and the vector: ignoring familiarity, always complying, rolling for a
 call she could not hear, drawing compliance from the shared rng, leaving no fact
@@ -608,12 +650,17 @@ the un-advancing cursor feeding the same stale event tick back in, dragging
 long gap. Bugs 2 and 4 were one bug wearing two faces, and only the combined
 mutation shows it.
 
-**Nothing outside the slice is here.** No perception, no memory, no zones, no
-conversation, no scheduler, no provider adapter — not even a mock one. See
-§17.1 of `docs/specs/engine/world-engine-2.5.md` for why that list is a fence
-rather than a to-do. 3C added perception and 3D adds memory; still no
-conversation sessions, no scheduler, no provider, no ray casting, no
+**Nothing outside the slice is here.** See §17.1 of
+`docs/specs/engine/world-engine-2.5.md` for why that list is a fence rather than
+a to-do. 3C added perception, 3D memory, 3E conversation — and there is still no
+scheduler, no provider adapter (not even a mock one), no ray casting, no
 model-generated prose, and no engine-computed affinity between characters.
+
+**What 3E leaves for 3F.** The floor store produces offers and reads answers;
+who is allowed to be in flight at once, what a provider costs, when to give up
+and when to retry are the scheduler's, and nothing here awaits anything. The
+café's own acts — ordering, preparation, the counter queue — are 3F-A, and they
+will reuse the same menu-and-commit path rather than adding a second one.
 
 ## Five things worth knowing before reading the code
 

@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { socialWeight, AXES } from './social.js';
+import { socialWeight, createSocialWeigher, AXES } from './social.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -120,6 +120,41 @@ for (const id of CAST) {
     const stranger = socialWeight(v, { withStranger: true });
     check(stranger < known, `${id} is no more hesitant with a stranger than a friend`);
   }
+}
+
+// --- the adapter: floors pass ids, and only this may ask memory ------------
+{
+  const traits = new Map(CAST.map((id) => [id, social.get(id)]));
+  const known = new Set(['grandma-01|pastor-01']);
+  const memory = { recall: (o, e) => (known.has(`${o}|${e}`) ? { entityId: e } : null) };
+
+  const withMem = createSocialWeigher({ traitsFor: traits, memory });
+  const blind = createSocialWeigher({ traitsFor: traits });
+
+  const friend = withMem('grandma-01', { participants: ['pastor-01'] });
+  const stranger = withMem('grandma-01', { participants: ['man-01'] });
+  check(stranger < friend,
+    `she is no more hesitant with a stranger (${stranger}) than a friend (${friend})`);
+
+  // Without a memory the adapter makes no claim rather than guessing.
+  check(blind('grandma-01', { participants: ['man-01'] })
+    === blind('grandma-01', { participants: ['pastor-01'] }),
+    'an adapter with no memory invented a stranger');
+  check(blind('grandma-01', { participants: ['pastor-01'] }) === friend,
+    'the no-memory answer is not the known-person answer');
+
+  // It passes the structural situation straight through.
+  check(withMem('grandma-01', { participants: [], quietRounds: 3 })
+    > withMem('grandma-01', { participants: [], quietRounds: 0 }),
+    'quiet rounds did not reach the weight through the adapter');
+  check(withMem('grandma-01', { participants: [], lastSpeakerWasMe: true })
+    < withMem('grandma-01', { participants: [] }),
+    'having just spoken did not reach the weight through the adapter');
+
+  // A function is as good as a map.
+  const fn = createSocialWeigher({ traitsFor: (id) => traits.get(id), memory });
+  check(fn('grandma-01', { participants: ['man-01'] }) === stranger,
+    'traitsFor as a function gave a different answer than as a map');
 }
 
 console.log('');
