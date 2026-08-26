@@ -86,6 +86,44 @@ two of them*. It may not say what that amounts to. It is tracked inside the open
 encounter (words passed during this meeting or they did not), so it needs no
 knowledge of conversation sessions and no help from 3E.
 
+### 2.0.1 What counts as having spoken — overhearing does not
+
+> **`spokenWith` counts encounters in which words passed *between the two*.
+> Hearing somebody speak to a third person is not one of them.**
+
+The first implementation counted any heard utterance, which made 星さん gain
+conversational history with the pastor by sitting near him while he talked to
+渡辺. That is not a small over-count; it is a different relationship. A count the
+Brain reads as *we have spoken four times* has to mean it.
+
+The rule is stated on the two perceived events rather than on anything semantic:
+
+| perceived event | means | counts |
+|---|---|---|
+| `direct_address` | this entity addressed **me**, and I heard it | **yes** |
+| `own_speech_directed` | **I** addressed this entity, and they heard it | **yes** |
+| `speech_heard` | words passed near me, between other people | no |
+| `sound_heard` | a voice I could not make out | no |
+
+Both directions count, because a directed utterance somebody heard is an
+exchange from both ends — 菅野 talking at 渡辺 for a fortnight is part of 菅野's
+history with him whether or not 渡辺 ever answers. Symmetry here is not the same
+as the reconciliation §5 forbids: each store still records only what its own
+observer perceived, and the two may hold different counts.
+
+**An unheard address is not an exchange.** `own_speech_directed` is queued only
+when the target is in the utterance's `heardBy`, which is the same audibility
+gate `phase-3e-floor-clarifications.md` §1 puts in front of conversational
+handoff. Calling to someone across the park who did not turn round is not a
+conversation from either side.
+
+Undirected speech — a remark to the room, with no `to` — counts for nobody. Under
+3E a conversational act always carries its target, so this case is the genuinely
+ambiguous one, and not counting it is the conservative reading.
+
+A separate `heardSpeaking` counter may exist later if passive exposure turns out
+to be worth modelling. It must not be folded into this one.
+
 Small, permanent, and at most one per cast member. **This is what makes
 recognition work.**
 
@@ -283,9 +321,13 @@ structural and permanent and costs one line per person:
 
 ```text
 encounters   += 1   when a meeting opens
-spokenWith   += 1   when words first pass during that meeting
+spokenWith   += 1   when words first pass BETWEEN THE TWO during that meeting
 lastSeenTick        while contact holds
 ```
+
+"Between the two" is load-bearing and is defined in §2.0.1: a directed utterance
+that landed, in either direction. Overhearing is contact, so it opens or extends
+an encounter, and it is not an exchange, so it does not count as one.
 
 Three consequences worth being explicit about.
 
@@ -399,3 +441,6 @@ life out of the character.
 17. Standing near someone and talking to them are distinguishable: `encounters`
     counts the meeting, `spokenWith` counts only the meetings words passed in,
     and neither inflates when an utterance sits in the queue.
+18. Overhearing is not conversing: an observer who hears one entity address a
+    third gains an encounter with the speaker and **no** `spokenWith`, in the
+    same tick that both participants gain one.

@@ -106,6 +106,7 @@ const SALIENCE = {
   own_action_failed: 100,
   own_activity_changed: 95,
   speech_heard: 80,
+  own_speech_directed: 35,
   nearby_world_event: 55,
   movement_seen: 45,
   public_activity_seen: 40,
@@ -225,6 +226,17 @@ export function createPerception(world, zones, {
               throw new Error('a speech fact carries no heardBy');
             }
             const heard = new Set(e.heardBy);
+            // The speaker's own record of having addressed somebody who heard
+            // it. Perception is otherwise silent about your own speech, which
+            // left one half of "we have spoken" unobservable: the person spoken
+            // TO knows, and the person who spoke does not. An address that
+            // nobody heard is not queued, because it was not an exchange
+            // (phase-3d-memory.md 2.0.1, clarifications 1).
+            if (e.to && heard.has(e.to)) {
+              queue(e.agent, {
+                kind: 'own_speech_directed', t: e.t, entityId: e.to, text: e.text
+              });
+            }
             for (const observerId of world.presentIds()) {
               if (observerId === e.agent) continue;
               if (heard.has(observerId)) {

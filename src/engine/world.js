@@ -215,9 +215,11 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
      * Say something.
      *
      * The words are a fact because they happened and a renderer may want to draw
-     * them. Who actually heard them is not stored here: perception decides that
-     * per observer, so the same utterance can reach one character as words and
-     * another as a voice too far off to make out.
+     * them. Who actually heard them IS stored here, as of 3E-1 - see below. What
+     * is still perception's is what a near miss looks like: the same utterance
+     * can reach one character as words and another as a voice too far off to
+     * make out, and only the second half of that is a judgement about an
+     * observer rather than a fact about the world.
      *
      * `scope` is a transport mode, not a social act. Whether the model should be
      * allowed to choose it, or whether it should be derived from the structured

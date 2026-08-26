@@ -90,6 +90,19 @@ export const DEFAULTS = {
 };
 
 /**
+ * Which perceived events say these two were in contact at all, and which of them
+ * say words passed BETWEEN the two.
+ *
+ * `speech_heard` is in the first set and not the second: hearing somebody speak
+ * puts you in the same place as them and does not make it a conversation.
+ * `own_speech_directed` is perception telling a speaker that the person they
+ * addressed heard it, which is the other half of an exchange and was invisible
+ * before 3E-0's review found it missing.
+ */
+const CONTACT = new Set(['speech_heard', 'direct_address', 'own_speech_directed']);
+const EXCHANGED = new Set(['direct_address', 'own_speech_directed']);
+
+/**
  * Salience for what is worth keeping when the episode budget is full.
  *
  * Kinds the engine no longer writes are still ranked, because a Brain may
@@ -282,11 +295,17 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
           if (e.seq <= high) continue;
           high = e.seq;
           if (!e.entityId || e.entityId === observerId) continue;
-          if (e.kind !== 'speech_heard' && e.kind !== 'direct_address') continue;
+          if (!CONTACT.has(e.kind)) continue;
           // Contact, and nothing else. The words themselves belong to the
           // conversation transcript (3E) and to the fact stream, which is where
           // replay and the offline script pass read them from.
-          observe(observerId, e.entityId, e.t, { words: true });
+          //
+          // EXCHANGED is narrower than HEARD, and the difference is the whole
+          // point of the field. Sitting near the pastor while he talks to 渡辺
+          // is a meeting with the pastor; it is not a conversation with him, and
+          // a count the Brain reads as "we have spoken four times" has to mean
+          // it (phase-3d-memory.md 2.0.1).
+          observe(observerId, e.entityId, e.t, { words: EXCHANGED.has(e.kind) });
         }
         consumed.set(observerId, high);
       }

@@ -307,7 +307,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
 
   // A second sentence in the same meeting is the same meeting. Delivery drained
   // the queue in between, which must change nothing here.
-  world.say('man-01', 'いい天気ですね');
+  world.say('man-01', 'いい天気ですね', { to: 'grandma-01' });
   loop.run(215, {});
   const q = memory.recall('grandma-01', 'man-01');
   check(q?.encounters === 1 && q?.spokenWith === 1,
@@ -354,8 +354,10 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   const { world, memory, loop } = setup();
   world.spawn('grandma-01', [470, 262]);
   world.spawn('man-01', [478, 264]);          // near, and silent
-  world.spawn('pastor-01', [500, 268]);       // further, and speaks
-  loop.run(40, { beforeTick: (t) => { if (t === 10) world.say('pastor-01', 'こんばんは'); } });
+  world.spawn('pastor-01', [500, 268]);       // further, and speaks to her
+  loop.run(40, { beforeTick: (t) => {
+    if (t === 10) world.say('pastor-01', 'こんばんは', { to: 'grandma-01' });
+  } });
 
   const silent = memory.recall('grandma-01', 'man-01');
   check(silent?.encounters >= 1, 'standing beside someone was not a meeting');
@@ -363,7 +365,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
     `a silent meeting counted ${silent?.spokenWith} as spoken-with`);
 
   const spoke = memory.recall('grandma-01', 'pastor-01');
-  check(spoke?.spokenWith === 1, `hearing someone speak counted ${spoke?.spokenWith}`);
+  check(spoke?.spokenWith === 1, `being addressed counted ${spoke?.spokenWith}`);
 
   // And a new meeting starts silent, however the last one went.
   world.roster('man-01', { at: [478, 264] });
@@ -396,6 +398,62 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   const fourth = memory.recall('grandma-01', 'man-01');
   check(fourth?.encounters === 4 && fourth?.spokenWith === 2,
     `a second meeting with words counted ${fourth?.encounters}/${fourth?.spokenWith}`);
+}
+
+// --- 11.18  overhearing is not conversing ---
+{
+  const { world, memory, loop } = setup();
+  world.spawn('pastor-01', [470, 262]);        // speaks
+  world.spawn('man-01', [476, 264]);           // is spoken to
+  world.spawn('grandma-01', [482, 262]);       // is merely standing there
+  loop.run(40, { beforeTick: (t) => {
+    if (t === 10) world.say('pastor-01', 'お仕事は何を', { to: 'man-01' });
+  } });
+
+  // Both ends of one exchange, in the same tick. The person spoken to knows;
+  // so, now, does the person who spoke - that half used to be unobservable.
+  check(memory.recall('man-01', 'pastor-01')?.spokenWith === 1,
+    `being addressed counted ${memory.recall('man-01', 'pastor-01')?.spokenWith}`);
+  check(memory.recall('pastor-01', 'man-01')?.spokenWith === 1,
+    `addressing somebody counted ${memory.recall('pastor-01', 'man-01')?.spokenWith}`);
+
+  // And the bystander, who heard every word of it.
+  const by = memory.recall('grandma-01', 'pastor-01');
+  check(by?.encounters >= 1, 'standing next to a conversation was not even a meeting');
+  check(by?.spokenWith === 0,
+    `overhearing one man address another counted ${by?.spokenWith} conversations`);
+  check(memory.recall('grandma-01', 'man-01')?.spokenWith === 0,
+    'overhearing counted a conversation with the person spoken to, either');
+
+  // Undirected speech is a remark to the room and counts for nobody.
+  world.say('pastor-01', 'いい夕方だ');
+  loop.run(60, {});
+  check(memory.recall('grandma-01', 'pastor-01')?.spokenWith === 0,
+    'a remark to the room counted as a conversation');
+}
+
+// --- an address nobody heard is not an exchange (floor-clarifications 1) ---
+{
+  const { world, memory, loop } = setup();
+  world.spawn('grandma-01', [470, 262]);
+  world.spawn('shopkeeper-01', [180, 240]);    // ~300 units, far outside hearing
+  loop.run(40, { beforeTick: (t) => {
+    if (t === 10) world.say('grandma-01', '澄子さん', { to: 'shopkeeper-01' });
+  } });
+  const said = world.log.facts.filter((e) => e.type === 'speech_said').at(-1);
+  check(!said.heardBy.includes('shopkeeper-01'), 'the test premise is wrong: she heard it');
+  check((memory.recall('grandma-01', 'shopkeeper-01')?.spokenWith ?? 0) === 0,
+    'calling to somebody who did not turn round counted as a conversation');
+  check((memory.recall('shopkeeper-01', 'grandma-01')?.spokenWith ?? 0) === 0,
+    'an unheard call counted on the other side');
+
+  // A carrying voice is the same call, heard.
+  world.say('grandma-01', '澄子さん', { to: 'shopkeeper-01', scope: 'broadcast' });
+  loop.run(80, {});
+  check(memory.recall('grandma-01', 'shopkeeper-01')?.spokenWith === 1,
+    'a call that carried did not count');
+  check(memory.recall('shopkeeper-01', 'grandma-01')?.spokenWith === 1,
+    'a call that carried did not count on the other side');
 }
 
 // --- 11.5  no ref may reach storage ---
@@ -527,7 +585,8 @@ if (problems.length) {
   console.log('    memory accumulates from the loop itself with no Brain and no');
   console.log('    scenario help; an utterance is ingested once, writes no');
   console.log('    episode and is still delivered; an encounter is a meeting,');
-  console.log('    not a cooldown, and knows whether words passed; refs');
+  console.log('    not a cooldown, and knows whether words were exchanged rather');
+  console.log('    than merely overheard; refs');
   console.log('    cannot reach storage; memory lives in audit and never in facts;');
   console.log('    eviction is deterministic; the dog has parameters, not a past');
 }

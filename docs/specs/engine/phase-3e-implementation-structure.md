@@ -263,7 +263,9 @@ exactly the machinery this excludes.
 ```text
 somebody arrives in / leaves the zone
 a SEAT became occupied or released         not a station
-a directed or loud utterance changed the local situation
+a directed utterance whose target is HERE and in its heardBy   clarifications §9.6
+   - including one spoken in another zone
+a loud utterance audible from here
 an order was placed / service was requested                    3F-A
 an addressable animal did something notable                    §8
 a human director input
@@ -294,8 +296,15 @@ A zone qualifies for a floor when it holds:
 
 ```text
 two or more LLM actors
-or one LLM actor and at least one addressable deterministic actor   §8
+or one LLM actor and at least one addressable deterministic actor          §8
+or one LLM actor holding a pending heard direct address     clarifications §9.3
 ```
+
+The third clause is temporary and self-clearing: a zone that qualified only
+through it is destroyed again once the target speaks, declines, or the address
+expires. It exists because hearing crosses zone edges and a direct address that
+demonstrably arrived must have somewhere to be answered — see clarifications §9,
+which is binding and settles the whole cross-zone case.
 
 Zones come from `docs/specs/world/zones.json` and are already implemented:
 吧台 / 近桌 / 遠桌 / 街邊 / 公園空地, plus 後臺. Five usable rooms means up to
@@ -330,10 +339,16 @@ this scene is. Recorded as a limitation rather than hidden.
 | | stream | why |
 |---|---|---|
 | `speech_said` | **fact** | already is one; gains an optional `zone` field |
+| `speech_said.heardBy` | **fact**, server-side field | who was in earshot at that tick — committed by `world.say`, never recomputable afterwards, never model-visible (clarifications §8.1) |
 | `animal_responded` | **fact** | the dog visibly does something; a renderer draws it §8 |
 | offers, declines, `floor_lost`, dormancy | **audit** | mechanism; nothing to draw |
-| `openQuestion`, rank order, `heardBy` | **audit / working** | server-side only |
+| `openQuestion`, rank order | **working** | server-side floor state |
 | transcript | **neither** | derived from facts, rebuilt on demand, never persisted |
+
+`heardBy` is a committed field of a fact and not working state. It is the one
+thing in this phase that a renderer never draws and a rebuild cannot do without:
+audibility depends on where everybody stood at that tick, and the Floor cache is
+disposable by design.
 
 **No new membership facts.** The earlier draft proposed
 `conversation_started` / `_joined` / `_left` / `_ended` and asked the owner to
@@ -365,6 +380,16 @@ Two implementations of one audibility test is where drift hides — the same
 reasoning that made `zones.json` carry a 300-position sample for the JS to
 reproduce. `heardBy` is server-side, never model-visible, and reaches a Brain
 only as the *absence* of a line from that observer's rendered transcript.
+
+### 7.0 What an observer's transcript contains
+
+> **The recent utterances the observer heard, that either belong to the
+> observer's own floor, or were spoken by or addressed to the observer.**
+
+Clarifications §9.4, and the last clause is what makes a conversation survive a
+zone boundary. An utterance the observer merely overheard from a neighbouring
+zone reaches them as perception and stays out of their transcript — hearing the
+counter from the near table makes you aware of it, it does not put you in it.
 
 ### 7.1 A gap in a transcript is a rendering, not a bug
 
@@ -544,6 +569,12 @@ Its only mechanical effect is rank 2 in §3.1: a character with a question hangi
 in the air is offered the floor before the general population. That is enough to
 make an unanswered question feel unanswered, and it costs one nullable field.
 
+It lives on the floor that owns the **asking** utterance, so a question asked
+across a zone boundary needs no duplication: the asker's floor holds the record
+and ranks the asker up, while the target's own floor ranks the target first
+because of the address (clarifications §9.5). Neither floor has to know the
+other's state.
+
 Deliberately not modelled: whether the reply actually answered the question. That
 is semantics, and `phase-3e-conversation.md` §8 keeps the engine out of it.
 
@@ -578,6 +609,7 @@ separates. No scripted choices are involved, which is what that test needs.
 
 ```text
 floors iterated in sorted zone id order
+a person stands in one zone, so exactly one floor can ever offer to them
 offer batches ranked deterministically; ties by hash01, never by rng stream
 the taker is chosen by rank, never by response arrival                §3.2
 animal compliance by hash01, never by the shared rng            this file §8.3
@@ -681,8 +713,9 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
       commit and carry it on speech_said; perception reads it §7, clar. §8.1
 3E-2  move perception delivery from context-built to offer-settled:
       contextFor + settle(epochId, {delivered})              clar. §8.2
-3E-3  Floor store: qualification, creation, destruction, ingestion of
-      speech_said with zone and heardBy; transcript as a cache §2, §5, clar. §2
+3E-3  Floor store: qualification including the cross-zone address clause,
+      creation, destruction, ingestion of speech_said with zone
+      and heardBy; transcript as a cache            §2, §5, clar. §2, §9
 3E-4  offer rounds: ranking, batching, rank-decides-the-taker,
       losers commit nothing and lose nothing                  §3, clar. §3, §8.2
 3E-5  quiet, dormancy, social re-arm as a fact-type property  §4, clar. §4, §8.3

@@ -410,3 +410,159 @@ is the same predicate, and a call the dog could not hear produces
 than through a compliance roll. Distance was already an input to compliance
 (`phase-3e-implementation-structure.md` §8.2); this makes inaudibility a hard
 gate in front of it rather than a term inside it.
+
+---
+
+## 9. Cross-zone direct address — binding, and required before the Floor Store
+
+Three rules that are each correct leave a hole between them:
+
+```text
+one offered floor per zone
+membership is standing in the zone
+hearing crosses zone edges          hearingRange 70; near-table to counter is 48
+```
+
+So: a customer at 近桌 calls the shopkeeper at 吧台. `heardBy` correctly includes
+her. She is not in the near-table floor, and the counter may not qualify for a
+floor at all if she is the only LLM standing there. **A direct address that
+demonstrably arrived has nowhere to be answered.**
+
+That is not a café special case. It is the general shape of *speaking to somebody
+who is not in the room with you*, and it has to be settled before the Floor Store
+is built, because it decides what qualifies a floor.
+
+### 9.1 The invariant
+
+> **A successfully heard direct address creates a response opportunity for the
+> addressed target, in the target's own zone, even when speaker and target are in
+> different zones.**
+
+```text
+A speaks in Z1, act carries `to: B`, B stands in Z2
+  B in heardBy   -> Z2 gains an addressed response opportunity for B
+                    B is Rank 1 there, and K = 1
+  B not in heardBy -> nothing happens anywhere            clarifications §1
+```
+
+Hearing physics stays authoritative. The handoff is a consequence of `heardBy`,
+never a reason to assume it.
+
+### 9.2 One utterance, one owner, one fact
+
+> **The utterance belongs to the speaker's zone and is committed exactly once.**
+
+Z2 receives an *opportunity*, not a copy. There is no second `speech_said`, no
+mirrored transcript entry, and no derived event that a renderer or a replay could
+mistake for a second utterance. What reaches B is what already reached B:
+`heardBy`, and the transcript rule in §9.4.
+
+### 9.3 A one-LLM zone may qualify temporarily
+
+`phase-3e-implementation-structure.md` §5 gains a third qualifying clause:
+
+```text
+two or more LLM actors                                        (existing)
+one LLM actor and an addressable deterministic actor          (existing)
+one LLM actor holding a pending heard direct address          (this section)
+```
+
+The third clause is **temporary and self-clearing**. It holds while the address
+is unanswered and unoffered-to-conclusion, and stops holding when the opportunity
+resolves — the target speaks, declines, or the address expires after
+`addressExpiry`. A floor that qualified only through it is then destroyed. A
+one-person floor must never become permanent; otherwise 澄子 alone at her counter
+is polled forever, which is exactly the money leak §4 exists to prevent.
+
+An animal target never qualifies a zone this way. `call_over` on ハナ resolves
+through the compliance path (structure §8), which has its own audibility gate and
+never involves an offer.
+
+### 9.4 Transcript rendering across two floors
+
+The naive rule — *`transcriptFor(observer)` renders the observer's own floor* —
+loses the reply: B answers in Z2, A hears it, and A's transcript in Z1 does not
+contain it.
+
+The binding rule is therefore:
+
+> **`transcriptFor(observer)` renders the recent utterances that the observer
+> heard AND that either belong to the observer's own floor, or were spoken by
+> or addressed to the observer.**
+
+```text
+heard + on my floor            the conversation I am standing in
+heard + I said it              my own line
+heard + it was said to me      somebody spoke to me from anywhere
+heard + none of the above      NOT in my transcript - it reaches me as
+                               perception, which is where an overheard
+                               conversation belongs
+```
+
+The last row is what keeps `phase-3e-conversation.md` §4 intact: **transport is
+not membership.** Hearing the counter from the near table makes you aware of it;
+it does not put you in it. Being spoken to does.
+
+### 9.5 `openQuestion` across two floors
+
+`openQuestion` lives on **the floor that owns the asking utterance** — the
+asker's. One record, in one place, whichever zone the answer eventually comes
+from.
+
+```text
+A asks B, B heard it        -> Z1.openQuestion = { asker: A, asked: B, sinceTick }
+                               Z2 gives B Rank 1 as the addressee              §9.1
+B replies to A, A hears it  -> Z1.openQuestion = null, from whichever floor the
+                               reply was made on
+B leaves earshot entirely   -> Z1.openQuestion = null
+```
+
+Each floor already has what it needs, and neither has to know the other's state:
+Z2 ranks B first because of the address, Z1 ranks A up because of the question.
+That is why the record does not need to be duplicated.
+
+### 9.6 Dormancy and re-arm
+
+The social re-arm whitelist (§4, §8.3) is refined:
+
+> **A `speech_said` whose `to` is standing in this zone and is present in its
+> `heardBy` re-arms this zone's floor — including when the utterance was spoken
+> in another zone.**
+
+This is the mechanism of §9.1: a dormant 吧台 wakes because somebody was spoken
+to there, and for no other cross-zone reason. An overheard undirected
+conversation next door still re-arms nothing, which is the same distinction §9.4
+draws for the transcript.
+
+### 9.7 Determinism
+
+Nothing here can race, and the reason is worth stating rather than assuming.
+
+**A person stands in exactly one zone, so exactly one floor can ever offer them
+the floor.** Two floors cannot contend for the same character. Floors are
+advanced in sorted zone id order, offers from different floors in one tick are
+independent, and the winner within a batch is still chosen by rank rather than by
+response arrival (structure §3.2).
+
+Two characters in different zones addressing B in the same tick give B one Rank 1
+slot in one zone, not two offers. `addressed` takes the later utterance by tick
+and then by the ordinary tie-break; B's Brain sees both lines in its transcript
+under §9.4 and chooses.
+
+### 9.8 Required tests
+
+```text
+1  near-table customer addresses the counter shopkeeper; she is the only LLM at
+   the counter; she is offered her own zone's floor at Rank 1, K = 1
+2  the same call when she is out of hearing range creates no floor, no offer and
+   no openQuestion anywhere
+3  exactly one speech_said fact exists for that utterance
+4  her reply appears in the caller's transcript, and the caller's line appears in
+   hers, although the two are on different floors
+5  a third party who overheard the call gets it as perception and NOT in their
+   transcript, unless it happened on their own floor
+6  a dormant counter re-arms on the address, and does not re-arm on an undirected
+   conversation next door
+7  once she answers or declines, the counter floor is destroyed again
+8  two callers from two zones in one tick produce one Rank 1 slot, not two offers
+```
