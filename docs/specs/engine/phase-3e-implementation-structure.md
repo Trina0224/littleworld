@@ -704,6 +704,21 @@ into the model's hands.
 
 ---
 
+## 15.2 Found by building 3E-6 to 3E-8
+
+**A committed utterance must be folded into its floor immediately**, not on the
+next tick's ingestion pass. The offer that follows in the same tick has to know
+who was just spoken to, or the person who owes an answer is asked as one of a
+crowd and clarifications §9.1 quietly stops holding. Ingestion dedupes by fact
+index, so the ordinary pass still handles waking a dormant zone elsewhere.
+
+**Transcript rendering belongs to the context builder, not to the floor.** Only
+`buildContext` holds both the epoch's refs and this observer's memory, and that
+is exactly what §7.2's fallback needs. `floors.js` therefore exposes
+`utterancesFor` with entity ids and never learns what a memory is.
+
+---
+
 ## 15.1 Found by building 3E-4
 
 **A temporary floor must not be revoked while carrying the offer it exists for.**
@@ -751,9 +766,9 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
       losers commit nothing and lose nothing   DONE  §3, clar. §3, §8.2
 3E-5  quiet, dormancy, social re-arm as a fact-type property
                                                DONE  §4, clar. §4, §8.3
-3E-6  transcriptFor() per-observer rendering                            §7.2
-3E-7  menuFor() / commit(), act-derived scope, refusals                  §9
-3E-8  openQuestion, gated on audibility                     §10, clar. §1, §6
+3E-6  transcriptFor() per-observer rendering            DONE          §7.2
+3E-7  menuFor() / commit(), act-derived scope, refusals  DONE           §9
+3E-8  openQuestion, gated on audibility            DONE    §10, clar. §1, §6
 3E-9  addressing a deterministic actor, compliance, animal_responded     §8
 3E-10 socialWeight() and the asymmetry test                             §11
 3E-11 scripted acceptance scenarios + mutations, view.js replay support  §13

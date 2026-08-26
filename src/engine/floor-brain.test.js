@@ -56,7 +56,11 @@ function setup(config = {}) {
     world, runtime: createActivityRuntime(world), perception, memory, floors
   });
   world.start();
-  return { world, perception, memory, floors, loop };
+  const wrapped = {
+    ...floors,
+    offers: () => floors.offers().map((o) => ({ ...o, __perception: perception }))
+  };
+  return { world, perception, memory, floors: wrapped, loop };
 }
 
 const problems = [];
@@ -74,6 +78,10 @@ function drive(loop, floors, n, policy = () => 'decline') {
   }
   return seen;
 }
+const perceptionOf = (o) => o.__perception;
+/** The menu entry for `act` aimed at a named entity, resolved through the refs. */
+const pickAt = (o, act, target) => o?.menu.find(
+  (m) => m.startsWith(`${act}:`) && o.context.refs.get(m.split(':')[1]) === target) ?? null;
 const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null;
 
 // --- 3E-7  the menu is what the engine supplied, and nothing else -------
@@ -107,6 +115,27 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   const said = floors.commit(o.entityId, { pick: 'nothing', text: 'こんにちは' });
   check(said.spoken === false, 'nothing was treated as speech');
   void other;
+
+  // A ref whose round trip is over must fail cleanly, never retarget somebody.
+  const { world: w2, floors: f2, loop: l2 } = setup();
+  w2.spawn('grandma-01', PARK[0]);
+  w2.spawn('pastor-01', PARK[1]);
+  let o2 = null;
+  for (let i = 0; i < 3 && !o2; i += 1) o2 = step(l2, f2)[0] ?? null;
+  const reply2 = pickFor(o2, 'reply');
+  perceptionOf(o2).releaseEpoch(o2.epochId);
+  check(f2.commit(o2.entityId, { pick: reply2, text: 'まだそこに？' }).refused,
+    'a ref whose epoch was released still resolved to somebody');
+
+  // Long replies are truncated, never refused.
+  const { world: w3, floors: f3, loop: l3 } = setup({ speechLimit: 12 });
+  w3.spawn('grandma-01', PARK[0]);
+  w3.spawn('pastor-01', PARK[1]);
+  drive(l3, f3, 6, (x) => (x.entityId === 'grandma-01'
+    ? { pick: 'address_group', text: 'あ'.repeat(50) } : 'decline'));
+  const long = w3.log.facts.find((e) => e.type === 'speech_said');
+  check(long?.text.length === 12, `a 50-character line came out ${long?.text.length} long`);
+  check(long?.scope === 'normal', `an ordinary remark carried at ${long?.scope}`);
 }
 
 // --- 3E-7  transport comes from the act, never from the reply -----------
@@ -146,17 +175,16 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   // long enough for both of them to get a turn - and her package is captured in
   // the round it is built, once she is in it herself.
   drive(loop, floors, 40, (o) => {
-    if (o.entityId === 'grandma-01' && !ctx
-        && spoke().has('grandma-01') && spoke().has('pastor-01')) {
+    if (o.entityId === 'grandma-01' && !ctx && spoke().size === 3) {
       ctx = o.context;
       return 'decline';
     }
-    if (o.entityId === 'man-01') return 'decline';
     n += 1;
     return { pick: 'address_group', text: `${n}番目の言葉` };
   });
   check(spoke().has('grandma-01') && spoke().has('pastor-01'),
     `only ${[...spoke()]} ever spoke`);
+  check(spoke().has('man-01'), '渡辺 never spoke, so no stranger is in her transcript');
   check(!!ctx, 'the grandmother was never offered the floor after both had spoken');
   const conv = ctx?.forModel.conversation ?? [];
   check(conv.length >= 2, `her transcript holds ${conv.length} lines`);
@@ -174,8 +202,9 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   check(hersSpoken, 'the test premise is wrong: she never spoke');
   // 渡辺 is nobody she knows, so he is a ref and a description, never a name.
   const stranger = conv.find((u) => typeof u.speaker === 'object');
-  check(!stranger || (stranger.speaker.ref && stranger.speaker.looks),
-    'an unknown speaker was rendered without a ref or a description');
+  check(!!stranger, '渡辺 is nobody she knows, and yet nothing rendered as a stranger');
+  check(!!stranger?.speaker.ref && !!stranger?.speaker.looks,
+    `an unknown speaker was rendered as ${JSON.stringify(stranger?.speaker)}`);
   void memory;
 }
 
@@ -209,7 +238,7 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   let answerer = null;
   drive(loop, floors, 12, (o) => {
     if (!asked && o.entityId === 'grandma-01') {
-      const p = pickFor(o, 'ask');
+      const p = pickAt(o, 'ask', 'pastor-01');
       if (!p) return 'decline';
       asked = true;
       return { pick: p, text: 'お元気ですか' };
@@ -238,18 +267,22 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   const { world, floors, loop } = setup();
   world.spawn('grandma-01', PARK[0]);
   world.spawn('pastor-01', PARK[1]);
+  world.spawn('man-01', PARK[2]);          // so the floor survives the departure
   world.roster('pastor-01', { at: PARK[1] });
   let asked = false;
   drive(loop, floors, 8, (o) => {
     if (asked || o.entityId !== 'grandma-01') return 'decline';
-    const p = pickFor(o, 'ask');
+    const p = pickAt(o, 'ask', 'pastor-01');
     if (!p) return 'decline';
     asked = true;
     return { pick: p, text: 'お元気ですか' };
   });
-  check(!!floors.openQuestionIn('park-open'), 'the test premise is wrong: no question');
+  check(floors.openQuestionIn('park-open')?.asked === 'pastor-01',
+    `the test premise is wrong: the question is ${JSON.stringify(floors.openQuestionIn('park-open'))}`);
   world.depart('pastor-01');
   for (let i = 0; i < 3; i += 1) for (const o of step(loop, floors)) floors.decline(o.entityId);
+  check(floors.floor('park-open') !== null,
+    'the test premise is wrong: the floor went, so the question went with it');
   check(floors.openQuestionIn('park-open') === null,
     'a question the other party can no longer hear stayed a debt');
 }

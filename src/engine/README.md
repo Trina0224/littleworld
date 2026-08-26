@@ -16,6 +16,8 @@ node src/engine/meeting-boundary.test.js
 node src/engine/perception-held-limit.test.js
 node src/engine/floors.test.js
 node src/engine/floor-rounds.test.js
+node src/engine/floors-address-decline.test.js
+node src/engine/floor-brain.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -47,6 +49,8 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `perception-held-limit.test.js` | that a refused context takes nothing with it |
 | `floors.test.js` | which zones are conversations, and who may answer from where |
 | `floor-rounds.test.js` | who is asked, who speaks, and when the room goes quiet |
+| `floors-address-decline.test.js` | that saying no to somebody settles what they asked |
+| `floor-brain.test.js` | what a Brain is shown, and what it is allowed to pick |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -287,6 +291,32 @@ stations do not — they are one thing to a reservation on purpose, so the
 difference has to be drawn here, and 澄子 claiming her workstation is exactly the
 machinery this excludes. Waking starts a new social spell.
 
+**The Brain selects; it never authors.** An offer carries the choices the engine
+just produced — `reply:seen-2`, `ask:seen-2`, `address_group`, `call_across:seen-4`,
+`nothing` — and a reply that names anything else is refused. So an act, a scope,
+an id or a coordinate cannot be invented: the engine validates against the list it
+supplied, and an invalid choice is impossible by construction. **Transport comes
+from the act**, never from the reply; a model that could set `scope` would
+gradually make every conversation scene-wide. Text is truncated rather than
+rejected, and discarded for a choice that carries no speech — a model that ran
+long, or helpfully added a sentence to `nothing`, has not malfunctioned. A
+refusal is audit, changes nothing, and reaches only the actor that attempted it.
+
+**A transcript is the observer's own.** What they heard, and either on their floor
+or spoken by or to them — so a conversation survives a zone boundary while the
+one next door stays out and arrives as perception, which is what it is. Speakers
+render by an ordered fallback: the observer's private label, else the current ref
+plus a description, and never a canonical name or an entity id. That join lives
+in `buildContext`, the one place holding both the refs and this observer's
+memory, which is why `floors.js` never sees a memory store.
+
+**A question is the one stake the engine owns.** `ask` marks a debt only if the
+target heard it, the debt lives on the asker's floor, and it raises the asker on
+later rounds — while the person who owes the answer is already first as the
+addressee. An answer settles it from whichever floor it is made on, and the two
+drifting out of earshot drops it. Whether the reply actually answered the
+question is semantics, and the engine stays out of it.
+
 **Nudge suppression lives on the source zone's social spell**, not on the target
 floor that happens to be showing the nudge. A cross-zone overhearer gets one
 *should I go over?* per conversation, and the target's temporary floor may be
@@ -295,7 +325,7 @@ spell is what ends it, and the spell belongs to the room the conversation is in.
 
 ### What the tests prove
 
-Twenty-four mutations, all biting. The store: dropping step 8 from the loop, not
+Thirty-eight mutations, all biting. The store: dropping step 8 from the loop, not
 stamping the zone, letting an unheard address qualify a zone, letting a pending
 address not qualify one, opening a floor for one person alone, refusing one for a
 person and their dog, clearing the utterance index when a floor closes, copying
@@ -311,6 +341,20 @@ floor, never expiring an unanswered offer, waking on any fact at all, waking on 
 station as if it were a seat, reusing the spell when a floor wakes, never
 spending the overheard nudge, and revoking a temporary floor while it carries the
 offer it exists for.
+
+The Brain interface: accepting any act string, guessing at a ref whose round
+trip is over, letting the reply choose its own transport, rejecting a long line
+instead of truncating it, treating `nothing` as speech, silencing a refusal,
+letting an overheard conversation into the transcript, rendering an entity id in
+it, rendering a stranger with no ref, keeping a question nobody could hear,
+never settling one that was answered, using last tick's addressee for this
+tick's offer, and leaving an address pending after it was declined.
+
+Five of those first caught nothing, and each needed a sharper scenario rather
+than a different rule: a stale ref that the *menu* check had already refused; a
+transport test that only asserted the loud case; a truncation test with no long
+line; a stranger who never spoke; and a question whose floor was closing anyway,
+so the floor rather than the rule was doing the clearing.
 
 The station one first caught nothing: the test fired a made-up resource id, so
 the `resource()` lookup already refused it and the `kind` check was doing no
