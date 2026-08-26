@@ -2,6 +2,10 @@
 
 **Status:** implementation contract / design baseline  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
+**Updated:** 2026-08-26 — tick position (§2.1), transcript source (§9.0), the 3D
+boundary made concrete (§9.3), engine effect of `continue_listening` (§5.3), turn
+ownership reconciled with `world-engine-2.5.md` §11.4 (§11.0), acceptance
+mechanism sharpened (§17.0)  
 **Depends on:** Phase 3C perception, Phase 3D private memory, `social-personality.md`  
 **Feeds:** Phase 3F-A Cafe / Venue Runtime, Phase 3F-B Scheduler + Mock Brain, Phase 3G provider adapter
 
@@ -95,6 +99,31 @@ an activity with higher authority makes continued conversation impossible
 ```
 
 A short answer is **not by itself** an ending signal.
+
+### 2.1 Conversation is a stage of the canonical tick
+
+Session state is updated at **step 8** of the tick order in
+`phase-3c-perception.md` §2, owned by the loop and not by whichever scenario
+happened to think of it.
+
+```text
+6  refresh perception
+7  accumulate private memory
+8  update conversation sessions from committed speech    <- here
+9  evaluate wake reasons
+10 dispatch
+```
+
+Its position is fixed by two dependencies and not by taste: sessions are built
+from committed speech facts (step 5), and the wake reasons of §14 are read out of
+session state at step 9. It sits after memory only because neither depends on the
+other.
+
+This is written down before any of it is implemented on purpose. Twice now a
+stage has existed as a correct module that nothing actually ran — perception for
+a whole phase, memory until a review caught scenarios calling it by hand — and
+both times the module was fine and the *order* was the defect. A loop given a
+conversation store it never ticks should be refused rather than left to look busy.
 
 ---
 
@@ -217,6 +246,19 @@ This is required so shy, withdrawn, distracted, or simply uninterested character
 
 This distinction allows quiet listeners such as タタ or 草野 to remain part of a conversation without being forced to speak.
 
+### 5.3 What the two do in the engine
+
+Neither produces a `speech_said` fact — §17.4 requires that no fake speech is invented, and that applies to both. The difference is entirely in session state:
+
+| choice | fact | session |
+|---|---|---|
+| `continue_listening` | none | stays a participant; **defers the idle threshold**; may clear its own turn |
+| `nothing` | none | untouched — no social commitment is recorded |
+
+So both are recorded in **audit**, never in facts, on the same terms as a memory write: a renderer has nothing to draw for either, and a run still has to be explicable afterwards.
+
+The consequence that matters is that a room of quiet listeners keeps its session alive, while a room of characters who each chose `nothing` lets it go quiet and wind down — which is the behaviour §5.1 and §7.3 exist to protect.
+
 ---
 
 ## 6. Minimum social action vocabulary for Phase 3E
@@ -327,6 +369,24 @@ This is enough to preserve conversational structure without parsing prose.
 
 ## 9. Session transcript is working context, not long-term memory
 
+### 9.0 The transcript is built from committed facts, not from a perception queue
+
+The session is server-side and already knows its participants, so it reads `speech_said` out of the committed fact stream directly.
+
+It must **not** be a third consumer of the perception queue. That queue already has two readers with deliberately different rights (`phase-3d-memory.md` §2.1): Brain delivery drains it, memory reads it without draining and tracks its position with a cursor. Adding a third reader with a third rule is how that contract stops being checkable.
+
+Reading facts instead gives §17.15 for free — conversation bookkeeping cannot duplicate a delivery or an ingestion, because it never touches the mechanism either one uses.
+
+It also keeps the three boundaries honest in different directions:
+
+```text
+perception queue  -> what one observer may know it heard
+fact stream       -> what the world committed
+transcript        -> what this session's participants said, server-side
+```
+
+A participant who could not hear an utterance still does not see it: the transcript is rendered per observer (§10), and what a given Brain is shown stays filtered by what that observer perceived. The session storing an utterance is not the same as every participant being told it.
+
 This boundary is mandatory.
 
 ```text
@@ -375,6 +435,26 @@ A Brain may separately propose a memory-worthy interpretation such as:
 
 That proposal follows the Phase 3D canonicalization/private-memory path. The transcript itself is not automatically promoted.
 
+### 9.3 What this changes in 3D, concretely
+
+This section is not only a rule for 3E — it revises behaviour that already ships.
+
+Before 3E, memory wrote a long-term episode for **every** heard utterance, because there was nowhere else for a sentence to go. The example in §9 above is literally what the implementation produced. `phase-3d-memory.md` §6.1 now replaces that with:
+
+> **The engine writes exactly one kind of episode: `first_meeting`. Everything else in the episode list was proposed by the Brain.**
+
+What the engine keeps instead is structural, permanent and one line per person:
+
+```text
+encounters    distinct meetings
+spokenWith    how many of those meetings words passed in
+lastSeenTick  while contact holds
+```
+
+So §17.7 becomes a property of 3D rather than something 3E has to arrange, and §17.8 stays possible because the Brain's own proposals are untouched. 3E does not have to *prevent* transcript promotion; there is no longer a mechanism that promotes it.
+
+3D's exactly-once ingestion contract does **not** relax. It is still required, now because a re-ingested utterance would inflate `spokenWith` and drag `lastSeenTick` backwards. Ingestion happens once; only what it writes changed.
+
 ---
 
 ## 10. Safe person references inside conversation context
@@ -399,6 +479,16 @@ This is the 3D label rule applied to conversation history.
 ---
 
 ## 11. Conversation lifecycle
+
+### 11.0 Turn ownership is addressee-driven, not rotational
+
+`world-engine-2.5.md` §11.4 decided **strict turn-taking with a timeout** for the MVP, and that stands: the session owns whose turn it is and when it expires. This section says only what "whose turn" resolves to, because with three participants it is otherwise ambiguous.
+
+> **The turn goes to whoever was addressed, not to whoever is next in a list.**
+
+`A replies to B` gives the turn to B. It does not give it to C because C has not had one recently. Rotation among participants would rebuild §3's round-robin inside the session after taking the trouble to keep it out of the scene, and it is also the mechanism that makes a three-person conversation feel like a meeting rather than a conversation somebody else is standing near.
+
+The timeout still belongs to the session: a turn that is never taken expires, and an expired turn is one of the ways a session goes quiet and reaches `winding_down`. `address_group` (§6, optional) is the case with no single addressee, and is why it stays optional in this phase.
 
 Initial lifecycle:
 
@@ -559,7 +649,27 @@ world facts outside what this observer may know
 
 ## 17. Required acceptance tests
 
-Phase 3E is not complete until scripted/mock participants demonstrate all of these without a real provider:
+### 17.0 What "scripted/mock" means here, and what it does not
+
+§18 assigns the **Mock Brain** to 3F-B, so the acceptance mechanism for this phase has to be something smaller: a **scripted participant** whose choice at each turn is written into the test.
+
+```text
+scripted participant (3E)   the test says: this turn, B selects reply
+mock Brain (3F-B)           a stand-in that DECIDES, without a provider
+```
+
+The distinction matters because a mock that decides would make these tests pass for reasons the test does not control, and 3E is about session mechanics rather than about anything resembling judgement. Every one of the fifteen tests below must be reachable with choices the test wrote itself.
+
+**§17.12 needs one exception, and only one.** Social asymmetry cannot be demonstrated by a test that writes down the choices, because writing them down is what it is trying to prove the engine does not do. So 3E exposes a single **pure function** — social vector plus situation in, a number out — and the test exercises it statistically over many situations:
+
+```text
+in scope for 3E       socialWeight(traits, situation) -> number
+out of scope for 3E   concurrency, quotas, priority, dropping, retry   (3F-B)
+```
+
+Nothing inside 3E may call it to decide anything. It exists so that §7.1's eligibility inputs are real and checkable before a scheduler exists to consume them, and so that 3F-B inherits a function rather than a paragraph.
+
+Phase 3E is not complete until scripted participants demonstrate all of these without a real provider:
 
 1. **Persistent two-person session:** A and B sustain at least 10 turns without opening a new session after every utterance.
 2. **No round-robin:** C hears A/B but is not automatically granted a turn or added as participant.
@@ -607,15 +717,23 @@ If one of these appears necessary to make a 3E test pass, reconsider the boundar
 Recommended order:
 
 ```text
-3E-1  ConversationSession store + lifecycle
+3E-0  apply the 3D transcript boundary (§9.3): stop writing an episode per
+      utterance, add spokenWith, keep the exactly-once cursor
+3E-1  ConversationSession store + lifecycle + tick stage (§2.1)
 3E-2  local speech transport integration + act-derived scope
 3E-3  legal conversational action menu
 3E-4  turn/direct-address wake reasons
 3E-5  transcript working window
 3E-6  third-party join / leave
-3E-7  social-personality guidance hooks
-3E-8  scripted/mock acceptance scenarios + mutation tests
+3E-7  social-personality guidance hooks + socialWeight() (§17.0)
+3E-8  scripted acceptance scenarios + mutation tests
 ```
+
+3E-0 comes first because it is the only step that *removes* behaviour, and
+removing it after the session store exists would mean writing tests against a
+contract that is about to change. It is also the only step that touches a phase
+already marked complete, so it should land as its own change with its own
+mutations rather than inside a larger one.
 
 Do not connect a real provider merely to make the conversation look alive during development. Scripted/mock choices are the acceptance mechanism for this phase.
 

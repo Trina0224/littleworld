@@ -4,6 +4,8 @@
 **Created:** 2026-08-25
 **Updated:** 2026-08-25 — memory is a stage of the canonical tick; consumption,
 encounter and mind-gate contracts made explicit after review
+**Updated:** 2026-08-26 — the transcript boundary (§6.1). 3E gives conversation a
+place to live, so the engine stops writing an episode per utterance.
 **Companion to:** `character-identity.md` (3B), `phase-3c-perception.md`, `phase-3c-implementation-clarifications.md` §1.1a, `simulation-replay-architecture.md`
 
 3C answered *what can this character perceive right now?* 3D answers the next
@@ -36,7 +38,7 @@ grandmother has always known the girl from the shop.
 
 ---
 
-## 1.1 Who has a memory at all is declared, not inferred
+### 1.1 Who has a memory at all is declared, not inferred
 
 `createMemory` requires an explicit **`minds`** set. There is no default, and
 that is deliberate:
@@ -71,11 +73,18 @@ gate no test can hold is a gate that rots.
 entityId          server-only join key
 label             what THIS observer calls them
 encounters        how many distinct meetings
+spokenWith        how many of those involved words          (§6.1)
 lastSeenTick      when contact last held
 firstMetTick      null for seeded knowledge
 seeded            true if it came from knows rather than from the world
 open              whether a meeting is going on right now
 ```
+
+`spokenWith` is a count, not a judgement, and it is the same class of thing as
+`encounters` — the engine may honestly say *we have met four times and spoken on
+two of them*. It may not say what that amounts to. It is tracked inside the open
+encounter (words passed during this meeting or they did not), so it needs no
+knowledge of conversation sessions and no help from 3E.
 
 Small, permanent, and at most one per cast member. **This is what makes
 recognition work.**
@@ -241,6 +250,59 @@ The reason to care is not memory pressure:
 
 So a long memory is expensive in a way a long self sheet is not.
 
+### 6.1 The transcript boundary — the engine writes no episode for speech
+
+This section revises implemented behaviour. Until 3E there was nowhere else for
+a heard sentence to live, so memory wrote an episode for every one. That was
+wrong the moment `phase-3e-conversation.md` §9 gave conversation a transcript of
+its own, and the spec's own example is exactly what the old code produced:
+
+```text
+こんにちは
+こんにちは
+今日はいい天気ですね
+そうですね
+```
+
+Four lines, four episodes, a sixth of a character's permanent budget, and
+nothing worth keeping. Ten turns of a real conversation would have taken half of
+it.
+
+The rule that replaces it is almost tautological, which is why it is the right
+one:
+
+> **The engine writes exactly one kind of episode: `first_meeting`. Everything
+> else in the episode list was proposed by the Brain.**
+
+That is *the engine writes encounters; the Brain writes meaning* stated so that
+it cannot be drifted away from. What the engine records about a conversation is
+structural and permanent and costs one line per person:
+
+```text
+encounters   += 1   when a meeting opens
+spokenWith   += 1   when words first pass during that meeting
+lastSeenTick        while contact holds
+```
+
+Three consequences worth being explicit about.
+
+**The exactly-once contract does not relax.** §2.1's cursor is still required —
+now because re-ingesting a queued utterance would inflate `spokenWith` and drag
+`lastSeenTick` backwards, which is the same defect wearing different clothes.
+Ingestion still happens once; what changes is only what ingestion *writes*.
+
+**Provider failure still accumulates.** With no Brain, a character keeps
+recognition, encounter counts and the knowledge that words were exchanged. It
+loses only *what the words meant*, which was never the engine's to hold. The
+complete utterances remain in the fact stream for replay and for the offline
+script pass regardless.
+
+**Salience ranking keeps entries for kinds the engine no longer writes.** The
+eviction table still ranks `speech_heard`, `direct_address`, `own_action_failed`
+and the rest, because a Brain may propose an episode of any of those kinds. A
+kind nothing writes is not a bug in the table; it is a kind nothing has proposed
+yet.
+
 ---
 
 ## 7. Memory writes go to the audit stream
@@ -323,9 +385,14 @@ life out of the character.
 11. The attention hint returns a number and never a name.
 12. Accumulation happens because the loop runs, with no `memory.tick()` anywhere
     in the scenario; and a loop given memory without perception is refused.
-13. A perceived utterance is remembered **exactly once** however long it waits,
+13. A perceived utterance is ingested **exactly once** however long it waits,
     and is **still delivered** to the Brain afterwards.
 14. Continuous proximity is **one** encounter; leaving, staying away past
     `separationTicks`, and returning is **two**; a brief absence is still one.
 15. A Brain note or label about someone creates the person model and counts **no**
     meeting.
+16. Ten conversational turns produce **no engine-written episodes** — the episode
+    list holds only `first_meeting` and whatever the Brain proposed (§6.1).
+17. Standing near someone and talking to them are distinguishable: `encounters`
+    counts the meeting, `spokenWith` counts only the meetings words passed in,
+    and neither inflates when an utterance sits in the queue.

@@ -265,6 +265,6 @@ simulation/replay split in the first place. Replay exists to solve exactly it.
 | structured actions | Brain **selects** from an engine-supplied menu; never authors a schema |
 | mixed providers | fine — characters are meant to sound different; 3G is a thin adapter |
 | running cost | ~$0.025–0.06 a decision, $10–50 an hour; `effort` and the dynamic suffix are the levers, not the self sheet |
-| cold conversation | wake by reason not by turn; `nothing` must always be legal |
+| cold conversation | wake by reason not by turn; `nothing` must always be legal — owned by `phase-3e-conversation.md` §3, §5.1 |
 
 The unresolved question is no longer "what exact day length makes a live demo entertaining?" That requirement has been removed by the two-system architecture.
