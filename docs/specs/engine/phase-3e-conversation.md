@@ -6,6 +6,9 @@
 boundary made concrete (§9.3), engine effect of `continue_listening` (§5.3), turn
 ownership reconciled with `world-engine-2.5.md` §11.4 (§11.0), acceptance
 mechanism sharpened (§17.0)  
+**Supplemented by:** `phase-3e-implementation-structure.md` — the object shapes,
+the tick algorithm, the fact/audit line, and five contract gaps this document
+does not settle. Where that file is more specific, it wins.  
 **Depends on:** Phase 3C perception, Phase 3D private memory, `social-personality.md`  
 **Feeds:** Phase 3F-A Cafe / Venue Runtime, Phase 3F-B Scheduler + Mock Brain, Phase 3G provider adapter
 
@@ -734,6 +737,12 @@ removing it after the session store exists would mean writing tests against a
 contract that is about to change. It is also the only step that touches a phase
 already marked complete, so it should land as its own change with its own
 mutations rather than inside a larger one.
+
+**Superseded.** `phase-3e-implementation-structure.md` §15 replaces this list
+with an eleven-step order, because writing the structure out found that
+audibility has to be published as a single query before anything downstream uses
+it, and that turn ownership cannot be built before the latency rule it depends
+on. The order above is kept for the record.
 
 Do not connect a real provider merely to make the conversation look alive during development. Scripted/mock choices are the acceptance mechanism for this phase.
 
