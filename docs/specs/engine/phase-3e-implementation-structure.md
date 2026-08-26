@@ -126,6 +126,8 @@ in step. `heardBy` and `zone` ride on the fact for the same reason
 
 ```text
 createFloors(world, zones, { minds, config })
+  no perception: audibility is world.hearing and membership is position,
+  so the store needs neither - one fewer edge that can drift
   tick()                     step 8 of the canonical tick
   offers()                   offers opened this tick; drained by the caller
   transcriptFor(entityId)    rendered for that observer                 §7
