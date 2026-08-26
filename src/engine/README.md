@@ -14,6 +14,7 @@ node src/engine/perception.test.js
 node src/engine/memory.test.js
 node src/engine/meeting-boundary.test.js
 node src/engine/perception-held-limit.test.js
+node src/engine/floors.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -30,6 +31,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `perception.js` | the sensory boundary between the world and one Brain |
 | `placement.js` | semantic destination in, physical position out |
 | `memory.js` | what a character remembers, and the context a Brain receives |
+| `floors.js` | one offered conversational floor per zone |
 | `nav.js` | A* over the painted walkable map |
 | `world.js` | authoritative state, resources, reservations, movement |
 | `activity.js` | the Activity Runtime |
@@ -42,6 +44,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `memory.test.js` | that a memory is the rememberer's and nobody else's, and accrues from the loop |
 | `meeting-boundary.test.js` | that knowing of somebody is not having met them |
 | `perception-held-limit.test.js` | that a refused context takes nothing with it |
+| `floors.test.js` | which zones are conversations, and who may answer from where |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -53,12 +56,12 @@ called by hand in a demo. `loop.js` is now the one place that owns it.
 ```
 1  advance the integer world clock      6  refresh perception for each present agent
 2  advance deterministic movement       7  accumulate private memory from what was perceived
-3  advance deterministic activities     8  decide whether any agent needs a Brain wakeup
-4  update reservations / presence       9  dispatch those requests asynchronously
-5  commit the resulting world facts
+3  advance deterministic activities     8  advance each zone's conversation floor
+4  update reservations / presence       9  decide whether any agent needs a Brain wakeup
+5  commit the resulting world facts    10  dispatch those requests asynchronously
 ```
 
-Steps 1–8 never wait for inference. **Step 9 is not here** — it belongs to the
+Steps 1–9 never wait for inference. **Step 10 is not here** — it belongs to the
 scheduler in 3F, and `onWakeup` is where it attaches. The contract is already
 enforced by the shape: the hook is handed a list and its return value is
 discarded, so there is nothing for a future implementer to await. `loop.test.js`
@@ -225,6 +228,51 @@ and making `releaseEpoch` do nothing. All fifteen failed the suite. One earlier
 form of the wakeup mutation hung instead of failing, because returning before the
 clock advanced left the run unable to finish; it was replaced with one that fails
 cleanly, and the assertion was strengthened to compare audit as well as facts.
+
+## Conversation floors (3E)
+
+> **The zone is the conversation.** Joining is walking in and leaving is walking
+> out, both of which the engine already does and already commits.
+
+That replaced a session object with a lifecycle, membership, joins and
+tick-based idle detection — and dissolved the problem that killed the first
+design, because *silence* becomes a round of offers with no taker rather than a
+tick count that is shorter than a single model call.
+
+**A zone qualifies for a floor** when two LLM actors stand in it, or one and an
+addressable animal, or one holding a heard direct address that has nowhere else
+to be answered. That third clause is the cross-zone case: hearing crosses zone
+edges, so 星さん at the near table can call 澄子 at the counter, and 澄子 may be
+the only person there. The counter qualifies temporarily and closes again the
+moment the address resolves — a one-person floor must never become permanent, or
+she is polled forever.
+
+**One utterance is one fact in one zone.** The target's zone gets an
+opportunity, never a copy. `speech_said` carries `zone` alongside `heardBy` and
+for the same reason: which room it was spoken in depends on where the speaker
+stood at that tick, and recovering that later means re-running containment
+against replayed movement.
+
+**The transcript is derived, not stored.** A per-zone index of positions in the
+fact stream is appended at ingestion and never cleared when a floor is
+destroyed, so a zone that empties and fills again reads back exactly what it
+read before. The rebuild-from-facts property is true by construction rather than
+by maintenance — there is no second copy to keep in step.
+
+**Nudge suppression lives on the source zone's social spell**, not on the target
+floor that happens to be showing the nudge. A cross-zone overhearer gets one
+*should I go over?* per conversation, and the target's temporary floor may be
+created and destroyed any number of times in between without resetting that. The
+spell is what ends it, and the spell belongs to the room the conversation is in.
+
+### What the tests prove
+
+Eleven mutations, all biting: dropping step 8 from the loop, not stamping the
+zone, letting an unheard address qualify a zone, letting a pending address not
+qualify one, opening a floor for one person alone, refusing one for a person and
+their dog, clearing the utterance index when a floor closes, copying an utterance
+into the target's zone as well, keying nudge suppression without the social
+spell, and reusing a spell when a floor reopens.
 
 ## Memory (3D)
 

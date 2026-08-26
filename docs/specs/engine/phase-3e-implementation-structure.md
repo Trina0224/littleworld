@@ -95,7 +95,7 @@ lastSpeaker       entityId | null
 addressed         entityId | null    who the last utterance was aimed at
 openQuestion      { asker, asked, sinceTick } | null                §10
 quietRounds       integer        consecutive rounds with no taker
-transcript        [Utterance]    bounded working window            §7
+transcript        derived from the fact stream, never stored       §7
 ```
 
 A floor is created when its zone qualifies (§5) and destroyed when it does not.
@@ -113,17 +113,19 @@ addressed         entityId | null      may be a deterministic actor    §8
 heardBy           [entityId]           sorted, server-side only         §7
 ```
 
-**This is a cache, not a record.** Committed `speech_said` facts are the
-authoritative transcript (clarifications §2), so a Floor's copy is derived,
-disposable and rebuildable, and `heardBy` therefore rides on the fact itself
-(clarifications §8.1) rather than living only here. Deleting every Floor's
-working state and rebuilding from facts must produce identical
-`transcriptFor()` output.
+**Not a cache at all, in the end.** Clarifications §2 asks for a transcript that
+is derived, disposable and rebuildable; the implementation went one step further
+and stores no transcript. A per-zone index of positions in the fact stream is
+appended at ingestion and is never cleared when a floor is destroyed, so the
+utterances are read back out of the facts on every call. The rebuild property is
+then true by construction rather than by maintenance — there is nothing to keep
+in step. `heardBy` and `zone` ride on the fact for the same reason
+(clarifications §8.1, §9.2).
 
 ### 2.3 The store
 
 ```text
-createFloors(world, zones, perception, { config })
+createFloors(world, zones, { minds, config })
   tick()                     step 8 of the canonical tick
   offers()                   offers opened this tick; drained by the caller
   transcriptFor(entityId)    rendered for that observer                 §7
@@ -727,7 +729,7 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 3E-3  Floor store (the "3E-2" of pre-floor-corrections §3, which gates it):
       qualification including the cross-zone address clause,
       creation, destruction, ingestion of speech_said with zone
-      and heardBy; transcript as a cache            §2, §5, clar. §2, §9
+      and heardBy; transcript derived    DONE     §2, §5, clar. §2, §9
 3E-4  offer rounds: ranking, batching, rank-decides-the-taker,
       losers commit nothing and lose nothing                  §3, clar. §3, §8.2
 3E-5  quiet, dormancy, social re-arm as a fact-type property  §4, clar. §4, §8.3

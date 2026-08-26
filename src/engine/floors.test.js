@@ -84,7 +84,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   check(floors.floorFor('grandma-01')?.zone === 'park-open',
     'an occupant is not on their own zone floor');
 
-  const spellA = floors.floor('park-open').socialSpell;
+  const spellA = floors.floor('park-open')?.socialSpell ?? -1;
   world.roster('pastor-01', { at: PARK_B });
   world.depart('pastor-01');
   loop.run(6, {});
@@ -95,7 +95,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   loop.run(8, {});
   const withDog = floors.floor('park-open');
   check(withDog !== null, 'a person and their dog opened no floor');
-  check(withDog.socialSpell > spellA, 'reopening reused the old social spell');
+  check(withDog?.socialSpell > spellA, 'reopening reused the old social spell');
 }
 
 // --- §9 a heard cross-zone address qualifies the target's own zone -------
