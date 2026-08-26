@@ -13,6 +13,7 @@ node src/engine/loop.test.js
 node src/engine/perception.test.js
 node src/engine/memory.test.js
 node src/engine/meeting-boundary.test.js
+node src/engine/perception-held-limit.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -40,6 +41,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `perception.test.js` | every leak the 3C spec asks to be proved impossible |
 | `memory.test.js` | that a memory is the rememberer's and nobody else's, and accrues from the loop |
 | `meeting-boundary.test.js` | that knowing of somebody is not having met them |
+| `perception-held-limit.test.js` | that a refused context takes nothing with it |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -149,7 +151,12 @@ they never took, and a sentence addressed to one of them would simply vanish.
 may be dropped at any moment or never; the queued events are what an agent is
 owed, and `held` is bounded by `heldLimit` rather than by `epochHistory` for the
 reason 3C already learned about refs. A caller that never settles is a bug, not a
-load, so exceeding the limit throws — and `perception.test.js` asserts
+load, so exceeding the limit throws — **before** the epoch is created and the
+queue is drained, because the first version of that guard threw afterwards and
+so left the observer's events held under an epochId the caller never received.
+Unreachable forever: the exact failure this step exists to prevent, inside the
+check meant to detect it. A refused `contextFor` is now a true no-op, and
+`perception-held-limit.test.js` asserts it by name — and `perception.test.js` asserts
 `heldCount()` is zero at the end, which is what makes the contract enforceable
 rather than merely stated. 3D needed no change at all: memory reads the queue
 with a cursor and never drains it, so a restored event cannot be ingested twice.
