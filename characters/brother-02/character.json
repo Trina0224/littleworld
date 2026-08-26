@@ -7,5 +7,24 @@
     { "who": "brother-01", "as": "タツ" },
     { "who": "dog-01", "as": "ハナ" }
   ],
-  "_note": "草稿。個性還沒定，見 bible.md。"
+  "social": {
+    "initiative": 0.15,
+    "conversationDrive": 0.30,
+    "curiosity": 0.75,
+    "questionTendency": 0.20,
+    "talkativeness": 0.15,
+    "socialInhibition": 0.85,
+    "persistence": 0.35,
+    "responsiveness": 0.45,
+    "selfDisclosure": 0.30,
+    "topicSwitching": 0.15
+  },
+  "interests": [
+    "畫畫",
+    "攝影",
+    "安靜觀察",
+    "ハナ",
+    "別人容易忽略的小細節"
+  ],
+  "_note": "他不是沒有想法，而是很慢才把話組起來；哥哥經常替他決定事情。social vector 刻意讓他低主動、低話量、高抑制。"
 }
