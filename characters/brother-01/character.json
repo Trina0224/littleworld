@@ -7,5 +7,25 @@
     { "who": "brother-02", "as": "タタ" },
     { "who": "dog-01", "as": "ハナ" }
   ],
+  "social": {
+    "initiative": 0.90,
+    "conversationDrive": 0.85,
+    "curiosity": 0.80,
+    "questionTendency": 0.75,
+    "talkativeness": 0.85,
+    "socialInhibition": 0.10,
+    "persistence": 0.85,
+    "responsiveness": 0.90,
+    "selfDisclosure": 0.70,
+    "topicSwitching": 0.70
+  },
+  "interests": [
+    "機器人",
+    "機械和會動的東西",
+    "玩耍",
+    "ハナ",
+    "吃東西",
+    "拿弟弟開玩笑"
+  ],
   "_note": "appearance 是世界真相，任何看得到他的人都知道，所以不含名字。knows 是種子辨識：他認得誰、叫對方什麼。狗的名字是選的不是記得的，見 bible.md。"
 }
