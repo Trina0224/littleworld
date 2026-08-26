@@ -23,6 +23,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `events.js` | the two streams |
 | `attendance.js` | who is here today |
 | `loop.js` | one tick, in the order the spec says |
+| `hearing.js` | how far a voice carries |
 | `zones.js` | which semantic area a position is in |
 | `perception.js` | the sensory boundary between the world and one Brain |
 | `placement.js` | semantic destination in, physical position out |
@@ -91,6 +92,19 @@ than a coincidence of two empty logs.
 number of **ticks**, never milliseconds, so a bubble expires at the same instant
 live and in replay.
 
+**It also carries who heard it.** How far a voice carries is world physics, so it
+lives in `hearing.js` and `world.hearing` is the only place that answers — 3E
+needs the same question in two more places, and two implementations of one rule
+is where drift hides. `world.say` stamps `heardBy` on the fact while everybody is
+still standing where they were standing, because nothing downstream can work it
+out afterwards: it depends on positions at that tick, and recovering those means
+replaying movement, which is re-simulation. Perception reads the field and throws
+if it is missing; it now only decides what a *near miss* looks like, because
+seeing somebody speak is not hearing the words. `hearingRange` and `soundRange`
+therefore left perception's `DEFAULTS`, and world physics wins over any
+perception config — a package that contradicted the recorded audience would be a
+package about a different world.
+
 ## Perception (3C)
 
 > **The World Engine determines what an agent can perceive. The Agent Brain
@@ -147,6 +161,19 @@ one asserted rather than promised. The leak tests run against the **real**
 character files: a test with invented appearance strings would still pass if the
 engine started reading `bible.md`, so the check that matters takes real sentences
 out of a real bible and a real self sheet and asserts none of them appear.
+
+Seven more came from 3E-1 and all seven bite: `say` stamping an empty audience
+(*A stood beside the speaker and heard nothing*), the speaker listed as their own
+audience, a carrying voice that does not carry, an unsorted `heardBy`, perception
+recomputing instead of reading the record (*perception ignored the committed
+audience and recomputed it*), tolerating a fact with no `heardBy`, and ignoring
+the hearing range entirely.
+
+That fifth one needed a deliberately artificial test, and it is worth saying why:
+a recomputation normally agrees with the record, so nothing would show. The test
+plants a fact whose audience contradicts the geometry — the far listener in, the
+near one out — and asserts perception follows the record. Artificial, and exactly
+the divergence a committed answer exists to prevent.
 
 Fifteen mutations were run to confirm the assertions bite — including making
 perception append a fact, dropping step 6 from the loop, letting the loop observe

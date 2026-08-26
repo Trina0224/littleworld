@@ -262,6 +262,22 @@ above and is not closed by it. §1–§7 are unchanged and still win.
 
 ### 8.1 §2 forces `heardBy` into the fact stream
 
+> **Implemented** in 3E-1. `src/engine/hearing.js`, `world.js`,
+> `perception.js`; proved by the 3E-1 block of `src/engine/perception.test.js`
+> and seven mutations.
+>
+> **One correction, found by building it.** This section and
+> `phase-3e-implementation-structure.md` §7 both said *`perception.canHear`
+> becomes a published pure query*. It cannot be perception's: `world.say`
+> commits the fact, and perception is built **on top of** the world, so the
+> world would have had to depend on it. The predicate moved to `hearing.js`
+> and `world.hearing` is the single home — which is also the truer place for
+> it. Whether an utterance reached somebody is a property of the world at that
+> moment; what they made of it is theirs. `createHearing` is handed only
+> presence and position, so it cannot grow a dependency on anything else, and
+> `hearingRange` / `soundRange` left perception's `DEFAULTS` so that a
+> perception config can never contradict the audience `say` recorded.
+
 §2 requires that destroying the Floor cache and rebuilding it from committed
 facts reproduces the same `transcriptFor()` output. `transcriptFor()` filters by
 `heardBy`. So `heardBy` has to survive the cache being thrown away.

@@ -349,10 +349,17 @@ time without re-running zone containment, and replay must never re-simulate.
 
 ## 7. Transcript and audibility
 
-`heardBy` is computed once, at ingestion, from perception's own predicate:
+`heardBy` is computed once, **at commit**, by the world:
 
-> **`perception.canHear(observerId, speakerId, scope)` becomes a published pure
-> query.** The floor calls it; nothing reimplements distance or scope.
+> **`world.hearing.canHear(observerId, speakerId, scope)` is the single
+> audibility predicate.** The floor calls it; nothing reimplements distance or
+> scope.
+
+An earlier draft of this section put it on perception. Building it showed why it
+cannot be: `world.say` commits the fact and perception is built on top of the
+world, so the world would have had to depend on perception. `hearing.js` is the
+one home, and it is the truer one — how far a voice carries is world physics, and
+what somebody made of hearing it is perception's.
 
 Two implementations of one audibility test is where drift hides — the same
 reasoning that made `zones.json` carry a 300-position sample for the JS to
@@ -670,8 +677,8 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 ```text
 3E-0  the 3D transcript boundary: no episode per utterance, add spokenWith,
       keep the exactly-once cursor                      phase-3d-memory.md 6.1
-3E-1  publish perception.canHear as a pure query; compute heardBy at commit
-      and carry it on speech_said; perception reads it       §7, clar. §8.1
+3E-1  hearing.js as the single audibility predicate; compute heardBy at
+      commit and carry it on speech_said; perception reads it §7, clar. §8.1
 3E-2  move perception delivery from context-built to offer-settled:
       contextFor + settle(epochId, {delivered})              clar. §8.2
 3E-3  Floor store: qualification, creation, destruction, ingestion of
