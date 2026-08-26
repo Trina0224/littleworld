@@ -566,3 +566,116 @@ under §9.4 and chooses.
 7  once she answers or declines, the counter floor is destroyed again
 8  two callers from two zones in one tick produce one Rank 1 slot, not two offers
 ```
+
+---
+
+## 10. The overhearer's invitation
+
+Overhearing is not meeting and not conversing (`phase-3d-memory.md` §2.0.1), and
+§9.4 keeps an overheard conversation out of the overhearer's transcript. Both are
+right, and together they leave a gap worth closing.
+
+### 10.1 The gap
+
+A **same-zone** bystander needs nothing: they are already in that floor's
+ranking, and speaking or not is their choice.
+
+A **cross-zone** overhearer has no path in and, worse, nothing ever prompts them.
+澄子 alone at 吧台 can hear a lively conversation at 近桌 and never once be given
+the chance to think *I should go and see*. §9.6 is explicit that an overheard
+undirected conversation re-arms nothing, so if her floor is dormant she is not
+asked at all.
+
+For this cast that is backwards. 澄子 is running the place and wants to know how
+it is going; 熊田 is there to watch and report back. The two characters most
+likely to walk over are the two the rule silently excludes.
+
+### 10.2 The rule
+
+> **A conversation an actor can hear but is not part of may produce one offer, on
+> that actor's own floor, with `why = overheard`.**
+
+```text
+rank 1   addressed                                              §9.1
+rank 2   openQuestion outstanding                               §9.5
+rank 3   overheard, and everyone else, by socialWeight   structure §3.1
+```
+
+It is a **nudge, not a summons**. Declining is free, costs nothing, and is the
+expected answer most of the time.
+
+### 10.3 Bounded, or it is a bill proportional to how lively the scene is
+
+Unbounded, a twenty-line conversation at 近桌 polls every zone within earshot
+twenty times.
+
+```text
+one overheard nudge per zone per dormancy
+   a floor that declined one is not nudged again by overhearing until it has
+   gone dormant and something else has re-armed it
+a zone may qualify temporarily for this, as it does for an address     §9.3
+   and is destroyed again the moment the offer resolves
+never for an actor already on a floor with an active conversation
+```
+
+The first line is the one that matters, and it is the same shape as the rescue
+budget that §4 removed for the same reason: **you get one "should I go over?" per
+quiet spell, not one per sentence.** In practice that is about one extra call per
+overhearer per conversation.
+
+### 10.4 What the offer may contain
+
+The overhearer is not standing on that floor, so they cannot take its turn:
+
+```text
+allowed    approach / go to that area           placement.js already does this
+allowed    a loud directed call across          -> becomes an address, and §9
+                                                   handles the handoff properly
+allowed    nothing
+NOT        reply / ask into a floor you are not standing in
+```
+
+That last line is the principled closure. **To take part in a conversation you
+either go there, or you address somebody directly** — and a direct address across
+a boundary already has a defined, tested route. Nothing new is needed, and no
+utterance ever belongs to two floors.
+
+Accepting is therefore a *movement*, and arrival does the rest: walking into the
+zone is joining (structure §5), with no membership mechanism anywhere.
+
+### 10.5 What it does not change
+
+```text
+memory        overhearing still creates no encounter and no spokenWith
+transcript    §9.4 unchanged - the overheard lines stay out of the transcript
+              and reach the Brain as perception, which is what they are
+facts         no new fact; the nudge is an offer, and offers are audit
+membership    unchanged; nobody joins anything by hearing it
+```
+
+The offer's context is the overhearer's ordinary perception package. They know
+somebody nearby is talking because `speech_heard` says so, at whatever fidelity
+distance allows — which is also why a conversation too far off to make out
+produces `sound_heard` and no nudge at all.
+
+### 10.6 Determinism
+
+The nudge is derived from committed facts (`speech_said` and its `heardBy`) and
+from floor state, both of which are deterministic. The per-dormancy bound is a
+flag on the floor, not a timer. Ordering is the ordinary rank order, and the
+overhearer's own zone is the only floor that can offer to them (§9.7).
+
+### 10.7 Required tests
+
+```text
+1  a conversation at 近桌 produces at most one overheard offer at 吧台 across its
+   whole length
+2  declining it produces no second offer until that floor has gone dormant and
+   been re-armed by something else
+3  the overheard offer's menu contains no reply/ask into the other floor
+4  approaching, then arriving, puts the actor in the other zone's next round with
+   no join action anywhere
+5  an actor already in an active conversation is never nudged
+6  a conversation too far off to make out (sound_heard) produces no nudge
+7  memory is untouched: the overhearer gains no encounter and no spokenWith
+```

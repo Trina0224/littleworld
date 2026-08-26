@@ -226,15 +226,22 @@ amounts to. It lives inside the open encounter, so it needs nothing from 3E, and
 `buildContext` renders it as `timesSpoken` because a counter nothing can read is
 write-only.
 
-**Exchanged is narrower than heard, and a review found the first version got it
-wrong.** Counting any heard utterance gave 星さん conversational history with the
+**A meeting opens on proximity, or on a directed utterance that landed. Nothing
+else.** Two review passes narrowed this. The first version counted any heard
+utterance as a conversation, which gave 星さん conversational history with the
 pastor for sitting near him while he talked to 渡辺 — not an over-count but a
-different relationship, and a number the Brain reads as *we have spoken four
-times* has to mean it. So the rule sits on the perceived event rather than on
-anything semantic: `direct_address` and `own_speech_directed` count,
-`speech_heard` and `sound_heard` do not. Overhearing is still **contact** — a
-voice 55 units away is being in the same place as somebody — it is only not an
-exchange.
+different relationship. The second kept overhearing as a *meeting*, and that was
+wrong too: **you can hear somebody across a park all afternoon and never have met
+them.** So an overheard voice now creates no person model at all, and the rule
+sits on the perceived event rather than on anything semantic — `direct_address`
+and `own_speech_directed` count, `speech_heard` and `sound_heard` do nothing.
+
+Standing beside a conversation is still a meeting with the people in it, because
+standing beside somebody is; that is the proximity rule doing its ordinary work,
+not the words. And the code has one set rather than two, which is not a
+coincidence to tidy away later: every speech-derived meeting is an exchange,
+because the only speech that reaches this layer is speech that passed between the
+two.
 
 That needed a new perceived event, because perception was silent about your own
 speech and so half of *we have spoken* was unobservable: the person spoken to
@@ -339,17 +346,20 @@ because a mutation that passes is not evidence:
   were genuine no-ops, which is the argument for having removed the redundant
   gates rather than the argument for keeping them.
 
-Six more came from the review that narrowed `spokenWith`, and all six bite:
+Seven more came from the two reviews that narrowed what a meeting is, and all
+seven bite — including overhearing opening one (*overhearing a voice across the
+park counted as having met the speaker*):
 counting `speech_heard` as an exchange (*overhearing one man address another
 counted 1 conversations*), never recording the speaker's own side (*addressing
 somebody counted 0*), counting an address nobody heard, counting nothing at all,
 counting only one direction, and dropping `speech_heard` from contact
 (*hearing a voice 55 units away was not contact at all*).
 
-That last one needed the test moved further away before it bit: the bystander was
-standing inside `nearRange`, so proximity opened the encounter anyway and hearing
-was doing no work. It is now asserted at 55 units — outside the near sweep,
-inside hearing — by somebody with no seeded knowledge of the speaker.
+The distance mattered and the test had to be moved to find it. The bystander
+originally stood inside `nearRange`, so proximity opened the encounter and the
+speech rule was doing no work either way. Moved to 55 units — outside the near
+sweep, inside hearing — it first proved the wrong thing, and then proved the
+right one.
 
 Seven more came from 3E-0, the step that removed the per-utterance episode:
 

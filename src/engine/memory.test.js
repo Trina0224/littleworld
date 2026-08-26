@@ -400,9 +400,9 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
     `a second meeting with words counted ${fourth?.encounters}/${fourth?.spokenWith}`);
 }
 
-// --- 11.18  overhearing is not conversing ---
+// --- 11.18  overhearing is neither meeting nor conversing ---
 {
-  const { world, memory, loop } = setup();
+  const { world, memory, perception, loop } = setup();
   world.spawn('pastor-01', [470, 262]);        // speaks
   world.spawn('man-01', [476, 264]);           // is spoken to
   world.spawn('grandma-01', [482, 262]);       // is merely standing there
@@ -422,6 +422,8 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   check(by?.encounters >= 1, 'standing next to a conversation was not even a meeting');
   check(by?.spokenWith === 0,
     `overhearing one man address another counted ${by?.spokenWith} conversations`);
+  // She is near him, so the meeting came from proximity. It must not have come
+  // from the words, or the two would be indistinguishable.
   check(memory.recall('grandma-01', 'man-01')?.spokenWith === 0,
     'overhearing counted a conversation with the person spoken to, either');
 
@@ -431,11 +433,11 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   check(memory.recall('grandma-01', 'pastor-01')?.spokenWith === 0,
     'a remark to the room counted as a conversation');
 
-  // Hearing IS contact, even at a distance proximity never reaches. ユキ stands
-  // 55 units off - too far for the near-range sweep, well inside hearing - and
-  // she has no seeded knowledge of the pastor, so any model of him came from
-  // this. Hearing somebody's voice is being in the same place as them. It is
-  // only not an exchange.
+  // Overhearing is not meeting. ユキ stands 55 units off - too far for the
+  // near-range sweep, well inside hearing - with no seeded knowledge of the
+  // pastor. She hears every word he says to 渡辺 and she has still never met
+  // him, which is true of hearing somebody across a park. The words reach her as
+  // perception and leave no trace here at all.
   world.spawn('woman-01', [525, 262]);
   check(memory.recall('woman-01', 'pastor-01') === null, 'the test premise is wrong: seeded');
   loop.run(120, { beforeTick: (t) => {
@@ -443,10 +445,18 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   } });
   const said = world.log.facts.filter((e) => e.type === 'speech_said').at(-1);
   check(said.heardBy.includes('woman-01'), 'the test premise is wrong: she did not hear it');
-  const far = memory.recall('woman-01', 'pastor-01');
-  check(far !== null, 'hearing a voice 55 units away was not contact at all');
-  check(far?.encounters >= 1, 'overhearing from outside near range was not a meeting');
-  check(far?.spokenWith === 0, `overhearing at a distance counted ${far?.spokenWith}`);
+  check(memory.recall('woman-01', 'pastor-01') === null,
+    'overhearing a voice across the park counted as having met the speaker');
+  check(memory.episodesFor('woman-01').length === 0,
+    'overhearing produced an episode');
+  // But she did perceive it - it is an observation, not a non-event.
+  check(perception.pendingFor('woman-01').some((e) => e.kind === 'speech_heard'),
+    'the overheard words never reached her at all, which is the opposite bug');
+
+  // Standing beside the same conversation IS a meeting, because standing beside
+  // somebody is. 星さん is 12 units from the pastor.
+  check(memory.recall('grandma-01', 'pastor-01')?.encounters >= 1,
+    'standing beside a conversation was not a meeting');
 }
 
 // --- an address nobody heard is not an exchange (floor-clarifications 1) ---

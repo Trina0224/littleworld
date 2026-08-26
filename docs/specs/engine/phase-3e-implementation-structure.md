@@ -148,6 +148,7 @@ it happens to be, answers it. So the order is:
 1  whoever the last utterance addressed
 2  whoever has an unanswered question of their own outstanding    §10
 3  everyone else, ranked by socialWeight(traits, situation)       §11
+   - including an overhearer being nudged once  clarifications §10
 4  ties broken by hash01(seed:zone:round:entityId)
 ```
 
@@ -265,6 +266,8 @@ somebody arrives in / leaves the zone
 a SEAT became occupied or released         not a station
 a directed utterance whose target is HERE and in its heardBy   clarifications §9.6
    - including one spoken in another zone
+a conversation audible from here that nobody here is part of  clarifications §10
+   - ONCE per dormancy, never for an actor already in a conversation
 a loud utterance audible from here
 an order was placed / service was requested                    3F-A
 an addressable animal did something notable                    §8
@@ -298,6 +301,7 @@ A zone qualifies for a floor when it holds:
 two or more LLM actors
 or one LLM actor and at least one addressable deterministic actor          §8
 or one LLM actor holding a pending heard direct address     clarifications §9.3
+or one LLM actor with an unspent overheard nudge            clarifications §10.3
 ```
 
 The third clause is temporary and self-clearing: a zone that qualified only
@@ -382,6 +386,12 @@ reproduce. `heardBy` is server-side, never model-visible, and reaches a Brain
 only as the *absence* of a line from that observer's rendered transcript.
 
 ### 7.0 What an observer's transcript contains
+
+An overheard conversation stays **out** of it and reaches the Brain as
+perception, which is what it is. That is not a dead end: clarifications §10 gives
+the overhearer one offer, once per dormancy, to walk over — and walking in is
+joining, so nothing new is needed once they arrive.
+
 
 > **The recent utterances the observer heard, that either belong to the
 > observer's own floor, or were spoken by or addressed to the observer.**

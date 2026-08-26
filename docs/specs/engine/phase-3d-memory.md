@@ -98,12 +98,28 @@ Brain reads as *we have spoken four times* has to mean it.
 
 The rule is stated on the two perceived events rather than on anything semantic:
 
-| perceived event | means | counts |
-|---|---|---|
-| `direct_address` | this entity addressed **me**, and I heard it | **yes** |
-| `own_speech_directed` | **I** addressed this entity, and they heard it | **yes** |
-| `speech_heard` | words passed near me, between other people | no |
-| `sound_heard` | a voice I could not make out | no |
+| perceived event | means | encounter | spokenWith |
+|---|---|---|---|
+| `direct_address` | this entity addressed **me**, and I heard it | **yes** | **yes** |
+| `own_speech_directed` | **I** addressed this entity, and they heard it | **yes** | **yes** |
+| `speech_heard` | words passed near me, between other people | no | no |
+| `sound_heard` | a voice I could not make out | no | no |
+
+**Overhearing is not meeting either.** You can hear somebody across a park all
+afternoon and never have met them, so hearing a voice opens no encounter and
+creates no person model at all. What opens a meeting is **proximity**, or a
+directed utterance that landed — and nothing else. Standing beside a conversation
+is still a meeting with the people in it, because standing beside somebody is;
+that is the proximity rule doing its ordinary work, not the words.
+
+The two columns above are therefore identical, and the implementation has one
+set rather than two. That is not a coincidence to be tidied away later: every
+speech-derived meeting is an exchange, because the only speech that reaches this
+layer at all is speech that passed between the two.
+
+An overheard conversation is not a non-event. It reaches the Brain as perception,
+which is what it is, and `phase-3e-floor-clarifications.md` §10 gives the
+overhearer one chance to decide whether to walk over.
 
 Both directions count, because a directed utterance somebody heard is an
 exchange from both ends — 菅野 talking at 渡辺 for a fortnight is part of 菅野's
@@ -441,6 +457,9 @@ life out of the character.
 17. Standing near someone and talking to them are distinguishable: `encounters`
     counts the meeting, `spokenWith` counts only the meetings words passed in,
     and neither inflates when an utterance sits in the queue.
-18. Overhearing is not conversing: an observer who hears one entity address a
-    third gains an encounter with the speaker and **no** `spokenWith`, in the
-    same tick that both participants gain one.
+18. Overhearing is neither meeting nor conversing: an observer beyond
+    `nearRange` who hears one entity address a third gains **no person model at
+    all**, in the same tick that both participants gain an encounter and a
+    `spokenWith` — and the words still reach that observer as perception.
+19. Standing beside a conversation is still a meeting with its participants, from
+    proximity and not from the words.

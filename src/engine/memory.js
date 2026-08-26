@@ -90,16 +90,21 @@ export const DEFAULTS = {
 };
 
 /**
- * Which perceived events say these two were in contact at all, and which of them
- * say words passed BETWEEN the two.
+ * The perceived events that mean words passed BETWEEN these two.
  *
- * `speech_heard` is in the first set and not the second: hearing somebody speak
- * puts you in the same place as them and does not make it a conversation.
+ * There is deliberately only one set. An earlier version had a wider one for
+ * "contact" that included `speech_heard`, so hearing a voice across the park
+ * counted as having met - and it does not. You can hear somebody in a park all
+ * afternoon and never meet them. Overhearing is perception, and stays perception.
+ *
  * `own_speech_directed` is perception telling a speaker that the person they
  * addressed heard it, which is the other half of an exchange and was invisible
- * before 3E-0's review found it missing.
+ * until 3E-0's review found it missing.
+ *
+ * So a meeting opens on PROXIMITY or on a landed directed utterance, and nothing
+ * else - and every speech-derived meeting is also an exchange, which is why one
+ * set is enough.
  */
-const CONTACT = new Set(['speech_heard', 'direct_address', 'own_speech_directed']);
 const EXCHANGED = new Set(['direct_address', 'own_speech_directed']);
 
 /**
@@ -295,17 +300,17 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
           if (e.seq <= high) continue;
           high = e.seq;
           if (!e.entityId || e.entityId === observerId) continue;
-          if (!CONTACT.has(e.kind)) continue;
-          // Contact, and nothing else. The words themselves belong to the
+          // EXCHANGED is much narrower than HEARD, and the difference is the
+          // whole point. Words that passed BETWEEN the two are a meeting and a
+          // conversation. Words merely overheard are neither: they are an
+          // observation, they reach the Brain as perception, and they leave no
+          // trace here at all (phase-3d-memory.md 2.0.1).
+          //
+          // The words themselves are not stored either way. They belong to the
           // conversation transcript (3E) and to the fact stream, which is where
           // replay and the offline script pass read them from.
-          //
-          // EXCHANGED is narrower than HEARD, and the difference is the whole
-          // point of the field. Sitting near the pastor while he talks to 渡辺
-          // is a meeting with the pastor; it is not a conversation with him, and
-          // a count the Brain reads as "we have spoken four times" has to mean
-          // it (phase-3d-memory.md 2.0.1).
-          observe(observerId, e.entityId, e.t, { words: EXCHANGED.has(e.kind) });
+          if (!EXCHANGED.has(e.kind)) continue;
+          observe(observerId, e.entityId, e.t, { words: true });
         }
         consumed.set(observerId, high);
       }
