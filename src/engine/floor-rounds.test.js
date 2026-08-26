@@ -100,7 +100,7 @@ function drive(loop, floors, n, policy = () => 'decline') {
 
   // Everyone wants to speak, and the lowest-ranked answers first.
   const order = offers.map((o) => o.entityId);
-  for (const id of [...order].reverse()) floors.commit(id, { speak: `${id} speaks` });
+  for (const id of [...order].reverse()) floors.commit(id, { pick: 'address_group', text: `${id} speaks` });
   const heldBefore = offers.map((o) => o.epochId);
   step(loop, floors);
 
@@ -134,7 +134,7 @@ function drive(loop, floors, n, policy = () => 'decline') {
 
   for (const o of offers) {
     if (o.entityId === 'grandma-01') floors.decline(o.entityId);
-    else floors.commit(o.entityId, { speak: `${o.entityId} replies` });
+    else floors.commit(o.entityId, { pick: 'address_group', text: `${o.entityId} replies` });
   }
   const next = step(loop, floors);
 
@@ -267,7 +267,7 @@ function drive(loop, floors, n, policy = () => 'decline') {
       return 'decline';
     }
     lines += 1;
-    return { speak: `line ${lines}` };
+    return { pick: 'address_group', text: `line ${lines}` };
   });
   check(lines >= 10, `the test premise is wrong: only ${lines} lines were spoken`);
   check(floors.floor('near-table')?.state !== 'dormant',

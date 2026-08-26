@@ -238,8 +238,9 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
  * Compose sanitized perception with only this observer's own recognition.
  * Internal ids remain server-side joins and never enter the model-visible data.
  */
-export function buildContext(perception, memory, observerId) {
+export function buildContext(perception, memory, observerId, floors = null) {
   const ctx = perception.contextFor(observerId);
+  const refOf = new Map([...ctx.refs].map(([ref, id]) => [id, ref]));
   for (const v of ctx.forModel.sensoryState.visible) {
     const p = memory.recall(observerId, ctx.refs.get(v.ref));
     if (!p) continue;
@@ -252,5 +253,31 @@ export function buildContext(perception, memory, observerId) {
     .slice(-8)
     .map((e) => ({ kind: e.kind, gist: e.gist }))
     .filter((e) => e.gist);
+  if (floors) {
+    ctx.forModel.conversation = floors.utterancesFor(observerId)
+      .map((u) => ({
+        said: u.text,
+        speaker: name(u.speaker),
+        ...(u.addressed ? { to: name(u.addressed) } : {})
+      }));
+  }
   return ctx;
+
+  /**
+   * Who a transcript line is by, said safely. The ordered fallback of
+   * phase-3e-implementation-structure.md 7.2, which is 3D's label rule applied
+   * to history: never the target's canonical name, never an entity id, and never
+   * a fallback that reaches for either because the first four were inconvenient.
+   */
+  function name(entityId) {
+    if (entityId === observerId) return 'you';
+    const p = memory.recall(observerId, entityId);
+    if (p?.label) return p.label;
+    const ref = refOf.get(entityId);
+    if (ref) {
+      const v = ctx.forModel.sensoryState.visible.find((x) => x.ref === ref);
+      return v ? { ref, looks: v.appearance } : 'somebody';
+    }
+    return 'somebody';
+  }
 }

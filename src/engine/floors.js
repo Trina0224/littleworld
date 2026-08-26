@@ -10,8 +10,24 @@
 import { SOCIAL_FACTS } from './events.js';
 import { SEAT } from './resources.js';
 
+/**
+ * Transport is derived from the act and never read from a model's reply
+ * (phase-3e-conversation.md 4.1). A model that could set `scope` would
+ * gradually make every conversation scene-wide.
+ */
+export const ACTS = {
+  greet: { target: true, scope: 'normal' },
+  reply: { target: true, scope: 'normal' },
+  ask: { target: true, scope: 'normal', asks: true },
+  change_topic: { target: true, scope: 'normal' },
+  address_group: { target: false, scope: 'normal' },
+  call_across: { target: true, scope: 'broadcast' },
+  nothing: { target: false, scope: null, silent: true }
+};
+
 export const DEFAULTS = {
   transcriptWindow: 12,
+  speechLimit: 240,
   addressExpiry: 200,      // how long an unanswered heard address keeps a zone qualified
   offerExpiry: 400,        // an offer nobody answers becomes a decline
   batch: 3,                // K when the floor is open; 1 when there is an addressee
@@ -32,11 +48,12 @@ function hash01(text) {
 }
 
 const ADDRESSED = 3000;
+const ASKED = 2000;
 const OVERHEARD = 1500;
 const ORDINARY = 1000;
 
 export function createFloors(world, zones, perception, {
-  minds, config = {}, weigh = null
+  minds, config = {}, weigh = null, makeContext = null
 } = {}) {
   if (minds === undefined) {
     throw new Error('createFloors needs an explicit `minds` set: who can hold a floor');
@@ -48,6 +65,7 @@ export function createFloors(world, zones, perception, {
   const spoken = new Map();          // zoneId -> indices into world.log.facts
   const pendingAddress = new Map();  // entityId -> { tick, from, zone }
   const spent = new Set();           // `${observer}|${sourceZone}|${sourceSpell}`
+  const recorded = new Set();        // fact indices already folded into a floor
   const opened = [];                 // offers opened this tick, drained by offers()
   let spell = 0;
   let factCursor = 0;
@@ -105,8 +123,8 @@ export function createFloors(world, zones, perception, {
     floors.set(zoneId, {
       zone: zoneId, socialSpell: spell, state: 'open',
       round: 0, quietRounds: 0,
-      lastSpeechTick: null, lastSpeaker: null, addressed: null,
-      offeredTo: [], offeredAt: null, why: new Map(),
+      lastSpeechTick: null, lastSpeaker: null, addressed: null, openQuestion: null,
+      offeredTo: [], offeredAt: null, why: new Map(), menus: new Map(),
       asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map()
     });
     world.log.note(world.tick, 'floor_opened', { zone: zoneId, spell });
@@ -156,7 +174,8 @@ export function createFloors(world, zones, perception, {
   }
 
   function record(e, index) {
-    if (!e.zone) return;
+    if (!e.zone || recorded.has(index)) return;
+    recorded.add(index);
     const list = spoken.get(e.zone) ?? [];
     list.push(index);
     spoken.set(e.zone, list);
@@ -189,6 +208,7 @@ export function createFloors(world, zones, perception, {
 
   function rankOf(f, entityId) {
     if (pendingAddress.has(entityId) || f.addressed === entityId) return ADDRESSED;
+    if (f.openQuestion?.asker === entityId) return ASKED;
     if (nudgeSource(entityId)) return OVERHEARD;
     return ORDINARY + (weigh ? weigh(entityId, { zone: f.zone, round: f.round }) : 0);
   }
@@ -227,12 +247,47 @@ export function createFloors(world, zones, perception, {
       const why = rankOf(f, id) === ADDRESSED ? 'addressed'
         : source ? 'overheard' : 'open_floor';
       if (why === 'overheard') spent.add(`${id}|${source}|${floors.get(source).socialSpell}`);
-      const ctx = perception.contextFor(id);
+      const ctx = makeContext ? makeContext(id) : perception.contextFor(id);
+      const menu = menuOf(id, ctx);
       f.epochs.set(id, ctx.epochId);
       f.why.set(id, why);
-      opened.push({ entityId: id, zone: f.zone, round: f.round, why, epochId: ctx.epochId, context: ctx });
+      f.menus.set(id, menu);
+      ctx.forModel.choices = menu;
+      opened.push({
+        entityId: id, zone: f.zone, round: f.round, why,
+        epochId: ctx.epochId, context: ctx, menu
+      });
       world.log.note(world.tick, 'floor_offered', { zone: f.zone, agent: id, why });
     }
+  }
+
+  /**
+   * The legal choices for this moment. A Brain selects one of these strings; it
+   * never authors an action, a scope, an id or a coordinate.
+   */
+  function menuOf(entityId, ctx) {
+    const mine = zoneOf(entityId);
+    const menu = ['nothing'];
+    let anyHere = false;
+    for (const v of ctx.forModel.sensoryState.visible) {
+      const target = ctx.refs.get(v.ref);
+      if (!target || !llm.has(target)) continue;
+      if (zoneOf(target) === mine) {
+        anyHere = true;
+        for (const act of ['reply', 'ask', 'greet', 'change_topic']) menu.push(`${act}:${v.ref}`);
+      } else if (world.hearing.canHear(target, entityId, 'broadcast')) {
+        // You may go there or call across, never take a floor you do not stand
+        // on (floor-clarifications 10.4).
+        menu.push(`call_across:${v.ref}`);
+      }
+    }
+    if (anyHere) menu.push('address_group');
+    return menu;
+  }
+
+  function refuse(entityId, reason, pick) {
+    world.log.note(world.tick, 'floor_refused', { agent: entityId, reason, pick });
+    return { refused: reason };
   }
 
   function resolve(f) {
@@ -253,11 +308,28 @@ export function createFloors(world, zones, perception, {
     f.offeredTo = [];
     f.claims.clear();
     f.declines.clear();
+    f.menus.clear();
     f.state = 'open';
 
     if (!winner) return;                                 // all declined: try the next batch
     pendingAddress.delete(winner);
-    world.say(winner, said.speak, said.to ? { to: said.to } : {});
+    if (said.asks && said.target) {
+      f.openQuestion = { asker: winner, asked: said.target, sinceTick: world.tick };
+    } else if (said.act === 'reply') {
+      // The question lives on the ASKER's floor, which may not be this one.
+      for (const other of floors.values()) {
+        if (other.openQuestion?.asked === winner
+            && other.openQuestion.asker === said.target) other.openQuestion = null;
+      }
+    }
+    world.say(winner, said.speak, { scope: said.scope, to: said.target ?? null });
+    // Fold it in now rather than next tick. The offer that follows in this same
+    // tick has to know who was just spoken to, or the person who owes an answer
+    // is asked as one of a crowd (floor-clarifications 9.1). Ingestion dedupes,
+    // so the ordinary pass still handles waking a dormant zone elsewhere.
+    const i = world.log.facts.length - 1;
+    registerAddress(world.log.facts[i]);
+    record(world.log.facts[i], i);
     f.round += 1;
     f.quietRounds = 0;
     f.asked.clear();
@@ -270,6 +342,10 @@ export function createFloors(world, zones, perception, {
     tick() {
       for (const [id, a] of [...pendingAddress.entries()].sort()) {
         if (world.tick - a.tick > cfg.addressExpiry) pendingAddress.delete(id);
+      }
+      for (const f of floors.values()) {
+        const q = f.openQuestion;
+        if (q && !world.hearing.canHear(q.asked, q.asker, 'normal')) f.openQuestion = null;
       }
 
       const facts = world.log.facts;
@@ -309,12 +385,35 @@ export function createFloors(world, zones, perception, {
      * the batch speaks and every other claim is a counterfactual that commits
      * nothing (clarifications 3).
      */
-    commit(entityId, { speak, to = null } = {}) {
+    commit(entityId, { pick, text = null } = {}) {
       const f = floors.get(zoneOf(entityId));
-      if (!f || !f.offeredTo.includes(entityId)) return false;
-      if (typeof speak !== 'string' || !speak) return false;
-      f.claims.set(entityId, { speak, to });
-      return true;
+      if (!f || !f.offeredTo.includes(entityId)) {
+        return refuse(entityId, 'no offer outstanding', pick);
+      }
+      if (!f.menus.get(entityId)?.includes(pick)) {
+        return refuse(entityId, 'not a choice this offer supplied', pick);
+      }
+      const [name, ref] = String(pick).split(':');
+      const act = ACTS[name];
+      if (act.silent) { this.decline(entityId); return { act: name, spoken: false }; }
+
+      const target = ref ? perception.resolve(f.epochs.get(entityId), ref) : null;
+      if (act.target && !target) return refuse(entityId, 'a stale ref', pick);
+      if (typeof text !== 'string' || !text.trim()) {
+        return refuse(entityId, 'the act needs words and none arrived', pick);
+      }
+      f.claims.set(entityId, {
+        act: name, target, scope: act.scope, asks: !!act.asks,
+        // Truncated, never rejected: a model that ran long has not malfunctioned.
+        speak: text.slice(0, cfg.speechLimit)
+      });
+      return { act: name, target, spoken: true };
+    },
+
+    /** The choices this actor's current offer supplied, or null. */
+    menuFor(entityId) {
+      const f = floors.get(zoneOf(entityId));
+      return f?.menus.get(entityId)?.slice() ?? null;
     },
 
     decline(entityId) {
@@ -354,6 +453,38 @@ export function createFloors(world, zones, perception, {
       });
     },
 
+    /**
+     * The utterances this observer may be shown: heard, and either on their own
+     * floor or spoken by or to them (floor-clarifications 9.4). An overheard
+     * conversation next door reaches them as perception, which is what it is.
+     *
+     * Server-side - it carries entity ids. Rendering it safely is the context
+     * builder's job, because only that knows the refs and this observer's own
+     * memory.
+     */
+    utterancesFor(entityId, limit = cfg.transcriptWindow) {
+      const mine = zoneOf(entityId);
+      const facts = world.log.facts;
+      const seen = [];
+      for (const [zoneId, list] of [...spoken.entries()].sort()) {
+        for (const i of list) {
+          const e = facts[i];
+          if (e.agent !== entityId && !e.heardBy.includes(entityId)) continue;
+          if (zoneId !== mine && e.agent !== entityId && e.to !== entityId) continue;
+          seen.push({
+            tick: e.t, speaker: e.agent, text: e.text,
+            addressed: e.to ?? null, zone: zoneId
+          });
+        }
+      }
+      return seen.sort((a, b) => a.tick - b.tick || (a.speaker < b.speaker ? -1 : 1))
+        .slice(-limit);
+    },
+
+    openQuestionIn(zoneId) {
+      return floors.get(zoneId)?.openQuestion ?? null;
+    },
+
     pendingAddressFor(entityId) {
       return pendingAddress.get(entityId) ?? null;
     },
@@ -378,6 +509,7 @@ export function createFloors(world, zones, perception, {
     rebuild() {
       for (const zoneId of [...floors.keys()]) close(zoneId);
       spoken.clear();
+      recorded.clear();
       pendingAddress.clear();
       opened.length = 0;
       factCursor = 0;
