@@ -12,5 +12,28 @@
     { "who": "grandpa-01", "as": "小野さん" },
     { "who": "shopkeeper-01", "as": "店の子" }
   ],
-  "_note": "她認得這條街上每一個人。knows 只列會用到的。"
+  "social": {
+    "initiative": 0.90,
+    "conversationDrive": 0.95,
+    "curiosity": 0.90,
+    "questionTendency": 0.90,
+    "talkativeness": 0.90,
+    "socialInhibition": 0.05,
+    "persistence": 0.90,
+    "responsiveness": 0.90,
+    "selfDisclosure": 0.80,
+    "topicSwitching": 0.75
+  },
+  "interests": [
+    "料理",
+    "裁縫",
+    "養蠶和以前的生活",
+    "書道",
+    "插花",
+    "茶道",
+    "語言課",
+    "街坊近況",
+    "家人和孩子"
+  ],
+  "_note": "她認得這條街上每一個人。knows 只列會用到的。她是整個 cast 最強的自然 conversation driver 之一，這是人設而不是 engine 強迫。"
 }
