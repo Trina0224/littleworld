@@ -2,8 +2,8 @@
 
 **Status:** implementation contract / character-data baseline  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
-**Updated:** 2026-08-25 — bound to active Phase 3E conversation contract  
-**Companion to:** `character-identity.md`, `phase-3d-memory.md`, `phase-3e-conversation.md`
+**Updated:** 2026-08-25 — offered-floor ranking ownership clarified  
+**Companion to:** `character-identity.md`, `phase-3d-memory.md`, `phase-3e-conversation.md`, `phase-3e-implementation-structure.md`, `phase-3e-floor-clarifications.md`
 
 This document defines the stable machine-readable social traits carried by each LLM character.
 
@@ -122,13 +122,21 @@ This asymmetry is a feature. Some conversations should flourish and some should 
 
 ## 6. Binding Phase 3E use
 
-`phase-3e-conversation.md` is now the active consumer of these traits.
+`phase-3e-conversation.md`, `phase-3e-implementation-structure.md`, and `phase-3e-floor-clarifications.md` are the active consumers of these traits.
 
 Phase 3E uses the vector in two distinct ways rather than expecting the model to obey raw numbers by itself.
 
-### Engine / later scheduler-facing traits
+### 6.1 3E owns offered-floor personality ranking
 
-These traits may affect the eligibility/weight of optional social opportunities:
+The offered-floor architecture has an immediate consumer for the social vector: the pure deterministic function
+
+```text
+socialWeight(traits, situation)
+```
+
+used to rank otherwise-eligible characters inside one zone after direct-addressee and open-question priority.
+
+Traits most relevant to that floor ranking include:
 
 ```text
 initiative
@@ -139,14 +147,37 @@ persistence
 
 Examples:
 
-- high `initiative` may make a character more eligible to start a conversation when a real opening exists;
-- high `conversationDrive` may make a character more eligible for a `conversation_fading` wake reason;
-- high `socialInhibition` suppresses unsolicited approaches, especially to strangers;
-- high `persistence` means one weak response does not immediately make the session ineligible to continue.
+- high `initiative` raises a character under an genuinely open floor;
+- high `conversationDrive` makes that character more likely to be offered an unclaimed conversational opening;
+- high `socialInhibition` lowers unsolicited social priority, especially with strangers;
+- high `persistence` makes one weak response less likely to push the character toward the bottom of a continuing exchange.
 
-The full concurrency/priority policy remains Phase 3F-B scheduler work. Phase 3E establishes the conversation state and wake reasons it will consume.
+`socialWeight()` belongs to **Phase 3E** because it decides who should get the conversational floor. It must be pure and deterministic: no provider arrival timing, no wall clock, no shared RNG stream, and no hidden mutation.
 
-### Brain-facing traits
+Low traits are permissions not to act, not defects to repair. In particular, 渡辺's low social drive must remain visible in the ranking rather than being compensated away for UX reasons.
+
+### 6.2 3F-B owns infrastructure scheduling, not a second personality policy
+
+Phase 3F-B owns:
+
+```text
+global concurrency
+provider/API queues
+cross-zone and cross-system request priority
+rate limits / quotas
+retries and provider timeouts
+defer/drop policy under global budget pressure
+```
+
+3F-B may delay or decline to service a 3E offer because infrastructure is busy, but it must not silently rerank characters inside a zone with a second social policy.
+
+Conversely, 3E must not grow quota/concurrency logic merely because it creates offers.
+
+> **3E decides who should get the conversational floor. 3F-B decides when infrastructure can service that offer.**
+
+See `phase-3e-floor-clarifications.md` §5 for the binding ownership split.
+
+### 6.3 Brain-facing traits
 
 All ten traits plus `interests` may affect the derived natural-language guidance shown to the Brain.
 
@@ -174,10 +205,10 @@ When Phase 3E/3F-B eventually exercises these values, validation should be stati
 Useful assertions include:
 
 ```text
-星さん initiates more often than 渡辺 under equal opportunity
+星さん ranks above 渡辺 under otherwise-equal open-floor conditions
 タタ produces less/shorter voluntary speech than 菅野 under equal opportunity
 草野 can show high curiosity without becoming a high-initiative speaker
 渡辺 remains allowed to let a conversation die
 ```
 
-If real-model trials later show no meaningful behavioral separation, strengthen the derived guidance or scheduler weighting. Do not rewrite the characters toward a common middle merely to make the test easier.
+If real-model trials later show no meaningful behavioral separation, strengthen the derived guidance or 3E floor weighting. Do not rewrite the characters toward a common middle merely to make the test easier.
