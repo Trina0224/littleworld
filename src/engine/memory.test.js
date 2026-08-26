@@ -272,27 +272,29 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   check(p.lastSeenTick === null, 'a note claimed the two had just been together');
 }
 
-// --- a queued utterance is remembered exactly once, and is still delivered ---
+// --- an utterance is ingested exactly once, writes no episode, still delivered ---
 {
   const { world, memory, perception, loop } = setup();
   world.spawn('grandma-01', [470, 262]);
   world.spawn('man-01', [478, 264]);
   loop.run(5, {});
   world.say('man-01', 'こんにちは', { to: 'grandma-01' });
-  // Long enough that a per-tick re-read of the queue would remember it 200 times.
+  // Long enough that a per-tick re-read of the queue would ingest it 200 times.
   loop.run(205, {});
 
-  const heard = memory.episodesFor('grandma-01')
-    .filter((e) => e.gist === 'こんにちは');
-  check(heard.length === 1, `one utterance was remembered ${heard.length} times`);
+  // 11.16 the engine writes exactly one kind of episode, and this is not it.
+  const engineWrote = memory.episodesFor('grandma-01').filter((e) => e.kind !== 'first_meeting');
+  check(engineWrote.length === 0,
+    `the engine wrote ${engineWrote.length} episodes it may not: `
+    + `${engineWrote.map((e) => e.kind)}`);
+  check(!JSON.stringify(memory.episodesFor('grandma-01')).includes('こんにちは'),
+    'a heard sentence became a long-term episode');
 
-  // The same event re-read every tick used to drag lastSeenTick backwards to the
-  // tick it was spoken on, so the next tick's proximity looked like a fresh
-  // meeting after a long gap - and encounters climbed by one a tick for as long
-  // as the words sat in the queue. One meeting, one count.
-  check(memory.recall('grandma-01', 'man-01')?.encounters === 1,
-    `an utterance in the queue inflated encounters to `
-    + `${memory.recall('grandma-01', 'man-01')?.encounters}`);
+  // What it does keep is one line: we met once, and words passed.
+  const p = memory.recall('grandma-01', 'man-01');
+  check(p?.encounters === 1, `one meeting counted ${p?.encounters} times`);
+  check(p?.spokenWith === 1,
+    `one utterance in the queue counted ${p?.spokenWith} spoken-with meetings`);
 
   // Memory read the queue; it did not take it. The Brain has not been woken yet
   // and the words must still be waiting for it.
@@ -300,15 +302,88 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   const said = ctx.forModel.recentPerceivedEvents.filter((e) => e.said === 'こんにちは');
   check(said.length === 1,
     `memory ate the utterance before the Brain saw it (${said.length} delivered)`);
+  check(ctx.forModel.sensoryState.visible.some((v) => v.timesSpoken === 1),
+    'spokenWith never reaches the Brain, which makes it write-only');
 
-  // Delivery drained the queue. Memory must not now forget it happened, or
-  // re-remember it if anything is queued afterwards.
+  // A second sentence in the same meeting is the same meeting. Delivery drained
+  // the queue in between, which must change nothing here.
   world.say('man-01', 'いい天気ですね');
   loop.run(215, {});
-  check(memory.episodesFor('grandma-01').filter((e) => e.gist === 'こんにちは').length === 1,
-    'the utterance was remembered again after the queue was drained');
-  check(memory.episodesFor('grandma-01').some((e) => e.gist === 'いい天気ですね'),
-    'nothing queued after a delivery was ever remembered');
+  const q = memory.recall('grandma-01', 'man-01');
+  check(q.encounters === 1 && q.spokenWith === 1,
+    `a second sentence in one meeting counted ${q.encounters}/${q.spokenWith}`);
+  check(memory.episodesFor('grandma-01').every((e) => e.kind === 'first_meeting'),
+    'an episode appeared for the second sentence');
+}
+
+// --- 11.16  ten conversational turns produce no engine-written episodes ---
+{
+  const { world, memory, loop } = setup();
+  world.spawn('grandma-01', [470, 262]);
+  world.spawn('man-01', [478, 264]);
+  const lines = ['こんにちは', 'こんにちは', '今日はいい天気ですね', 'そうですね',
+                 'お仕事は', '銀行です', '大変ね', 'いえ', 'お茶でも', '結構です'];
+  let i = 0;
+  loop.run(120, {
+    beforeTick: (t) => {
+      if (t % 10 === 5 && i < lines.length) {
+        const speaker = i % 2 === 0 ? 'man-01' : 'grandma-01';
+        const to = i % 2 === 0 ? 'grandma-01' : 'man-01';
+        world.say(speaker, lines[i], { to });
+        i += 1;
+      }
+    }
+  });
+  check(i === lines.length, `only ${i} of the ten turns were said`);
+
+  for (const who of ['grandma-01', 'man-01']) {
+    const eps = memory.episodesFor(who);
+    check(eps.every((e) => e.kind === 'first_meeting'),
+      `${who} accumulated ${eps.length} episodes from ten turns: `
+      + `${[...new Set(eps.map((e) => e.kind))]}`);
+    check(eps.length <= 1, `${who} kept ${eps.length} episodes for one meeting`);
+  }
+  // The words are not lost - they are in the fact stream, where replay and the
+  // offline script pass read them from. Memory was never their home.
+  const facts = JSON.stringify(world.log.facts);
+  for (const line of lines) check(facts.includes(line), `${line} is in no stream at all`);
+}
+
+// --- 11.17  standing near and talking are different facts ---
+{
+  const { world, memory, loop } = setup();
+  world.spawn('grandma-01', [470, 262]);
+  world.spawn('man-01', [478, 264]);          // near, and silent
+  world.spawn('pastor-01', [500, 268]);       // further, and speaks
+  loop.run(40, { beforeTick: (t) => { if (t === 10) world.say('pastor-01', 'こんばんは'); } });
+
+  const silent = memory.recall('grandma-01', 'man-01');
+  check(silent?.encounters >= 1, 'standing beside someone was not a meeting');
+  check(silent?.spokenWith === 0,
+    `a silent meeting counted ${silent?.spokenWith} as spoken-with`);
+
+  const spoke = memory.recall('grandma-01', 'pastor-01');
+  check(spoke?.spokenWith === 1, `hearing someone speak counted ${spoke?.spokenWith}`);
+
+  // And a new meeting starts silent, however the last one went.
+  world.roster('man-01', { at: [478, 264] });
+  world.depart('man-01');
+  loop.run(40 + 120, {});
+  world.arrive('man-01');
+  loop.run(40 + 120 + 20, { beforeTick: (t) => {
+    if (t === 165) world.say('man-01', 'どうも', { to: 'grandma-01' });
+  } });
+  const again = memory.recall('grandma-01', 'man-01');
+  check(again.encounters === 2 && again.spokenWith === 1,
+    `leaving, returning and speaking counted ${again.encounters}/${again.spokenWith}`);
+
+  world.depart('man-01');
+  loop.run(40 + 120 + 20 + 120, {});
+  world.arrive('man-01');
+  loop.run(40 + 120 + 20 + 120 + 20, {});
+  const third = memory.recall('grandma-01', 'man-01');
+  check(third.encounters === 3 && third.spokenWith === 1,
+    `a third silent meeting counted ${third.encounters}/${third.spokenWith}`);
 }
 
 // --- 11.5  no ref may reach storage ---
@@ -438,8 +513,9 @@ if (problems.length) {
   console.log('OK  knows seeds memory rather than sitting beside it; a label is the');
   console.log('    observer\'s and never the target\'s; two stores stay asymmetric;');
   console.log('    memory accumulates from the loop itself with no Brain and no');
-  console.log('    scenario help; an utterance is remembered once and still');
-  console.log('    delivered; an encounter is a meeting, not a cooldown; refs');
+  console.log('    scenario help; an utterance is ingested once, writes no');
+  console.log('    episode and is still delivered; an encounter is a meeting,');
+  console.log('    not a cooldown, and knows whether words passed; refs');
   console.log('    cannot reach storage; memory lives in audit and never in facts;');
   console.log('    eviction is deterministic; the dog has parameters, not a past');
 }

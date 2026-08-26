@@ -20,6 +20,18 @@
  * recognition keeps working and encounters keep counting - only the
  * interpretation is missing. The world does not stop being a world.
  *
+ * Stated so it cannot be drifted away from (phase-3d-memory.md 6.1):
+ *
+ *     THE ENGINE WRITES EXACTLY ONE KIND OF EPISODE: first_meeting.
+ *     EVERYTHING ELSE IN THE LIST WAS PROPOSED BY THE BRAIN.
+ *
+ * It used to write one per heard utterance, because until 3E gave conversation a
+ * transcript of its own there was nowhere else for a sentence to live. Four lines
+ * of こんにちは / そうですね cost a sixth of a character's permanent budget and
+ * preserved nothing; ten turns of a real conversation took half of it. What the
+ * engine keeps instead is structural, permanent, and one line per person -
+ * encounters, spokenWith, lastSeenTick.
+ *
  * A LABEL BELONGS TO THE OBSERVER. What the brothers call the shopkeeper is
  * theirs; her name is hers. Nothing here reads a target's own files, and 3B made
  * that structurally hard by accident worth keeping: character.json has no name
@@ -77,7 +89,13 @@ export const DEFAULTS = {
   separationTicks: 60
 };
 
-/** Salience for what is worth keeping when the episode budget is full. */
+/**
+ * Salience for what is worth keeping when the episode budget is full.
+ *
+ * Kinds the engine no longer writes are still ranked, because a Brain may
+ * propose an episode of any of them. A kind nothing writes is not a stale row;
+ * it is a kind nothing has proposed yet.
+ */
 const KEEP = {
   direct_address: 100,
   speech_heard: 80,
@@ -128,10 +146,12 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
         entityId: who,
         label: as,
         encounters: 0,
+        spokenWith: 0,
         lastSeenTick: null,
         firstMetTick: null,                      // seeded knowledge has no first time
         seeded: true,
-        open: false                              // never met in the world yet
+        open: false,                             // never met in the world yet
+        spoke: false                             // words during the open encounter
       });
     }
   }
@@ -171,8 +191,9 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
     let p = m.get(entityId);
     if (!p) {
       p = {
-        entityId, label: null, encounters: 0,
-        lastSeenTick: null, firstMetTick: tick, seeded: false, open: false
+        entityId, label: null, encounters: 0, spokenWith: 0,
+        lastSeenTick: null, firstMetTick: tick, seeded: false,
+        open: false, spoke: false
       };
       m.set(entityId, p);
       remember(observerId, { tick, kind: 'first_meeting', entityId, gist: 'met for the first time' });
@@ -186,12 +207,23 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
    * Opens an encounter if none is open, and otherwise only extends the one that
    * is. `lastSeenTick` never moves backwards, because a queued utterance may
    * carry an older tick than the proximity seen this same tick.
+   *
+   * `words` counts the MEETING, not the sentence. Standing next to someone for
+   * an afternoon and talking to them for an afternoon are different facts about
+   * the same afternoon, and the engine may honestly hold both - we have met four
+   * times and spoken on two of them. What it may not do is say what that amounts
+   * to.
    */
-  function observe(observerId, entityId, tick) {
+  function observe(observerId, entityId, tick, { words = false } = {}) {
     const p = ensure(observerId, entityId, tick);
     if (!p.open) {
       p.open = true;
       p.encounters += 1;
+      p.spoke = false;
+    }
+    if (words && !p.spoke) {
+      p.spoke = true;
+      p.spokenWith += 1;
     }
     p.lastSeenTick = p.lastSeenTick === null ? tick : Math.max(p.lastSeenTick, tick);
     return p;
@@ -201,7 +233,10 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
   function closeStale(observerId, tick) {
     for (const p of people.get(observerId)?.values() ?? []) {
       if (!p.open) continue;
-      if (tick - p.lastSeenTick > cfg.separationTicks) p.open = false;
+      if (tick - p.lastSeenTick > cfg.separationTicks) {
+        p.open = false;
+        p.spoke = false;                         // the next meeting starts silent
+      }
     }
   }
 
@@ -237,7 +272,10 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
 
         // And from what was heard, which reaches further than "near". The queue
         // is read, not drained - delivery to a Brain owns the draining. The
-        // cursor is what makes reading it repeatedly safe.
+        // cursor is what makes reading it repeatedly safe, and it is still
+        // required now that no episode is written: re-ingesting a queued
+        // utterance would inflate spokenWith and drag lastSeenTick backwards,
+        // which is the same defect wearing different clothes.
         let high = consumed.get(observerId) ?? 0;
         for (const e of perception.pendingFor(observerId)) {
           if (e.seq === undefined) throw new Error('a queued perceived event carries no seq');
@@ -245,11 +283,10 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
           high = e.seq;
           if (!e.entityId || e.entityId === observerId) continue;
           if (e.kind !== 'speech_heard' && e.kind !== 'direct_address') continue;
-          observe(observerId, e.entityId, e.t);
-          remember(observerId, {
-            tick: e.t, kind: e.kind, entityId: e.entityId,
-            gist: e.text ?? null
-          });
+          // Contact, and nothing else. The words themselves belong to the
+          // conversation transcript (3E) and to the fact stream, which is where
+          // replay and the offline script pass read them from.
+          observe(observerId, e.entityId, e.t, { words: true });
         }
         consumed.set(observerId, high);
       }
@@ -334,6 +371,7 @@ export function buildContext(perception, memory, observerId) {
     v.recognised = true;
     if (p.label) v.youCallThem = p.label;
     if (p.encounters > 0) v.timesMet = p.encounters;
+    if (p.spokenWith > 0) v.timesSpoken = p.spokenWith;
   }
   ctx.forModel.memory = memory.episodesFor(observerId)
     .slice(-8)
