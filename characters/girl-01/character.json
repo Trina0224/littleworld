@@ -6,5 +6,25 @@
   "knows": [
     { "who": "boy-01", "as": "菅野先輩" }
   ],
+  "social": {
+    "initiative": 0.35,
+    "conversationDrive": 0.70,
+    "curiosity": 0.95,
+    "questionTendency": 0.55,
+    "talkativeness": 0.45,
+    "socialInhibition": 0.55,
+    "persistence": 0.75,
+    "responsiveness": 0.80,
+    "selfDisclosure": 0.35,
+    "topicSwitching": 0.25
+  },
+  "interests": [
+    "口述故事",
+    "地方文化",
+    "民謠與歌",
+    "語言怎麼被說出來",
+    "教育",
+    "人的生活經驗"
+  ],
   "_note": "她只認得菅野一個人。稱呼跟他那邊不對稱是刻意的，見 bible.md。"
 }
