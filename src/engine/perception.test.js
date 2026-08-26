@@ -377,6 +377,77 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
 }
 
 // ------------------------------------------------------- the roll-up --------
+// ------------------------------------- 3E-1: the audience is committed ------
+// How far a voice carries is world physics, decided once by `world.hearing` and
+// stamped onto the fact. Nothing downstream may work it out again: it depends on
+// where everybody stood at that tick, and recovering that means replaying
+// movement, which is re-simulation.
+{
+  const { world: w6, perception: p6 } = setup();
+  w6.spawn('grandma-01', [470, 262]);
+  w6.spawn('pastor-01', [480, 262]);            // ~10 units, well inside hearing
+  w6.spawn('brother-01', [524, 262]);           // ~54 units, still inside 70
+  w6.spawn('shopkeeper-01', [180, 240]);        // ~300 units, far outside
+
+  w6.say('pastor-01', '普通の声。', { scope: 'normal' });
+  const said = w6.log.facts.filter((e) => e.type === 'speech_said').at(-1);
+
+  check(Array.isArray(said.heardBy), 'a speech fact carries no heardBy at all');
+  check(!said.heardBy.includes('pastor-01'), 'the speaker was listed as their own audience');
+  check(said.heardBy.includes('grandma-01') && said.heardBy.includes('brother-01'),
+    `the audience is ${said.heardBy}`);
+  check(!said.heardBy.includes('shopkeeper-01'),
+    'somebody 300 units away was recorded as having heard an ordinary voice');
+  check(JSON.stringify(said.heardBy) === JSON.stringify([...said.heardBy].sort()),
+    'heardBy is not sorted, so iteration order could change a result');
+
+  // One implementation, asked twice, agreeing.
+  for (const id of w6.presentIds()) {
+    check(said.heardBy.includes(id) === w6.hearing.canHear(id, 'pastor-01', 'normal'),
+      `heardBy and canHear disagree about ${id}`);
+  }
+
+  // A carrying voice reaches the scene, and that is the same query answering
+  // differently rather than a second rule.
+  w6.say('pastor-01', '大きな声。', { scope: 'broadcast' });
+  const loud = w6.log.facts.filter((e) => e.type === 'speech_said').at(-1);
+  check(loud.heardBy.includes('shopkeeper-01'),
+    'a carrying voice did not reach across the scene');
+  check(loud.heardBy.length === w6.presentIds().length - 1,
+    'a broadcast reached the wrong number of people');
+
+  // Perception READS the field rather than asking again. Deliberately artificial:
+  // a hand-made fact whose audience disagrees with the geometry. If perception
+  // recomputed, the distant one would be dropped and the near one delivered -
+  // which is exactly the divergence the committed answer exists to prevent.
+  const { world: w7, perception: p7 } = setup();
+  w7.spawn('grandma-01', [470, 262]);
+  w7.spawn('pastor-01', [480, 262]);
+  w7.spawn('shopkeeper-01', [180, 240]);
+  w7.log.fact(w7.tick, 'speech_said', {
+    agent: 'pastor-01', text: '記録が真実。', scope: 'normal', to: null,
+    heardBy: ['shopkeeper-01']                  // the far one, and not the near one
+  });
+  p7.tick();
+  check(p7.pendingFor('shopkeeper-01').some((e) => e.kind === 'speech_heard'),
+    'perception ignored the committed audience and recomputed it');
+  check(!p7.pendingFor('grandma-01').some((e) => e.kind === 'speech_heard'),
+    'perception delivered words to somebody the record says did not hear them');
+  // The near one still SAW a speaker, which is a different question (9).
+  check(p7.pendingFor('grandma-01').some((e) => e.kind === 'sound_heard'),
+    'seeing somebody speak stopped being noticeable');
+
+  // A speech fact with no audience at all is a recording from before the field
+  // existed, and is a bug rather than silence. Fail loudly.
+  const { world: w8, perception: p8 } = setup();
+  w8.spawn('grandma-01', [470, 262]);
+  w8.spawn('pastor-01', [480, 262]);
+  w8.log.fact(w8.tick, 'speech_said', { agent: 'pastor-01', text: 'x', scope: 'normal', to: null });
+  let threw = false;
+  try { p8.tick(); } catch (e) { threw = true; }
+  check(threw, 'a speech fact with no heardBy was accepted');
+}
+
 console.log('  acceptance scenario');
 console.log(`    A sees      ${ctxA.forModel.sensoryState.visible.length} others, `
   + `hears ${ctxA.forModel.recentPerceivedEvents.filter((e) => e.kind === 'speech_heard').length}`);
@@ -392,7 +463,8 @@ if (problems.length) {
 } else {
   console.log('OK  no name, id, sprite, file path, private prose or raw coordinate');
   console.log('    reaches a model-visible field; refs are opaque, stable within a');
-  console.log('    snapshot and resolvable after it; speech carries by distance;');
+  console.log('    snapshot and resolvable after it; speech carries by distance,');
+  console.log('    settled once by the world and read from the fact, never recomputed;');
   console.log('    own failure reaches only the agent that failed; a full table');
   console.log('    still admits standing, deterministically');
 }

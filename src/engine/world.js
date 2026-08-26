@@ -9,6 +9,7 @@ import { createClock } from './clock.js';
 import { createRng } from './rng.js';
 import { createRecorder } from './events.js';
 import { attends } from './attendance.js';
+import { createHearing } from './hearing.js';
 import { idle } from './activity.js';
 import { AVAILABLE, RESERVED, OCCUPIED, SEAT, STATION } from './resources.js';
 import { pathLength, pointAlong } from './nav.js';
@@ -16,7 +17,8 @@ import { pathLength, pointAlong } from './nav.js';
 const round2 = (v) => Math.round(v * 100) / 100;
 
 export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 100,
-                             ticksPerDay = 0, moveUnitsPerTick = 4 }) {
+                             ticksPerDay = 0, moveUnitsPerTick = 4,
+                             hearingRange, soundRange }) {
   // 4 units per tick at 10 ticks a second is about 1.2 m/s where the bench is,
   // which is a walk. Speed is flat in world units for now; making it flat in
   // metres means scaling by the height ramp, and that is a refinement, not a
@@ -52,12 +54,23 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
   const roster = new Map();
   const here = new Set();
 
+  // How far a voice carries is a property of the world, not of one observer's
+  // perception. Built here so `say` can stamp the audience onto the fact while
+  // everyone is still standing where they were, and so perception can ask the
+  // same object rather than keeping a second implementation.
+  const hearing = createHearing({
+    present: (id) => here.has(id),
+    positionOf: (id) => agents.get(id)?.at ?? null,
+    ids: () => [...here].sort()
+  }, { hearingRange, soundRange });
+
   const world = {
     clock,
     rng,
     log,
     resources,
     agents,
+    hearing,
 
     get tick() {
       return clock.tick;
@@ -210,10 +223,19 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
      * allowed to choose it, or whether it should be derived from the structured
      * social action instead, is an open question - see the review note in
      * phase-3c-venue-interactions.md 2.
+     *
+     * `heardBy` IS COMMITTED HERE AND NOWHERE ELSE. Who was in earshot depends on
+     * where everybody was standing at this tick, and nothing downstream can work
+     * that out later without replaying movement - which is re-simulation, and is
+     * forbidden. So the answer is computed once, while it is cheap and correct,
+     * and rides on the fact (phase-3e-floor-clarifications.md 8.1). It is
+     * server-side truth; no model ever reads a fact.
      */
     say(agentId, text, { scope = 'normal', to = null } = {}) {
       if (!here.has(agentId)) return false;
-      log.fact(clock.tick, 'speech_said', { agent: agentId, text, scope, to });
+      log.fact(clock.tick, 'speech_said', {
+        agent: agentId, text, scope, to, heardBy: hearing.audience(agentId, scope)
+      });
       return true;
     },
 

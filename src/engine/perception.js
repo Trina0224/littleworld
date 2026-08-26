@@ -47,6 +47,14 @@
  * not drain cannot track its progress as a position in an array somebody else
  * is emptying. The seq is server-side and never reaches a model.
  *
+ * HOW FAR A VOICE CARRIES IS NOT DECIDED HERE. It is world physics, it lives in
+ * hearing.js, and `world.say` has already stamped the audience onto the speech
+ * fact by the time this file sees it. Recomputing it would be a second
+ * implementation of one rule that could disagree with the recording, and the
+ * answer is not recoverable later anyway - it depends on where everyone stood at
+ * that tick. So this file reads `heardBy` and only decides what a near miss
+ * looks like: seeing a speaker is not hearing the words.
+ *
  * OWN FAILURE IS THE ONE THING TAKEN FROM AUDIT. A failed attempt changed
  * nothing, so it is not a fact, so it cannot be derived from the fact stream at
  * all. It reaches the agent that attempted it and nobody else - not another
@@ -72,15 +80,16 @@ function hash01(text) {
   return (h >>> 0) / 4294967296;
 }
 
+/**
+ * What perception decides for itself. `hearingRange` and `soundRange` are NOT
+ * here: how far a voice carries is world physics and lives in `hearing.js`, so
+ * that `say` and this file cannot disagree about who heard something.
+ */
 export const DEFAULTS = {
   // Flat in world units, like movement speed, and for the same reason: making it
   // flat in metres means scaling by the height ramp, which is a refinement
-  // rather than a correctness problem. Checked against the real anchors - the
-  // counter to the near table is 48 units and audible; the counter to the far
-  // table is 78 and is not, which is what makes broadcast worth having.
+  // rather than a correctness problem.
   nearRange: 40,
-  hearingRange: 70,
-  soundRange: 140,          // far enough to notice a voice, not to make out words
   personalSpace: 6,
   queueLimit: 40,
   visibleLimit: 8,          // how many people one request describes, most salient first
@@ -114,10 +123,10 @@ const SALIENCE = {
  * person at your table and fall off the end of a busy package - omitted from one
  * delivery, not removed from the world.
  */
-function visualSalience(entry, sameZone) {
+function visualSalience(entry, sameZone, cfg) {
   let s = entry.kind === 'animal_seen' ? 28 : 30;
-  if (entry.distance <= DEFAULTS.nearRange) s += 20;
-  else if (entry.distance <= DEFAULTS.hearingRange * 2) s += 8;
+  if (entry.distance <= cfg.nearRange) s += 20;
+  else if (entry.distance <= cfg.hearingRange * 2) s += 8;
   if (sameZone) s += 6;
   if (entry.activity && entry.activity !== 'idle') s += 4;
   return s;
@@ -133,7 +142,10 @@ export function createPerception(world, zones, {
   config = {},
   attentionHint = null                  // (observerId, entityId) -> number, see below
 } = {}) {
-  const cfg = { ...DEFAULTS, ...config };
+  // World physics wins over anything a caller passes: a perception config that
+  // quietly disagreed with the ranges `say` used would produce packages that
+  // contradict the recorded `heardBy`.
+  const cfg = { ...DEFAULTS, ...config, ...world.hearing.config };
   const pending = new Map();            // observerId -> perceived events
   const epochs = new Map();             // epochId -> { observer, tick, refs: Map }
   const epochOrder = [];
@@ -192,12 +204,6 @@ export function createPerception(world, zones, {
     return zones.adjacent(zo, zs);
   }
 
-  function canHear(observerId, speakerId, scope) {
-    if (!world.present(observerId)) return false;
-    if (scope === 'broadcast') return true;      // scene-wide, for this small venue
-    return gap(observerId, speakerId) <= cfg.hearingRange;
-  }
-
   return {
     config: cfg,
 
@@ -211,9 +217,17 @@ export function createPerception(world, zones, {
         const e = facts[factCursor];
         switch (e.type) {
           case 'speech_said': {
+            // Who heard it was settled at commit, by the world, while everybody
+            // was still standing where they were standing. Asking again here
+            // would be a second implementation of one rule and could disagree
+            // with the recording (phase-3e-floor-clarifications.md 8.1).
+            if (!Array.isArray(e.heardBy)) {
+              throw new Error('a speech fact carries no heardBy');
+            }
+            const heard = new Set(e.heardBy);
             for (const observerId of world.presentIds()) {
               if (observerId === e.agent) continue;
-              if (canHear(observerId, e.agent, e.scope)) {
+              if (heard.has(observerId)) {
                 queue(observerId, {
                   kind: e.to === observerId ? 'direct_address' : 'speech_heard',
                   t: e.t, entityId: e.agent, text: e.text, scope: e.scope
@@ -327,7 +341,7 @@ export function createPerception(world, zones, {
       const here = positionOf(observerId);
       const myZone = here ? zones.at(here[0], here[1]) : null;
       const ranked = state.visible
-        .map((v) => ({ v, s: visualSalience(v, v.zone === myZone) }))
+        .map((v) => ({ v, s: visualSalience(v, v.zone === myZone, cfg) }))
         .sort((a, b) => (b.s - a.s)
           || (a.v.distance - b.v.distance)
           || (hash01(epochId + a.v.entityId) - hash01(epochId + b.v.entityId)))
