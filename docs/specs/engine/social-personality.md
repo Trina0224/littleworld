@@ -1,0 +1,141 @@
+# Social Personality Vector — conversational behavior
+
+**Status:** implementation contract / character-data baseline  
+**Created:** 2026-08-25 (`America/Los_Angeles`)  
+**Companion to:** `character-identity.md`, `phase-3d-memory.md`, future Phase 3E conversation work
+
+This document defines the stable machine-readable social traits carried by each LLM character.
+
+The purpose is **not** to turn personality into an engine-controlled script. The vector gives the Brain a stable behavioral bias so different characters do not all become the same polite assistant. The Brain still chooses words, topics, meaning, and whether a conversation continues.
+
+> **The vector biases behavior; it does not author dialogue.**
+
+## 1. Where it lives
+
+Each `brain: "llm"` character carries these fields in `character.json`:
+
+```json
+{
+  "social": {
+    "initiative": 0.50,
+    "conversationDrive": 0.50,
+    "curiosity": 0.50,
+    "questionTendency": 0.50,
+    "talkativeness": 0.50,
+    "socialInhibition": 0.50,
+    "persistence": 0.50,
+    "responsiveness": 0.50,
+    "selfDisclosure": 0.50,
+    "topicSwitching": 0.50
+  },
+  "interests": ["...", "..."]
+}
+```
+
+All social values are in the inclusive range **0.0–1.0**. There is no requirement that they sum to anything.
+
+These values are stable character data. They are not memory, mood, or current state.
+
+`self.md` remains authored first-person identity prose. Do not duplicate the numeric vector into `self.md` merely to make it visible to the model.
+
+## 2. The ten axes
+
+| Field | High value means |
+|---|---|
+| `initiative` | readily starts interaction without being invited |
+| `conversationDrive` | tends to keep a conversation alive when no one else drives it |
+| `curiosity` | genuinely wants to know more about people, events, or ideas |
+| `questionTendency` | expresses curiosity by asking questions rather than only observing/listening |
+| `talkativeness` | naturally produces more speech and longer contributions |
+| `socialInhibition` | hesitates around strangers, embarrassment, or social risk; **high = more inhibited** |
+| `persistence` | does not immediately abandon a social thread after one weak response |
+| `responsiveness` | readily notices and meaningfully answers what another person just said |
+| `selfDisclosure` | readily volunteers personal information, feelings, or opinions |
+| `topicSwitching` | readily introduces a new topic instead of staying on the current thread |
+
+These axes are deliberately behavioral. Intelligence, processing speed, literalness, and reflection are **not** encoded here. If needed later, they belong in a separate cognitive-style schema.
+
+## 3. Interests are topic seeds, not mandatory subjects
+
+`interests` is a stable list of things the character naturally notices, enjoys discussing, or can use to open a conversation.
+
+The Brain may combine:
+
+```text
+current observation
++ current conversation thread
++ relevant private memory
++ what is known about the other person
++ this character's interests
+```
+
+to find a natural topic.
+
+An interest must never force a topic into every conversation. A pastor who likes history does not need to mention history to every customer; a child who likes robots does not need to turn every sentence into robots.
+
+## 4. Runtime / prompt boundary
+
+The canonical source is the numeric vector in `character.json`. The Context Builder should translate it into concise natural-language behavioral guidance rather than dumping unexplained decimals into the model prompt.
+
+For example:
+
+```text
+conversationDrive = 0.90
+questionTendency = 0.85
+socialInhibition = 0.10
+```
+
+may become:
+
+> You readily keep a conversation going, often ask natural follow-up questions, and are not very shy with strangers. A short answer does not automatically mean the other person wants to end the conversation.
+
+By contrast:
+
+```text
+initiative = 0.15
+conversationDrive = 0.30
+socialInhibition = 0.85
+```
+
+may become:
+
+> You rarely start conversations and are hesitant with unfamiliar people. You can answer when approached, but you do not need to rescue every silence.
+
+The translation layer must preserve differences between characters. Do not flatten everyone into generic instructions such as "be engaging" or "keep the conversation going".
+
+## 5. Conversation design consequence
+
+The cast intentionally contains different social roles:
+
+```text
+strong topic starters / rescuers     星のおばあちゃん, 菅野, タツ
+listeners who can deepen a thread    草野, 森牧師, 熊田
+natural conversational companions    小野, 澄子
+characters who usually need a lead   ユキ, タタ
+strong social withdrawal             渡辺
+```
+
+This asymmetry is a feature. Some conversations should flourish and some should naturally die.
+
+> **The goal is not to prevent silence. The goal is to stop every character from having the same reason for silence.**
+
+## 6. Phase 3E use
+
+Phase 3E Conversation Session should consume these traits when deciding what guidance a Brain receives at a turn or potential conversation wakeup.
+
+Examples:
+
+- high `conversationDrive` may encourage finding a new hook when the current thread is exhausted;
+- high `questionTendency` may encourage follow-up questions;
+- high `socialInhibition` may make an unsolicited approach less likely;
+- high `responsiveness` should favor answering the actual previous remark before changing topics;
+- high `topicSwitching` may make a character more willing to introduce an unrelated observation;
+- low values are permissions to *not* act, not defects the engine should compensate away.
+
+The engine may use these values for wakeup weighting later, but it must not deterministically manufacture dialogue or force a relationship outcome from them.
+
+## 7. Baseline cast values
+
+The initial values are authored from the existing `self.md` characterizations, not generated independently from them. They are stored in each character's own `character.json` and should be reviewed there when a character changes.
+
+The deterministic dog has no social vector. Its behavior remains parameter/state-machine driven.
