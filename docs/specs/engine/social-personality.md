@@ -2,7 +2,8 @@
 
 **Status:** implementation contract / character-data baseline  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
-**Companion to:** `character-identity.md`, `phase-3d-memory.md`, future Phase 3E conversation work
+**Updated:** 2026-08-25 — bound to active Phase 3E conversation contract  
+**Companion to:** `character-identity.md`, `phase-3d-memory.md`, `phase-3e-conversation.md`
 
 This document defines the stable machine-readable social traits carried by each LLM character.
 
@@ -119,23 +120,64 @@ This asymmetry is a feature. Some conversations should flourish and some should 
 
 > **The goal is not to prevent silence. The goal is to stop every character from having the same reason for silence.**
 
-## 6. Phase 3E use
+## 6. Binding Phase 3E use
 
-Phase 3E Conversation Session should consume these traits when deciding what guidance a Brain receives at a turn or potential conversation wakeup.
+`phase-3e-conversation.md` is now the active consumer of these traits.
+
+Phase 3E uses the vector in two distinct ways rather than expecting the model to obey raw numbers by itself.
+
+### Engine / later scheduler-facing traits
+
+These traits may affect the eligibility/weight of optional social opportunities:
+
+```text
+initiative
+conversationDrive
+socialInhibition
+persistence
+```
 
 Examples:
 
-- high `conversationDrive` may encourage finding a new hook when the current thread is exhausted;
-- high `questionTendency` may encourage follow-up questions;
-- high `socialInhibition` may make an unsolicited approach less likely;
-- high `responsiveness` should favor answering the actual previous remark before changing topics;
-- high `topicSwitching` may make a character more willing to introduce an unrelated observation;
-- low values are permissions to *not* act, not defects the engine should compensate away.
+- high `initiative` may make a character more eligible to start a conversation when a real opening exists;
+- high `conversationDrive` may make a character more eligible for a `conversation_fading` wake reason;
+- high `socialInhibition` suppresses unsolicited approaches, especially to strangers;
+- high `persistence` means one weak response does not immediately make the session ineligible to continue.
 
-The engine may use these values for wakeup weighting later, but it must not deterministically manufacture dialogue or force a relationship outcome from them.
+The full concurrency/priority policy remains Phase 3F-B scheduler work. Phase 3E establishes the conversation state and wake reasons it will consume.
+
+### Brain-facing traits
+
+All ten traits plus `interests` may affect the derived natural-language guidance shown to the Brain.
+
+Examples:
+
+- high `questionTendency` encourages natural follow-up questions;
+- high `responsiveness` favors answering what was actually said before changing topic;
+- high `topicSwitching` allows a fresh observation or interest to become a new hook;
+- low `talkativeness` permits short replies;
+- high `selfDisclosure` permits volunteering personal experience more readily;
+- low values are permissions to *not* act, not defects to be repaired.
+
+The model should not receive an instruction such as "keep the conversation going" merely because a conversation exists. That would erase the cast distribution this schema exists to preserve.
 
 ## 7. Baseline cast values
 
 The initial values are authored from the existing `self.md` characterizations, not generated independently from them. They are stored in each character's own `character.json` and should be reviewed there when a character changes.
 
 The deterministic dog has no social vector. Its behavior remains parameter/state-machine driven.
+
+## 8. Validation expectations
+
+When Phase 3E/3F-B eventually exercises these values, validation should be statistical/behavioral rather than exact-text based.
+
+Useful assertions include:
+
+```text
+星さん initiates more often than 渡辺 under equal opportunity
+タタ produces less/shorter voluntary speech than 菅野 under equal opportunity
+草野 can show high curiosity without becoming a high-initiative speaker
+渡辺 remains allowed to let a conversation die
+```
+
+If real-model trials later show no meaningful behavioral separation, strengthen the derived guidance or scheduler weighting. Do not rewrite the characters toward a common middle merely to make the test easier.
