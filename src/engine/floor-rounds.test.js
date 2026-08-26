@@ -218,6 +218,38 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(woke.length > 0, 'the woken floor opened no offer');
 }
 
+// --- a seat wakes a floor; the shopkeeper's workstation does not --------
+{
+  const { world, zones, floors, loop } = setup();
+  const A = [222, 178];
+  const B = [228, 178];
+  check(zones.at(A[0], A[1]) === 'cafe-counter' && zones.at(B[0], B[1]) === 'cafe-counter',
+    'the test premise is wrong: those positions are not both at the counter');
+  world.spawn('shopkeeper-01', A);
+  world.spawn('grandma-01', B);
+  drive(loop, floors, 6);
+  const asleep = floors.floor('cafe-counter');
+  check(asleep?.state === 'dormant', 'the test premise is wrong: the counter is not asleep');
+
+  // Seats and stations are one thing to a reservation, on purpose, so the
+  // difference has to be made here: her claiming her workstation is the
+  // machinery the whitelist exists to exclude.
+  world.reserve('cafe-counter', 'shopkeeper-01');
+  world.occupy('cafe-counter', 'shopkeeper-01');
+  check(world.log.facts.some((e) => e.type === 'resource_occupied' && e.resource === 'cafe-counter'),
+    'the test premise is wrong: the station was never occupied');
+  check(step(loop, floors).length === 0, 'the workstation woke the floor');
+  check(floors.floor('cafe-counter')?.state === 'dormant', 'the workstation woke the floor');
+
+  // A stool is somebody sitting down with you.
+  world.reserve('counter-stool-1', 'grandma-01');
+  world.occupy('counter-stool-1', 'grandma-01');
+  const woke = step(loop, floors);
+  check(floors.floor('cafe-counter')?.state !== 'dormant', 'a seat did not wake the floor');
+  check(woke.length > 0, 'the woken floor opened no offer');
+  for (const o of woke) floors.decline(o.entityId);
+}
+
 // --- clarifications §10: one overheard nudge per source spell -----------
 {
   const { world, floors, loop } = setup();

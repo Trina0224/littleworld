@@ -15,6 +15,7 @@ node src/engine/memory.test.js
 node src/engine/meeting-boundary.test.js
 node src/engine/perception-held-limit.test.js
 node src/engine/floors.test.js
+node src/engine/floor-rounds.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -45,6 +46,7 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `meeting-boundary.test.js` | that knowing of somebody is not having met them |
 | `perception-held-limit.test.js` | that a refused context takes nothing with it |
 | `floors.test.js` | which zones are conversations, and who may answer from where |
+| `floor-rounds.test.js` | who is asked, who speaks, and when the room goes quiet |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -259,6 +261,32 @@ destroyed, so a zone that empties and fills again reads back exactly what it
 read before. The rebuild-from-facts property is true by construction rather than
 by maintenance — there is no second copy to keep in step.
 
+**The floor is offered, never granted.** A round asks the top K in rank order —
+addressee first, then an overhearer being nudged, then everybody else by weight
+with a hash tie-break — and K is 1 when there is somebody who was just spoken to.
+Everyone answers, and then **rank decides who speaks, not who answered first**.
+Provider response order is network timing, and letting it pick the speaker would
+lose *same seed + same recorded choices = same fact stream*, which is the claim
+replay rests on. So a `commit` is a **claim**, not an utterance: the highest-
+ranked claimant speaks and every other claim is a counterfactual that reaches
+nothing — no fact, no memory — while its perception context is settled as never
+used, so the loser is still owed exactly what it was owed and is offered again
+next round.
+
+**A round with no taker is what silence means**, and it costs nothing to measure
+because it does not involve a clock. Whether each answer took three seconds or
+forty does not enter into it — which is the whole reason the session object was
+thrown away. An offer nobody answers becomes a decline after `offerExpiry`, and
+`quietLimit` rounds with no taker put the floor to sleep.
+
+**Waking is a declared property of the fact type**, in `events.js` where facts
+are defined, defaulting to false. A whitelist kept by the consumer is a list the
+next runtime forgets to update, and it fails in the expensive direction: one new
+café fact quietly polling every Brain within earshot. Seats wake a floor and
+stations do not — they are one thing to a reservation on purpose, so the
+difference has to be drawn here, and 澄子 claiming her workstation is exactly the
+machinery this excludes. Waking starts a new social spell.
+
 **Nudge suppression lives on the source zone's social spell**, not on the target
 floor that happens to be showing the nudge. A cross-zone overhearer gets one
 *should I go over?* per conversation, and the target's temporary floor may be
@@ -267,12 +295,27 @@ spell is what ends it, and the spell belongs to the room the conversation is in.
 
 ### What the tests prove
 
-Eleven mutations, all biting: dropping step 8 from the loop, not stamping the
-zone, letting an unheard address qualify a zone, letting a pending address not
-qualify one, opening a floor for one person alone, refusing one for a person and
-their dog, clearing the utterance index when a floor closes, copying an utterance
-into the target's zone as well, keying nudge suppression without the social
-spell, and reusing a spell when a floor reopens.
+Twenty-four mutations, all biting. The store: dropping step 8 from the loop, not
+stamping the zone, letting an unheard address qualify a zone, letting a pending
+address not qualify one, opening a floor for one person alone, refusing one for a
+person and their dog, clearing the utterance index when a floor closes, copying
+an utterance into the target's zone as well, keying nudge suppression without the
+social spell, and reusing a spell when a floor reopens.
+
+The rounds: letting the first answer take the floor (*the floor went to
+grandma-01; rank said pastor-01*), letting every claimant speak, counting a
+loser's context as delivered (*the loser lost the utterance it was woken for*),
+not putting the addressee first, offering the whole batch when there is an
+addressee, not counting a taker-less round as quiet, offering from a dormant
+floor, never expiring an unanswered offer, waking on any fact at all, waking on a
+station as if it were a seat, reusing the spell when a floor wakes, never
+spending the overheard nudge, and revoking a temporary floor while it carries the
+offer it exists for.
+
+The station one first caught nothing: the test fired a made-up resource id, so
+the `resource()` lookup already refused it and the `kind` check was doing no
+work. It now reserves and occupies the real `cafe-counter` station and the real
+`counter-stool-1` beside it, and asserts the two behave differently.
 
 ## Memory (3D)
 

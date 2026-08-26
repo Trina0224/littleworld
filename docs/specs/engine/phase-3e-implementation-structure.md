@@ -125,9 +125,9 @@ in step. `heardBy` and `zone` ride on the fact for the same reason
 ### 2.3 The store
 
 ```text
-createFloors(world, zones, { minds, config })
-  no perception: audibility is world.hearing and membership is position,
-  so the store needs neither - one fewer edge that can drift
+createFloors(world, zones, perception, { minds, config, weigh })
+  perception is needed after all, and only from 3E-4: an offer carries a
+  context, and only the floor knows when one lost and must be given back
   tick()                     step 8 of the canonical tick
   offers()                   offers opened this tick; drained by the caller
   transcriptFor(entityId)    rendered for that observer                 §7
@@ -704,6 +704,21 @@ into the model's hands.
 
 ---
 
+## 15.1 Found by building 3E-4
+
+**A temporary floor must not be revoked while carrying the offer it exists for.**
+Spending the nudge, or answering the address, is precisely what stops the zone
+qualifying — so without a guard the offer is withdrawn in the same breath as it
+is issued and the provider call is wasted. Only that case is protected: an
+ordinary open-floor offer in an emptying zone still goes with the zone.
+
+**`socialWeight` is injected rather than imported.** `createFloors` takes a
+`weigh` function and defaults it to zero, so rank 3 is the hash tie-break until
+3E-10 supplies the real one. Same seam `attentionHint` used in 3C, and it keeps
+the asymmetry test out of the store.
+
+---
+
 ## 16. Open
 
 1. **`quietLimit`, `K`, `speechLimit`.** Proposed 1, 1-or-3, and 240 characters.
@@ -733,8 +748,9 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
       creation, destruction, ingestion of speech_said with zone
       and heardBy; transcript derived    DONE     §2, §5, clar. §2, §9
 3E-4  offer rounds: ranking, batching, rank-decides-the-taker,
-      losers commit nothing and lose nothing                  §3, clar. §3, §8.2
-3E-5  quiet, dormancy, social re-arm as a fact-type property  §4, clar. §4, §8.3
+      losers commit nothing and lose nothing   DONE  §3, clar. §3, §8.2
+3E-5  quiet, dormancy, social re-arm as a fact-type property
+                                               DONE  §4, clar. §4, §8.3
 3E-6  transcriptFor() per-observer rendering                            §7.2
 3E-7  menuFor() / commit(), act-derived scope, refusals                  §9
 3E-8  openQuestion, gated on audibility                     §10, clar. §1, §6
