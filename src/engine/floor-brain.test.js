@@ -287,6 +287,52 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
     'a question the other party can no longer hear stayed a debt');
 }
 
+// --- a question the target could not hear is no debt, same zone or not -----
+{
+  const { world, floors, loop } = setup();
+  world.spawn('grandma-01', [310, 110]);
+  world.spawn('pastor-01', [600, 290]);        // same zone, ~340 units: out of hearing
+  world.spawn('man-01', [316, 114]);           // so the zone qualifies and stays open
+  let asked = false;
+  drive(loop, floors, 10, (o) => {
+    if (asked || o.entityId !== 'grandma-01') return 'decline';
+    const p = pickAt(o, 'ask', 'pastor-01');
+    if (!p) return 'decline';
+    asked = true;
+    return { pick: p, text: '牧師さん、聞こえますか' };
+  });
+  check(asked, 'she was never offered a way to ask him');
+  const call = world.log.facts.find((e) => e.type === 'speech_said' && e.to === 'pastor-01');
+  check(call && !call.heardBy.includes('pastor-01'),
+    'the test premise is wrong: he heard it after all');
+  check(floors.openQuestionIn('park-open') === null,
+    'a question shouted across a zone he could not hear became a debt');
+  check(floors.pendingAddressFor('pastor-01') === null,
+    'an unheard address created a response opportunity');
+}
+
+// --- an addressed offer that nobody ever answers resolves the address -------
+{
+  const { world, floors, loop } = setup({ offerExpiry: 4 });
+  world.spawn('grandma-01', [227, 235]);
+  world.spawn('brother-01', [232, 238]);
+  world.spawn('shopkeeper-01', [222, 178]);
+  world.say('grandma-01', '澄子さん', { to: 'shopkeeper-01' });
+
+  let hers = 0;
+  for (let i = 0; i < 30; i += 1) {
+    for (const o of step(loop, floors)) {
+      if (o.entityId === 'shopkeeper-01') { hers += 1; continue; }   // never answered
+      floors.decline(o.entityId);
+    }
+  }
+  check(hers === 1, `she was offered the same address ${hers} times without ever answering`);
+  check(floors.pendingAddressFor('shopkeeper-01') === null,
+    'an offer that timed out left the address pending');
+  check(floors.floor('cafe-counter') === null,
+    'the temporary floor outlived the offer it was opened for');
+}
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
