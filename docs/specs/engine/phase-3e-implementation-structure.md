@@ -769,8 +769,9 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 3E-6  transcriptFor() per-observer rendering            DONE          §7.2
 3E-7  menuFor() / commit(), act-derived scope, refusals  DONE           §9
 3E-8  openQuestion, gated on audibility            DONE    §10, clar. §1, §6
-3E-9  addressing a deterministic actor, compliance, animal_responded     §8
-3E-10 socialWeight() and the asymmetry test                             §11
+3E-9  addressing a deterministic actor, compliance, animal_responded
+                                                  DONE                  §8
+3E-10 socialWeight() and the asymmetry test           DONE            §11
 3E-11 scripted acceptance scenarios + mutations, view.js replay support  §13
 ```
 

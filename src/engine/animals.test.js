@@ -128,11 +128,29 @@ function callFor(who, acts = 'call_over') {
     'the ignored response does not say who was ignored');
 }
 
-// --- deterministic: the same seed and tick give the same answer ---------
+// --- deterministic, and stable under what anyone else draws -------------
 {
   const a = callFor('grandma-01').responses.map((e) => `${e.t}:${e.outcome}`).join('|');
   const b = callFor('grandma-01').responses.map((e) => `${e.t}:${e.outcome}`).join('|');
   check(a === b && a.length > 0, 'the same run produced different compliance');
+
+  // The load-bearing half, and the same one attendance.js has: a stream's
+  // values depend on how many times anyone else has drawn from it, so deciding
+  // this from the world rng would make an unrelated change reshuffle the dog.
+  const { world, animals } = setup();
+  world.spawn('brother-01', PARK[0]);
+  world.spawn('dog-01', PARK[2]);
+  const plain = [];
+  for (let i = 0; i < 20; i += 1) { plain.push(animals.respond('brother-01', 'dog-01', 'call_over')); world.advance(); }
+
+  const two = setup();
+  two.world.spawn('brother-01', PARK[0]);
+  two.world.spawn('dog-01', PARK[2]);
+  for (let i = 0; i < 7; i += 1) two.world.rng.next();      // somebody else drew
+  const after = [];
+  for (let i = 0; i < 20; i += 1) { after.push(two.animals.respond('brother-01', 'dog-01', 'call_over')); two.world.advance(); }
+  check(plain.join('|') === after.join('|'),
+    'somebody else drawing from the world rng changed what the dog did');
 }
 
 // --- a call the dog cannot hear is ignored for a physical reason --------
@@ -141,10 +159,12 @@ function callFor(who, acts = 'call_over') {
   world.spawn('brother-01', [310, 110]);
   world.spawn('grandma-01', [316, 114]);
   world.spawn('dog-01', [600, 290]);            // ~340 units: out of hearing
-  check(animals.chance('dog-01', 'brother-01', 'call_over') > 0,
-    'the test premise is wrong: she would not have come anyway');
-  const out = animals.respond('brother-01', 'dog-01', 'call_over');
-  check(out === 'ignored', `she came from 340 units away: ${out}`);
+  check(animals.chance('dog-01', 'brother-01', 'call_over') > 0.5,
+    'the test premise is wrong: she would rarely have come anyway');
+  const out = [];
+  for (let i = 0; i < 30; i += 1) { out.push(animals.respond('brother-01', 'dog-01', 'call_over')); world.advance(); }
+  check(out.every((o) => o === 'ignored'),
+    `she came from 340 units away ${out.filter((o) => o === 'complied').length} times`);
   void floors; void loop;
 }
 

@@ -18,6 +18,8 @@ node src/engine/floors.test.js
 node src/engine/floor-rounds.test.js
 node src/engine/floors-address-decline.test.js
 node src/engine/floor-brain.test.js
+node src/engine/animals.test.js
+node src/engine/social.test.js
 node src/engine/run-3c.js          # shows what a Brain would actually be handed
 ```
 
@@ -35,6 +37,8 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `placement.js` | semantic destination in, physical position out |
 | `memory.js` | what a character remembers, and the context a Brain receives |
 | `floors.js` | one offered conversational floor per zone |
+| `animals.js` | what a deterministic actor does when spoken to |
+| `social.js` | the ten-axis vector, turned into a number |
 | `nav.js` | A* over the painted walkable map |
 | `world.js` | authoritative state, resources, reservations, movement |
 | `activity.js` | the Activity Runtime |
@@ -51,6 +55,8 @@ node src/engine/run-3c.js          # shows what a Brain would actually be handed
 | `floor-rounds.test.js` | who is asked, who speaks, and when the room goes quiet |
 | `floors-address-decline.test.js` | that saying no to somebody settles what they asked |
 | `floor-brain.test.js` | what a Brain is shown, and what it is allowed to pick |
+| `animals.test.js` | that 辰's dog comes when he calls, and mostly not otherwise |
+| `social.test.js` | that the cast stays asymmetric and nothing repairs a low trait |
 | `run-3c.js` | the acceptance scenario, printed |
 
 ## The tick
@@ -317,6 +323,31 @@ addressee. An answer settles it from whichever floor it is made on, and the two
 drifting out of earshot drops it. Whether the reply actually answered the
 question is semantics, and the engine stays out of it.
 
+**Speaking to the dog needs no new mechanism.** The Brain picks `call_over`,
+`praise` or `shoo` from the menu; the words go out as ordinary speech aimed at
+her and the *act* is what the world executes, so the engine never reads the
+prose. Audibility is a hard gate in front of the compliance roll — the same
+`canHear` with `dog-01` as the observer — so a call she could not hear is
+ignored for a physical reason rather than a bad roll, and uncertainty comes from
+a hash of `(seed, tick, speaker, act, animal)` rather than the shared rng, for
+the reason `attendance.js` already learned.
+
+The asymmetry costs nothing and nobody wrote it: **辰 calls and she comes better
+than 80% of the time; 星さん calls and it is under 35%** — because
+`bonds.familiarity` is 1.0 for the two brothers and absent for everyone else.
+The test asserts the character file still says so, or it would be measuring its
+own arithmetic. **An ignored call is a fact too**: a dog visibly not coming is
+information about the caller.
+
+**`socialWeight` is a pure function, injected rather than imported.** The floor
+ranking takes it as a parameter, so the store never learns what a personality is
+and the asymmetry test never needs a floor. It enumerates every situation the
+ranking can be in rather than sampling: 星さん outranks 渡辺 in all sixteen and
+by more than a rounding artefact, タタ never outranks 菅野, 草野 stays curious
+without becoming a driver, and **渡辺 remains the least eligible however long
+the silence runs** — which is the point. A low trait is a permission not to act,
+not a defect for a scheduler to repair.
+
 **Nudge suppression lives on the source zone's social spell**, not on the target
 floor that happens to be showing the nudge. A cross-zone overhearer gets one
 *should I go over?* per conversation, and the target's temporary floor may be
@@ -325,7 +356,7 @@ spell is what ends it, and the spell belongs to the room the conversation is in.
 
 ### What the tests prove
 
-Thirty-eight mutations, all biting. The store: dropping step 8 from the loop, not
+Fifty-two mutations, all biting. The store: dropping step 8 from the loop, not
 stamping the zone, letting an unheard address qualify a zone, letting a pending
 address not qualify one, opening a floor for one person alone, refusing one for a
 person and their dog, clearing the utterance index when a floor closes, copying
@@ -355,6 +386,22 @@ than a different rule: a stale ref that the *menu* check had already refused; a
 transport test that only asserted the loud case; a truncation test with no long
 line; a stranger who never spoke; and a question whose floor was closing anyway,
 so the floor rather than the rule was doing the clearing.
+
+The dog and the vector: ignoring familiarity, always complying, rolling for a
+call she could not hear, drawing compliance from the shared rng, leaving no fact
+when she ignores one, dropping her from the menu, giving her a transcript,
+making hesitation the same with a stranger as with a friend, ignoring an axis
+the weight claims to read, letting silence compensate for a low drive, and
+mutating the vector it was handed.
+
+Three of those first caught nothing. The inaudible call was rolled once and the
+hash happened to refuse it anyway — it is now called thirty times. The shared-rng
+one passed because two identical runs stay identical either way; the real
+property is stability under *what anyone else draws*, so the second run now
+draws seven times from the world rng first, which is the shape `days.test.js`
+already uses. And the initiative one was hidden behind three other axes that
+differ between 星さん and 渡辺; each axis the weight claims to read is now moved
+on its own against a flat vector.
 
 The station one first caught nothing: the test fired a made-up resource id, so
 the `resource()` lookup already refused it and the `kind` check was doing no

@@ -86,6 +86,19 @@ for (const id of CAST) {
     `only ${louder.length} of the cast start a conversation more readily than 草野`);
 }
 
+// Each axis the weight claims to read must actually move it, on its own.
+{
+  const flat = Object.fromEntries(AXES.map((a) => [a, 0.5]));
+  const bump = (axis, v) => socialWeight({ ...flat, [axis]: v }, { quietRounds: 1 });
+  for (const [axis, dir] of [['initiative', 1], ['conversationDrive', 1],
+                             ['talkativeness', 1], ['socialInhibition', -1]]) {
+    const low = bump(axis, 0.1);
+    const high = bump(axis, 0.9);
+    check(dir > 0 ? high > low : high < low,
+      `${axis} at 0.1 and 0.9 weigh ${low} and ${high}, which is the wrong way or not at all`);
+  }
+}
+
 // A low trait is a permission not to act. Nothing compensates for it: 渡辺 must
 // stay at the bottom however long the silence runs.
 {
