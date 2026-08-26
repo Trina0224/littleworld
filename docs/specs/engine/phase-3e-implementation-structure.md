@@ -4,7 +4,8 @@
 **Created:** 2026-08-26
 **Revised:** 2026-08-26 — rebuilt around the **offered floor**; the session
 object and half of this document were deleted rather than fixed
-**Amended by:** `phase-3e-floor-clarifications.md`, which wins over this file.
+**Amended by:** `phase-3e-floor-clarifications.md` and
+`phase-3e-pre-floor-corrections.md`, which win over this file.
 Its §1–§7 close five edge cases; its §8 carries four consequences found when
 reviewing them, of which §8.2 changes a 3C contract.
 **Companion to:** `phase-3e-conversation.md`, `social-personality.md`,
@@ -723,7 +724,8 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
       commit and carry it on speech_said; perception reads it §7, clar. §8.1
 3E-2  move perception delivery from context-built to offer-settled:
       contextFor + settle(epochId, {delivered})              clar. §8.2
-3E-3  Floor store: qualification including the cross-zone address clause,
+3E-3  Floor store (the "3E-2" of pre-floor-corrections §3, which gates it):
+      qualification including the cross-zone address clause,
       creation, destruction, ingestion of speech_said with zone
       and heardBy; transcript as a cache            §2, §5, clar. §2, §9
 3E-4  offer rounds: ranking, batching, rank-decides-the-taker,

@@ -1,6 +1,6 @@
 # Phase 3E — Pre-Floor Corrections
 
-**Status:** binding clarification / 3E-2 implementation gate  
+**Status:** binding clarification / Floor Store implementation gate  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
 **Applies to:** `phase-3d-memory.md`, `phase-3e-floor-clarifications.md` §10, `phase-3e-implementation-structure.md`  
 
@@ -186,7 +186,15 @@ This preserves the intended cost invariant:
 
 ---
 
-## 3. Gate for 3E-2
+## 3. Gate for the Floor Store
+
+> **Step numbering.** This document says "3E-2" for the Floor Store. In the
+> current order (`phase-3e-implementation-structure.md` §17) the Floor Store is
+> **3E-3**; 3E-2 is the perception delivery change (`contextFor` + `settle`),
+> which was inserted ahead of it because it alters a shipped 3C contract and
+> every offer round depends on being able to withdraw a context without
+> consuming anything. The gate below is about the Floor Store, whatever it is
+> numbered, and §1 is already implemented and tested.
 
 The Floor Store may now rely on these invariants:
 
@@ -197,4 +205,6 @@ overhearing creates no memory relationship by itself
 overheard nudge suppression is source-spell state, not Floor-instance state
 ```
 
-Do not implement 3E-2 with a temporary-Floor-local `overheardNudgeSpent` boolean. That implementation is explicitly non-conforming.
+Do not implement the Floor Store with a temporary-Floor-local
+`overheardNudgeSpent` boolean. That implementation is explicitly
+non-conforming.
