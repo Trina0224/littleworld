@@ -254,8 +254,8 @@ quietRounds >= quietLimit  ->  state = dormant
 ```
 
 A dormant floor re-arms on a **socially salient** event, not on a timer and not
-on any event at all. The binding whitelist is clarifications §4; the mechanism is
-clarifications §8.3 — *social* is a declared property of the fact type, defaulting to false, so
+on any event at all. The binding whitelist is clarifications §4; the mechanism is clarifications
+§8.3 — *social* is a declared property of the fact type, defaulting to false, so
 a new cafe fact cannot start polling eleven Brains by accident. Seats re-arm a
 floor and stations do not, because the shopkeeper claiming her workstation is
 exactly the machinery this excludes.
@@ -687,10 +687,8 @@ Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 3E-11 scripted acceptance scenarios + mutations, view.js replay support  §13
 ```
 
-3E-2 is early and on its own because it changes a shipped 3C contract, and every
-offer round after it depends on being able to withdraw a context without
-consuming anything.
-
 3E-0 first because it is the only step that removes behaviour. 3E-1 second
 because everything downstream needs one implementation of audibility, and adding
-it later means two.
+it later means two. 3E-2 third and on its own because it changes a shipped 3C
+contract, and every offer round after it depends on being able to withdraw a
+context without consuming anything.
