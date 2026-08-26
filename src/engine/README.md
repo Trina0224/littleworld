@@ -224,7 +224,27 @@ lastSeenTick  while contact holds
 have met four times and spoken on two of them*, and may not say what that
 amounts to. It lives inside the open encounter, so it needs nothing from 3E, and
 `buildContext` renders it as `timesSpoken` because a counter nothing can read is
-write-only. **The exactly-once cursor did not relax**: it is now what stops a
+write-only.
+
+**Exchanged is narrower than heard, and a review found the first version got it
+wrong.** Counting any heard utterance gave 星さん conversational history with the
+pastor for sitting near him while he talked to 渡辺 — not an over-count but a
+different relationship, and a number the Brain reads as *we have spoken four
+times* has to mean it. So the rule sits on the perceived event rather than on
+anything semantic: `direct_address` and `own_speech_directed` count,
+`speech_heard` and `sound_heard` do not. Overhearing is still **contact** — a
+voice 55 units away is being in the same place as somebody — it is only not an
+exchange.
+
+That needed a new perceived event, because perception was silent about your own
+speech and so half of *we have spoken* was unobservable: the person spoken to
+knew, and the person who spoke did not. Memory could not fill it in from the
+other side — writing into another observer's store from one observer's
+perception is exactly the cross-store contamination the phase exists to prevent —
+so perception queues `own_speech_directed` to the speaker, and only when the
+target is in `heardBy`. **An address nobody heard is not an exchange**, which is
+the same audibility gate 3E puts in front of conversational handoff. A remark to
+the room, with no `to`, counts for nobody. **The exactly-once cursor did not relax**: it is now what stops a
 re-ingested utterance inflating `spokenWith` and dragging `lastSeenTick`
 backwards.
 
@@ -318,6 +338,18 @@ because a mutation that passes is not evidence:
 - two removed belt-and-braces mind gates that a third gate already covered. Both
   were genuine no-ops, which is the argument for having removed the redundant
   gates rather than the argument for keeping them.
+
+Six more came from the review that narrowed `spokenWith`, and all six bite:
+counting `speech_heard` as an exchange (*overhearing one man address another
+counted 1 conversations*), never recording the speaker's own side (*addressing
+somebody counted 0*), counting an address nobody heard, counting nothing at all,
+counting only one direction, and dropping `speech_heard` from contact
+(*hearing a voice 55 units away was not contact at all*).
+
+That last one needed the test moved further away before it bit: the bystander was
+standing inside `nearRange`, so proximity opened the encounter anyway and hearing
+was doing no work. It is now asserted at 55 units — outside the near sweep,
+inside hearing — by somebody with no seeded knowledge of the speaker.
 
 Seven more came from 3E-0, the step that removed the per-utterance episode:
 
