@@ -45,3 +45,24 @@ export function createRecorder() {
     }
   };
 }
+
+/**
+ * Which committed facts are socially salient enough to wake a dormant
+ * conversation floor (phase-3e-floor-clarifications.md 4, 8.3).
+ *
+ * Opt-in, declared here rather than inside the floor store, and default false.
+ * A whitelist kept by the consumer is a list the next runtime forgets to update,
+ * and it fails in the expensive direction: one new cafe fact quietly polls every
+ * Brain within earshot. Adding a type here is one reviewable line by whoever
+ * added the fact, and the question it has to answer is whether that event
+ * changes what somebody might reasonably want to say.
+ */
+export const SOCIAL_FACTS = new Set([
+  'agent_spawned',
+  'agent_arrived',
+  'agent_departed',
+  'speech_said',            // narrowed further by audibility, see floors.js
+  'resource_occupied',      // seats only, not stations
+  'resource_released',
+  'animal_responded'        // 3E-9
+]);

@@ -67,6 +67,7 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
   const world = {
     clock,
     rng,
+    seed,
     log,
     resources,
     agents,

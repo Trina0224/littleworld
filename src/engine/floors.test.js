@@ -43,7 +43,7 @@ function setup() {
   const zones = createZones(zoneSpec, nav);
   const world = createWorld({ anchors, nav, zones, seed: 20260826 });
   const perception = createPerception(world, zones, { entities });
-  const floors = createFloors(world, zones, { minds });
+  const floors = createFloors(world, zones, perception, { minds });
   const runtime = createActivityRuntime(world);
   const loop = createLoop({ world, runtime, perception, floors });
   world.start();
@@ -125,9 +125,18 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   check(floors.transcript('near-table').length === 1,
     'the utterance is not in the zone it was spoken in');
 
-  // Self-clearing: the opportunity expires and the temporary floor goes.
+  // Self-clearing: she is offered the floor, declines it, and the temporary
+  // floor goes. It survives until the offer resolves, or the offer it exists to
+  // carry would be revoked in the same breath as it was issued.
+  const hers = floors.offers().filter((o) => o.entityId === 'shopkeeper-01');
+  check(hers.length === 1 && hers[0].why === 'addressed',
+    `she was offered ${hers.length} times, why=${hers[0]?.why}`);
   floors.clearAddress('shopkeeper-01');
-  loop.run(6, {});
+  loop.run(5, {});
+  check(floors.floor('cafe-counter') !== null,
+    'the temporary floor was revoked while its own offer was still outstanding');
+  floors.decline('shopkeeper-01');
+  loop.run(7, {});
   check(floors.floor('cafe-counter') === null,
     'the temporary floor outlived the address that created it');
 }
@@ -192,6 +201,7 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   check(floors.nudgeSpent('shopkeeper-01', 'near-table'), 'the nudge was not recorded');
 
   // Her temporary floor is created and destroyed; the record must not care.
+  floors.decline('shopkeeper-01');
   floors.clearAddress('shopkeeper-01');
   loop.run(8, {});
   check(floors.floor('cafe-counter') === null, 'the temporary floor did not close');
