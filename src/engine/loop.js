@@ -14,10 +14,11 @@
  *     5  commit the resulting world facts
  *     6  refresh perception for each present agent
  *     7  accumulate private memory from what was perceived
- *     8  decide whether any agent needs a Brain wakeup
- *     9  dispatch those requests asynchronously
+ *     8  advance each zone's conversation floor
+ *     9  decide whether any agent needs a Brain wakeup
+ *    10  dispatch those requests asynchronously
  *
- * Steps 1-8 never wait for inference. Step 9 belongs to the scheduler in 3F and
+ * Steps 1-9 never wait for inference. Step 10 belongs to the scheduler in 3F and
  * is not here; `onWakeup` is where it will attach, and the contract is already
  * enforced by the shape - it is handed a list and its return value is ignored,
  * so there is nothing for a future implementer to await.
@@ -56,7 +57,7 @@
  */
 
 export function createLoop({
-  world, runtime, perception = null, memory = null, onWakeup = null
+  world, runtime, perception = null, memory = null, floors = null, onWakeup = null
 }) {
   if (memory && !perception) {
     // Memory accumulates from perception and from nothing else. A loop given one
@@ -82,8 +83,9 @@ export function createLoop({
       runtime.tick();                             // 3, and 4 and 5 as it goes
       if (perception) perception.tick();          // 6
       if (memory) memory.tick(perception);        // 7
+      if (floors) floors.tick();                  // 8
 
-      // 8. Who would need to think? The list is produced synchronously and the
+      // 9. Who would need to think? The list is produced synchronously and the
       // return value is discarded, so a scheduler attaching here in 3F cannot
       // make the world wait for one.
       if (onWakeup) onWakeup(world.presentIds(), world.tick);

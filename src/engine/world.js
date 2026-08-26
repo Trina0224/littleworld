@@ -18,7 +18,7 @@ const round2 = (v) => Math.round(v * 100) / 100;
 
 export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 100,
                              ticksPerDay = 0, moveUnitsPerTick = 4,
-                             hearingRange, soundRange }) {
+                             hearingRange, soundRange, zones = null }) {
   // 4 units per tick at 10 ticks a second is about 1.2 m/s where the bench is,
   // which is a walk. Speed is flat in world units for now; making it flat in
   // metres means scaling by the height ramp, and that is a refinement, not a
@@ -232,11 +232,19 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
      * forbidden. So the answer is computed once, while it is cheap and correct,
      * and rides on the fact (phase-3e-floor-clarifications.md 8.1). It is
      * server-side truth; no model ever reads a fact.
+     *
+     * `zone` rides on the fact for the same reason and only when the world was
+     * given zones: which room an utterance was spoken in cannot be recovered
+     * later without re-running containment against where the speaker stood, and
+     * replay is playback rather than re-simulation (3E clarifications 8.1, 9.2).
      */
     say(agentId, text, { scope = 'normal', to = null } = {}) {
       if (!here.has(agentId)) return false;
+      const at = agents.get(agentId).at;
       log.fact(clock.tick, 'speech_said', {
-        agent: agentId, text, scope, to, heardBy: hearing.audience(agentId, scope)
+        agent: agentId, text, scope, to,
+        heardBy: hearing.audience(agentId, scope),
+        ...(zones ? { zone: zones.at(at[0], at[1]) } : {})
       });
       return true;
     },
