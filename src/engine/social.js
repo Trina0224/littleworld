@@ -2,8 +2,7 @@
  * The social vector, turned into a number.
  *
  * Implements social-personality.md 6.1 and phase-3e-floor-clarifications.md 5.
- * Pure: no clock, no rng, no world, no memory, no mutation. Its consumers are
- * the offer ranking and the test that proves the cast stays asymmetric.
+ * socialWeight itself is pure: no clock, rng, world, memory, or mutation.
  */
 
 const AXES = [
@@ -27,20 +26,43 @@ export function socialWeight(traits, situation = {}) {
   w += 60 * mid(traits, 'conversationDrive');
   w += 20 * mid(traits, 'talkativeness');
 
-  // High inhibition suppresses unsolicited approaches, and more so with someone
-  // the character does not know. A low value is a permission not to act, never
-  // a defect to be repaired (social-personality.md 6.1).
   w -= (withStranger ? 90 : 45) * mid(traits, 'socialInhibition');
-
-  // A silence somebody has to rescue is where conversationDrive earns its place.
   w += Math.min(quietRounds, 3) * 25 * mid(traits, 'conversationDrive');
 
-  // Having just spoken makes you a little less eligible, unless persistence says
-  // one weak response is not a reason to stop.
   if (lastSpeakerWasMe) w -= 30 * (1 - mid(traits, 'persistence'));
 
   void roundIndex;
   return Math.round(w * 100) / 100;
+}
+
+/**
+ * Bridge between the Floor's structural situation and the pure weight.
+ *
+ * Floors deliberately do not know private memory. They pass participant ids;
+ * this adapter is the one place allowed to ask whether those people are known
+ * to this observer, then reduces that to the boolean socialWeight needs.
+ *
+ * traitsFor may be a function or a Map. `memory` is optional; without it the
+ * adapter makes no stranger claim rather than guessing.
+ */
+export function createSocialWeigher({ traitsFor, memory = null } = {}) {
+  const traits = typeof traitsFor === 'function'
+    ? traitsFor
+    : (id) => traitsFor?.get?.(id) ?? null;
+
+  return (entityId, situation = {}) => {
+    const participants = Array.isArray(situation.participants) ? situation.participants : [];
+    const withStranger = memory
+      ? participants.some((otherId) => !memory.recall(entityId, otherId))
+      : false;
+
+    return socialWeight(traits(entityId), {
+      withStranger,
+      quietRounds: situation.quietRounds ?? 0,
+      roundIndex: situation.roundIndex ?? situation.round ?? 0,
+      lastSpeakerWasMe: !!situation.lastSpeakerWasMe
+    });
+  };
 }
 
 export { AXES };
