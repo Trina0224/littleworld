@@ -6,9 +6,22 @@
 boundary made concrete (§9.3), engine effect of `continue_listening` (§5.3), turn
 ownership reconciled with `world-engine-2.5.md` §11.4 (§11.0), acceptance
 mechanism sharpened (§17.0)  
-**Supplemented by:** `phase-3e-implementation-structure.md` — the object shapes,
-the tick algorithm, the fact/audit line, and five contract gaps this document
-does not settle. Where that file is more specific, it wins.  
+**Supplemented and partly superseded by:**
+`phase-3e-implementation-structure.md`. Writing the structure out found that a
+session object was the wrong shape: conversation is now **an offered floor, one
+per zone** — the engine offers the floor to one character at a time, "no" is an
+answer, and a round with no taker is what silence means. **The zone is the
+session.** That file wins wherever the two differ; the sections it replaces are
+marked below and kept for the record.
+
+Replaced: §1.2 (one active session), §5.2 (`continue_listening`), §6 (join /
+leave in the vocabulary), §11 (lifecycle), §13 (third-party joining), §14 (wake
+reasons), §17 tests 1/2/3/5/6, §19 (order). **Unchanged and still binding:** §2
+(persistence is the default), §3 (no round-robin), §4 (transport ≠ membership),
+§5 / §5.1 (select not author, `nothing` always legal), §7 (personality),
+§8 (shallow topics), §9 (transcript ≠ memory), §10 (safe references), §12
+(physics wins), §15 (latency safety), §16 (context contents), §18 (non-goals),
+§20 (handoff gate).  
 **Depends on:** Phase 3C perception, Phase 3D private memory, `social-personality.md`  
 **Feeds:** Phase 3F-A Cafe / Venue Runtime, Phase 3F-B Scheduler + Mock Brain, Phase 3G provider adapter
 
@@ -63,6 +76,11 @@ A Brain receives only its own model-visible context: recognised/private labels w
 
 ### 1.2 One active social conversation per LLM actor in the MVP
 
+> **Superseded — structure §14.** Kept because the requirement is right; the
+> mechanism is gone. With one floor per zone, an actor is in exactly one
+> conversation because it is standing in exactly one zone. Physics enforces it
+> and no rule is needed.
+
 For Phase 3E, an LLM actor may be an active participant in at most **one** conversational session at once.
 
 This avoids unclear cases such as one character simultaneously taking turns in two nearby groups. A character may still **hear** other conversations through perception without joining them.
@@ -105,22 +123,21 @@ A short answer is **not by itself** an ending signal.
 
 ### 2.1 Conversation is a stage of the canonical tick
 
-Session state is updated at **step 8** of the tick order in
+Floor state is advanced at **step 8** of the tick order in
 `phase-3c-perception.md` §2, owned by the loop and not by whichever scenario
 happened to think of it.
 
 ```text
 6  refresh perception
 7  accumulate private memory
-8  update conversation sessions from committed speech    <- here
+8  advance each zone's conversation floor    <- here
 9  evaluate wake reasons
 10 dispatch
 ```
 
-Its position is fixed by two dependencies and not by taste: sessions are built
-from committed speech facts (step 5), and the wake reasons of §14 are read out of
-session state at step 9. It sits after memory only because neither depends on the
-other.
+Its position is fixed by two dependencies and not by taste: floors are built from
+committed speech facts (step 5), and the offers dispatched at step 10 are opened
+here. It sits after memory only because neither depends on the other.
 
 This is written down before any of it is implemented on purpose. Twice now a
 stage has existed as a correct module that nothing actually ran — perception for
@@ -157,7 +174,7 @@ C hears it through perception
   -> C does NOT automatically receive the next conversational turn
 ```
 
-If C wants to join, that is a distinct legal social choice such as `join_conversation`.
+If C wants to join, C walks into the zone and is in the next offer round. There is no join action (structure §5).
 
 This rule prevents one local conversation from becoming an eleven-agent meeting.
 
@@ -191,7 +208,8 @@ The legal action vocabulary determines physical speech extent.
 Examples:
 
 ```text
-greet / ask / reply / chat / join_conversation
+greet / ask / reply / chat
+call_over / praise / shoo   (animal-directed)
   -> ordinary local speech
 
 order / call_across_park / raise_voice
@@ -212,9 +230,8 @@ Example:
 [
   reply:seen-2,
   ask:seen-2,
-  continue_listening,
   change_topic:seen-2,
-  leave_conversation,
+  call_over:seen-4,
   nothing
 ]
 ```
@@ -243,6 +260,14 @@ This is required so shy, withdrawn, distracted, or simply uninterested character
 
 ### 5.2 `continue_listening` is distinct from `nothing`
 
+> **Superseded — structure §3.4.** `continue_listening` is deleted. It existed to
+> keep a participant inside a session without speaking, and there is no
+> membership to maintain: standing in the zone *is* the membership, and declining
+> the floor removes nobody from the next round. The property it protected —
+> タタ and 草野 may stay in a conversation without speaking — holds by
+> construction instead of by a choice they have to remember to make.
+
+
 `continue_listening` means the character remains socially engaged in the current session but does not take the conversational floor now.
 
 `nothing` means no social commitment is made.
@@ -250,6 +275,12 @@ This is required so shy, withdrawn, distracted, or simply uninterested character
 This distinction allows quiet listeners such as タタ or 草野 to remain part of a conversation without being forced to speak.
 
 ### 5.3 What the two do in the engine
+
+> **Superseded — structure §3.4.** With `continue_listening` gone, `nothing` is
+> simply the decline, and an explicit refusal, a request timeout and a provider
+> error all resolve to it. That collapse is what lets a bad provider day make the
+> world quieter rather than broken.
+
 
 Neither produces a `speech_said` fact — §17.4 requires that no fake speech is invented, and that applies to both. The difference is entirely in session state:
 
@@ -268,6 +299,12 @@ The consequence that matters is that a room of quiet listeners keeps its session
 
 The initial vocabulary should remain small.
 
+> **Partly superseded — structure §3.4, §8.1.** `continue_listening`,
+> `join_conversation` and `leave_conversation` are removed: you join by walking
+> into the zone and leave by walking out, both already implemented and already
+> facts. Animal-directed acts are added when an addressable deterministic actor
+> is in the zone.
+
 Required conversational actions:
 
 ```text
@@ -276,10 +313,11 @@ start_conversation(target)
 reply(target)
 ask(target)
 change_topic(target)
-continue_listening
-join_conversation(session/visible group)
-leave_conversation
 nothing
+
+call_over(animal)                  when an addressable animal is present
+praise(animal)
+shoo(animal)
 ```
 
 Optional if implementation proves useful without widening scope:
@@ -483,6 +521,11 @@ This is the 3D label rule applied to conversation history.
 
 ## 11. Conversation lifecycle
 
+> **Superseded — structure §2.1, §4.** The four-state session lifecycle is gone.
+> A floor is `open`, `offered` or `dormant`, and it goes dormant after a round
+> with no taker rather than after a tick threshold. §11.0 below survives intact
+> and became rank 1 of the offer order.
+
 ### 11.0 Turn ownership is addressee-driven, not rotational
 
 `world-engine-2.5.md` §11.4 decided **strict turn-taking with a timeout** for the MVP, and that stands: the session owns whose turn it is and when it expires. This section says only what "whose turn" resolves to, because with three participants it is otherwise ambiguous.
@@ -559,17 +602,17 @@ Required rules:
 
 ## 13. Third-party joining
 
+> **Superseded — structure §5.** There is no join action. A nearby listener in
+> another zone is never offered that zone's floor; someone who walks *into* the
+> zone is in the next round automatically, because the round is over whoever is
+> standing there. §13.1's three-participant requirement is unchanged and is
+> easier to satisfy than it was.
+
 A nearby listener is not automatically included.
 
-To join an existing session, the character must have:
-
-```text
-physical/auditory access
-+ a legal join_conversation option
-+ a selected social action to join
-```
-
-On commit, the server adds the character to `participants[]`.
+To take part, the character must be standing in the zone — that is the whole
+condition. On the next round it is in the ranking, and whether it speaks is its
+own choice.
 
 The existing participants are not required to explicitly "approve" the join in Phase 3E. Their Brains may react naturally on their next turns. More complex exclusion/private-conversation mechanics are out of scope.
 
@@ -582,6 +625,13 @@ There is no requirement yet to optimize large group conversation among all eleve
 ---
 
 ## 14. Wake reasons produced by conversation
+
+> **Superseded — structure §3.3, §14.** There is one wake event — *you have been
+> offered the floor* — carrying why: `addressed`, `open_floor`, or
+> `question_outstanding`. `conversation_opening` and
+> `conversation_join_opportunity` collapse into walking into a zone;
+> `conversation_fading` and its rescue budget are replaced by being ranked high
+> on the next round.
 
 Phase 3E should expose explicit reasons rather than directly call an LLM provider.
 
@@ -674,12 +724,21 @@ Nothing inside 3E may call it to decide anything. It exists so that §7.1's elig
 
 Phase 3E is not complete until scripted participants demonstrate all of these without a real provider:
 
-1. **Persistent two-person session:** A and B sustain at least 10 turns without opening a new session after every utterance.
-2. **No round-robin:** C hears A/B but is not automatically granted a turn or added as participant.
-3. **Explicit join:** C chooses `join_conversation` and the same session becomes a three-person session.
+> **Tests 1, 2, 3, 5 and 6 are restated for the floor model — structure §3–§5.**
+> The properties are the same; the mechanisms they name are gone.
+
+1. **Persistence:** A and B sustain at least 10 turns on one zone floor, and the
+   floor never goes dormant between them.
+2. **No round-robin:** C, standing in a *different* zone, hears A and B and is
+   never offered their floor. C in the *same* zone is offered it only after the
+   addressee, and whether C speaks is C's choice, never the engine's.
+3. **Walking in is joining:** C enters the zone and is included in the next
+   round, with no join action anywhere.
 4. **Silence is legal:** B selects `nothing`; no fake speech fact is emitted.
-5. **Listening is legal:** B selects `continue_listening`; B remains a participant without speaking.
-6. **Physical boundary:** A walks outside ordinary hearing conditions and the conversation winds down/ends rather than becoming telepathic.
+5. **Declining does not remove you:** B declines three rounds running and is
+   still offered the floor in the fourth, and is still rendered a transcript.
+6. **Physical boundary:** A walks out of the zone and is no longer offered its
+   floor; nothing becomes telepathic.
 7. **Transcript is session-local:** ten conversational turns do not create ten long-term memory episodes merely because they occurred.
 8. **Meaningful memory remains possible:** a separate Brain memory proposal is canonicalized and survives after the session ends.
 9. **Third-party hearing remains perception:** a nonparticipant may remember heard speech without being made participant.
@@ -689,6 +748,16 @@ Phase 3E is not complete until scripted participants demonstrate all of these wi
 13. **Provider independence:** all session state/lifecycle tests run with no real LLM provider.
 14. **Latency safety:** a pending async Brain result does not stop world ticks or deterministic activity.
 15. **Exactly-once speech:** each committed utterance is delivered through perception/memory according to existing exactly-once contracts and is not duplicated by conversation bookkeeping.
+16. **Silence is free:** a zone whose round found no taker stops polling, and
+    re-arms only when something happens in it (structure §4).
+17. **Rank decides, not the network:** with two takers in one batch, the
+    higher-ranked one speaks and the other is discarded — replaying the same
+    recorded choices in a different arrival order produces the same fact stream
+    (structure §3.2).
+18. **Speaking to the dog:** 辰 selects `call_over` on ハナ and she usually
+    comes; 星さん selects the same act and she usually does not, because
+    familiarity is authored and not learned. Both outcomes are facts, and ハナ
+    acquires no memory, no menu and no offer (structure §8).
 
 ---
 
@@ -738,11 +807,9 @@ contract that is about to change. It is also the only step that touches a phase
 already marked complete, so it should land as its own change with its own
 mutations rather than inside a larger one.
 
-**Superseded.** `phase-3e-implementation-structure.md` §15 replaces this list
-with an eleven-step order, because writing the structure out found that
-audibility has to be published as a single query before anything downstream uses
-it, and that turn ownership cannot be built before the latency rule it depends
-on. The order above is kept for the record.
+**Superseded.** `phase-3e-implementation-structure.md` §17 replaces this list
+with an eleven-step order built around the offered floor. The order above is kept
+for the record.
 
 Do not connect a real provider merely to make the conversation look alive during development. Scripted/mock choices are the acceptance mechanism for this phase.
 

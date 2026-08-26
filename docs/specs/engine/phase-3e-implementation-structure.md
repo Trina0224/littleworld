@@ -2,325 +2,350 @@
 
 **Status:** binding supplement before implementation
 **Created:** 2026-08-26
+**Revised:** 2026-08-26 — rebuilt around the **offered floor**; the session
+object and half of this document were deleted rather than fixed
 **Companion to:** `phase-3e-conversation.md`, `social-personality.md`,
-`phase-3c-perception.md`, `phase-3d-memory.md`, `world-engine-2.5.md` §11–§12
+`phase-3c-perception.md`, `phase-3c-venue-interactions.md` §3,
+`phase-3d-memory.md`, `world-engine-2.5.md` §11–§12
 
 Same relationship to `phase-3e-conversation.md` as
 `phase-3c-implementation-clarifications.md` has to the 3C draft: that document
 says what conversation must *be*, this one says what gets built. **Where this
 file is more specific, this file wins.**
 
-It exists because writing the structure out found five things the prose version
-does not settle, and one of them is load-bearing enough that building without it
-would produce a world in which nobody ever finishes a sentence.
+---
+
+## 0. The pivot, and why the first draft was thrown away
+
+The first version of this document built conversation as a session object with a
+lifecycle, membership, joins, turn grants and tick-based idle detection. Writing
+it out found five contract gaps, one of them fatal: any silence threshold short
+enough to mean something conversationally is shorter than a single model call, so
+every conversation would have timed out while its next line was being generated,
+and the reply would have arrived for a turn that no longer existed.
+
+The owner's answer replaced the mechanism rather than patching it:
+
+> **The engine offers the floor to one character at a time and asks whether they
+> want to speak. "No" is an answer. The engine then offers it to the next one.
+> Each area of the scene has its own floor, so several conversations run at
+> once.**
+
+Two problems stop existing rather than being managed.
+
+**Silence becomes latency-independent.** A conversation is quiet when a full
+round of offers found no taker. Whether each answer took three seconds or forty
+does not enter into it. The entire tick-arithmetic apparatus the first draft
+needed — counting only unthought ticks, suspending turn expiry while a request is
+in flight — is deleted.
+
+**The zone becomes the session.** A conversation is *the people in this area right
+now*. Joining is walking in and leaving is walking out, both of which are already
+implemented and already facts. The session object, its four-state lifecycle,
+`join_conversation`, `leave_conversation`, membership facts, invitation expiry and
+the one-active-session-per-actor rule all disappear, the last one because physics
+already guarantees it: you are in one zone.
+
+§14 lists exactly what was deleted, so the reasoning survives the deletion.
 
 ---
 
-## 0. What went wrong when I wrote the structure out
-
-Recorded before the design, because the reasoning matters more than the shapes.
-
-**§4 is the serious one.** The session has to decide "has this conversation gone
-quiet". Every natural way to measure that is in ticks. Provider latency is also
-in ticks — 80 to 150 of them for one reply. A quiet threshold short enough to
-mean anything conversationally is shorter than a single ordinary model call, so
-**every conversation would time out while its next line was still being
-generated**, and the answer would arrive for a turn that no longer existed
-(`world-engine-2.5.md` §12.2 discards it, correctly). The result is not a slow
-conversation. It is a world where nobody ever replies.
-
-The other four are smaller but the same species — a rule that reads fine in prose
-and has no implementable meaning:
-
-- **§5** never says whether a turn is a permission or an obligation, which
-  decides what happens when its holder chooses `nothing`;
-- **§6** one-active-session-per-actor contradicts "a direct address from outside
-  must not silently switch sessions" — the address has to live *somewhere*;
-- **§7** the transcript is rendered per observer, but nothing records who could
-  hear a given utterance, and by the time a Brain is woken the perception queue
-  that knew has been drained;
-- **§9** `conversation_fading` waking the highest-`conversationDrive` participant
-  has no stopping condition, so 星さん rescues every conversation forever and
-  nothing in the park ever ends.
-
-None of these are hard once seen. All of them are invisible in prose.
-
----
-
-## 1. The objects
-
-Five, and no more. Field names are binding; representation is not.
-
-### 1.1 `ConversationSession`
+## 1. The model in one page
 
 ```text
-id                'conv-3'                    deterministic counter, server-side
-participants      [entityId]                  sorted; never model-visible
-state             opening | active | winding_down | ended
-startedTick
-endedTick         null until ended
-lastSpeechTick    null while opening
+每個區域一個話語權   one floor per zone
+  offered to one character at a time, in priority order
+  the character speaks, or declines
+  a full round with no taker  = the conversation has gone quiet
+  quiet  -> the floor sleeps until something happens
+```
+
+```text
+ZONE park-open          floor: offered to 星さん        (awaiting)
+ZONE near-table         floor: open, round 2, 1 decline so far
+ZONE cafe-counter       floor: dormant since t=1180
+ZONE far-table          no floor - one person, no animal
+```
+
+Nothing here waits for inference. The engine hands out offers and reads answers
+when they arrive; the world clock never stops, and a character with an offer
+outstanding continues its deterministic activity exactly as before.
+
+---
+
+## 2. The objects
+
+Three. The first draft had five and a state machine.
+
+### 2.1 `Floor` — one per zone that currently qualifies
+
+```text
+zone              'near-table'
+state             open | offered | dormant
+round             integer, increments when an offer round completes
+offeredTo         [entityId]     the current batch, in rank order   §3.2
+offeredAt         tick
+declines          [entityId]     who has declined this round
+lastSpeechTick    null until somebody speaks
 lastSpeaker       entityId | null
-turn              Turn | null                 who may speak now
-openQuestion      { asker, asked, sinceTick } | null
-awaiting          Map(entityId -> tick)       Brain requests in flight   §4
-quietTicks        integer                     counts only unthought ticks §4
-rescues           integer                     fading wakeups spent       §9
-transcript        [Utterance]                 bounded working window     §7
+addressed         entityId | null    who the last utterance was aimed at
+openQuestion      { asker, asked, sinceTick } | null                §10
+quietRounds       integer        consecutive rounds with no taker
+transcript        [Utterance]    bounded working window            §7
 ```
 
-### 1.2 `Turn`
+A floor is created when its zone qualifies (§5) and destroyed when it does not.
+It holds no membership list: **membership is who is standing in the zone**, which
+`world.presentIds()` and `zones.at()` already answer.
 
-```text
-holder            entityId | null             null = open floor
-grantedTick
-expiresTick                                   see §5 for what expiry means
-```
-
-### 1.3 `Utterance` — one line of transcript
+### 2.2 `Utterance`
 
 ```text
 tick
 speaker           entityId
 text              the committed words
-act               reply | ask | greet | ...   the selected act, not a scope
-addressed         entityId | null
-heardBy           [entityId]                  sorted; server-side only     §7
+act               greet | reply | ask | call_over | ...
+addressed         entityId | null      may be a deterministic actor    §8
+heardBy           [entityId]           sorted, server-side only         §7
 ```
 
-### 1.4 `Opening` — an invitation that is not yet a conversation
-
-Not a separate class; an `opening`-state session with two participants, one of
-whom has not responded. It is listed separately because §6 turns on it.
-
-### 1.5 The store
+### 2.3 The store
 
 ```text
-createConversations(world, perception, { config })
-  tick()                        step 8 of the canonical tick
-  sessionFor(entityId)          the actor's one ACTIVE session, or null
-  openingsFor(entityId)         invitations awaiting this actor
-  reasons()                     wake reasons produced this tick, drained by the caller
-  transcriptFor(entityId)       rendered for that observer                 §7
-  menuFor(entityId)             legal choices for that actor               §8
-  commit(entityId, choice)      the only way a Brain choice enters the world §8
+createFloors(world, zones, perception, { config })
+  tick()                     step 8 of the canonical tick
+  offers()                   offers opened this tick; drained by the caller
+  transcriptFor(entityId)    rendered for that observer                 §7
+  menuFor(entityId)          legal choices for whoever holds an offer   §9
+  commit(entityId, choice)   the only door a Brain reply enters through §9
+  decline(entityId)          explicit or timed-out refusal              §3.4
 ```
 
-`reasons()` is drained, exactly like `fresh()` in `loop.js`, and its return value
-is a list. Nothing in this interface returns a promise, and nothing awaits.
+`offers()` drains, exactly like `fresh()` in `loop.js`. Nothing in this interface
+returns a promise and nothing awaits — the scheduler in 3F-B attaches to
+`offers()` the way it attaches to `onWakeup`.
 
 ---
 
-## 2. The tick stage
+## 3. The offer round
 
-Step 8 of `phase-3c-perception.md` §2. Two passes, in this order.
+### 3.1 Order of offer — priority, never a circle
 
-### Pass A — ingest committed speech
-
-Reads `speech_said` from the fact stream with its own cursor, the same pattern
-perception uses. It does not read the perception queue (`phase-3e-conversation.md`
-§9.0).
+A fixed circle produces the failure where A asks B a question and C, whose turn
+it happens to be, answers it. So the order is:
 
 ```text
-for each new speech_said fact:
-    session = the speaker's active session, or a new one if the act opens one
-    heardBy = participants for whom perception.canHear(p, speaker, scope)   §7
-    append the Utterance; trim to transcriptWindow
-    lastSpeechTick / lastSpeaker = this
-    if act was ask        -> openQuestion = { asker, asked, now }
-    if act was reply
-       and openQuestion.asked === speaker  -> openQuestion = null
-    turn = { holder: addressed ?? null, ... }                                §5
-    quietTicks = 0 ; rescues unchanged
-    if state === opening and speaker is the invited party -> state = active
+1  whoever the last utterance addressed
+2  whoever has an unanswered question of their own outstanding    §10
+3  everyone else, ranked by socialWeight(traits, situation)       §11
+4  ties broken by hash01(seed:zone:round:entityId)
 ```
 
-### Pass B — advance every session
+Rank 1 is the whole of `phase-3e-conversation.md` §11.0 preserved: **the floor
+goes to whoever was addressed, before anyone else is asked.** Everything below it
+is where the cast's asymmetry does its work — 星さん sits high in rank 3 on
+`initiative` and `conversationDrive`, 渡辺 sits at the bottom on both, and the
+result is that he is asked last and usually after somebody else has already
+spoken.
+
+He is still asked. Being asked last is characterisation; never being asked would
+be the engine deciding he is not a person.
+
+### 3.2 Offer in parallel, decide by rank
+
+Asking strictly one at a time multiplies latency by the number of decliners. With
+five people in a zone and four declines, one line of dialogue costs five full
+round trips, and a quiet character costs a full wait on every round forever.
+
+So the batch size adapts:
 
 ```text
-for each session, in sorted id order:
-    drop participants who can no longer hear any other participant  -> winding_down
-    if turn expired and its holder is not awaiting -> turn = null            §5
-    if awaiting.size === 0 and nobody spoke this tick -> quietTicks += 1     §4
-    if quietTicks >= fadeAfter and rescues < rescueLimit -> emit conversation_fading
-    if quietTicks >= idleLimit                          -> winding_down
-    if winding_down and quietTicks >= idleLimit + graceTicks -> ended
+a clear addressee exists  -> K = 1     they almost always answer
+open floor                -> K = 3     offer to the top three at once
 ```
 
-Sorted id order because iteration order must never change a result — the same
-rule as `resourceIds()` in `world.js`.
+**The taker is chosen by rank, not by who answered first.** Provider response
+order is network timing, and letting it decide who speaks would make the world
+non-deterministic — `same seed + same recorded choices = same fact stream` is the
+claim that keeps replay honest, and this is exactly where it would be lost.
+
+```text
+offer to the top K
+wait for all K to answer, decline, or time out
+among the takers, the highest-ranked speaks
+the rest are discarded and recorded in audit as floor_lost
+if all K decline -> next batch, same round
+if the round exhausts the zone -> quietRounds += 1
+```
+
+Discarding a generated utterance costs tokens. That is the price of paying
+latency once instead of K times, it is bounded by K, and in this project latency
+is the scarce resource and tokens are not (`pacing-and-latency.md` §6b).
+
+The alternative — record provider arrival order as a recorded simulation input,
+the way human director input is recorded — is legal under `pacing-and-latency.md`
+§4.1 and is deliberately not chosen: it would make the priority order decorative,
+overridden by network noise on most rounds.
+
+### 3.3 What an offer contains
+
+The full conversation-turn package of `phase-3e-conversation.md` §16, plus one
+field that did not exist in the session model:
+
+```text
+why you have the floor    addressed | open_floor | question_outstanding
+```
+
+and the legal choices from `menuFor()` (§9). The character is not told its rank,
+who else is being offered, or that anyone declined — those are engine mechanics
+and would leak the shape of the scheduler into the fiction.
+
+### 3.4 Declining
+
+`nothing` is the decline. It is always in the menu
+(`phase-3e-conversation.md` §5.1), it is not a provider failure, and a timeout or
+a provider error resolves to the same thing:
+
+```text
+explicit `nothing`   -> decline
+request timeout      -> decline, recorded in audit as an implicit one
+provider error       -> decline, same
+```
+
+Collapsing all three into one outcome is what makes the world survive a bad
+provider day: the conversation gets quieter, not broken.
+
+**`continue_listening` is deleted.** It existed to keep a participant in a
+session without speaking, and there is no membership to maintain any more —
+standing in the zone is the membership. One fewer concept, and one fewer thing
+for a model to choose wrongly.
 
 ---
 
-## 3. Facts, audit, and working state
+## 4. Quiet, and re-arming — the rule that keeps a quiet park free
 
-The line, stated once so it stops being re-argued:
+A round in which every character declined is the conversation going quiet. What
+happens next is the only place this design can waste real money:
+
+> **A floor that has gone quiet does not start another round on its own.**
+
+```text
+quietRounds >= quietLimit  ->  state = dormant
+```
+
+A dormant floor re-arms on an event, not on a timer:
+
+```text
+somebody arrives in the zone
+somebody leaves the zone
+a committed act inside the zone            sat down, ordered, stood up
+a loud utterance audible from the zone     call_across_park, raise_voice
+an animal does something notable           §8
+a human director input
+```
+
+Without this, eleven characters standing quietly in a park are polled forever and
+the bill is proportional to how boring the scene is, which is the wrong way
+round. With it, **silence is free**, which is what lets a day be long.
+
+Two consequences worth stating.
+
+**Rescue happens by widening, not by a special mechanism.** The first draft
+needed `conversation_fading` with a rescue budget to stop 星さん resuscitating
+every silence in the park forever. Here, a round that found no taker simply ends;
+if the zone re-arms later, she is high in rank 3 and will be asked early. She
+gets many chances and no guarantee, which is what being a sociable person is. The
+`rescueLimit` question in the earlier draft's §14 is withdrawn.
+
+**`quietLimit` is how stubborn the world is, and it is small.** Proposed 1: one
+full round with no taker is enough. A second round rarely finds a taker the first
+did not, and it costs a full poll of the zone to discover that.
+
+---
+
+## 5. Several conversations at once
+
+A zone qualifies for a floor when it holds:
+
+```text
+two or more LLM actors
+or one LLM actor and at least one addressable deterministic actor   §8
+```
+
+Zones come from `docs/specs/world/zones.json` and are already implemented:
+吧台 / 近桌 / 遠桌 / 街邊 / 公園空地, plus 後臺. Five usable rooms means up to
+five conversations running at once with no new geometry and no new concepts.
+
+### 5.1 A zone is not an audibility boundary
+
+Hearing range is 70 world units and crosses zone edges — the counter to the near
+table is 48 and audible, which is exactly why `broadcast` was worth having
+(`perception.js` DEFAULTS). So:
+
+```text
+the floor    is per zone      a scheduling construct
+hearing      is per distance  physics, and unchanged
+```
+
+People at the near table hear the counter and do not have the floor there. They
+perceive it, they may remember it, and it may make one of them walk over. That is
+already how 3C works and 3E adds nothing to it.
+
+### 5.2 Accepted limitation: one floor per zone
+
+Four people at the far table are one conversation, not two pairs. For a small
+café terrace and a pocket park this is close enough to true to be worth the
+simplicity, and two pairs at one table politely ignoring each other is not what
+this scene is. Recorded as a limitation rather than hidden.
+
+---
+
+## 6. Facts, audit, and working state
 
 | | stream | why |
 |---|---|---|
-| `speech_said` | **fact** | already is one; gains an optional `conv` field |
-| `conversation_started` / `_joined` / `_left` / `_ended` | **fact** | membership is publicly observable — you can see three people are talking together, and a renderer may draw the huddle |
-| turn grants, expiries, `openQuestion` | **audit** | mechanism; nothing to draw |
-| `continue_listening`, `nothing` | **audit** | §5.3; neither is speech |
+| `speech_said` | **fact** | already is one; gains an optional `zone` field |
+| `animal_responded` | **fact** | the dog visibly does something; a renderer draws it §8 |
+| offers, declines, `floor_lost`, dormancy | **audit** | mechanism; nothing to draw |
+| `openQuestion`, rank order, `heardBy` | **audit / working** | server-side only |
 | transcript | **neither** | derived from facts, rebuilt on demand, never persisted |
 
-Two consequences.
+**No new membership facts.** The earlier draft proposed
+`conversation_started` / `_joined` / `_left` / `_ended` and asked the owner to
+decide whether membership belonged in the recording. The question is withdrawn:
+membership is position, position is already committed every tick, and replay can
+draw a huddle from where people are standing. Adding a second, derived
+representation of the same truth is the kind of duplication that drifts.
 
-**The `conv` field on `speech_said` is what lets replay draw a conversation
-without re-deriving one.** Replay is playback, not re-simulation
-(`simulation-replay-architecture.md`); it must never rebuild a session. It reads
-membership facts and tagged utterances and draws.
-
-**Membership being a fact is a claim about the world, not a convenience.** Three
-people standing together talking is visible. Who holds the turn is not.
-
----
-
-## 4. Provider latency is not conversational silence
-
-The load-bearing rule of this document.
-
-```text
-ordinary conversational pause      ~2 s      20 ticks
-ordinary model call                8-15 s    80-150 ticks
-congested model call               20-40 s   200-400 ticks
-```
-
-A quiet threshold that models impatience is an order of magnitude smaller than
-one model call. So:
-
-> **`quietTicks` advances only on ticks where `awaiting` is empty.** A session in
-> which somebody is thinking is not quiet, however long the thinking takes.
-
-`awaiting` is set when the scheduler dispatches a request for a participant and
-cleared when a result arrives, fails, or is abandoned. 3E owns the **state**;
-3F-B owns the **policy** — concurrency, timeout, retry, dropping. This is the
-same split `loop.js` already uses for `onWakeup`: 3E hands out a list and holds
-state, and nothing in it awaits.
-
-Three things follow.
-
-**A turn does not expire while its holder is awaiting** (§5). Otherwise the
-answer arrives for a turn that no longer exists and is correctly discarded — the
-failure described in §0.
-
-**Thresholds become meaningful in simulation time.** `fadeAfter` can be 40 ticks
-and mean four seconds of real silence, rather than "faster than any model can
-answer".
-
-**Replay is unaffected and stays unaffected.** It compresses provider wait
-because it has the fact timeline; nothing in the session state machine has to
-know about presentation pacing. This is the simulation/replay split doing the
-work it was introduced for.
-
-### 4.1 The failure the rule prevents, written down
-
-Without it, with `idleLimit` at any conversationally sensible value:
-
-```text
-t=100  A: 今日はいい天気ですね          turn -> B, expires t=140
-t=100  B dispatched
-t=140  turn expires, session quiet
-t=180  session winding_down
-t=250  B's reply arrives -> stale, discarded
-```
-
-B never speaks. Not once, not slowly — never. And the log shows a well-behaved
-state machine doing exactly what it was told.
+The `zone` field on `speech_said` is kept because it is *not* derivable at replay
+time without re-running zone containment, and replay must never re-simulate.
 
 ---
 
-## 5. A turn is a permission with an expiry, never an obligation
+## 7. Transcript and audibility
 
-`nothing` is always legal (`phase-3e-conversation.md` §5.1), so a turn cannot be
-a duty. Therefore:
+`heardBy` is computed once, at ingestion, from perception's own predicate:
 
-```text
-granted    to whoever was addressed                          §11.0
-held       until taken, released, or expired
-taken      by any act that produces speech
-released   by continue_listening (stays engaged) or nothing (no commitment)
-expired    only after expiresTick AND only if the holder is not awaiting   §4
-```
+> **`perception.canHear(observerId, speakerId, scope)` becomes a published pure
+> query.** The floor calls it; nothing reimplements distance or scope.
 
-An expired or released turn sets `turn = null`, an **open floor**. It does not
-pass to the next participant — that is the rotation §11.0 exists to prevent. An
-open floor with nobody speaking is how `quietTicks` starts running, and quiet is
-how a conversation ends. **Silence is the mechanism by which conversations die,
-and that is intended**: the alternative is a system that keeps handing the turn
-around until somebody talks.
-
-`address_group` (optional, §6) grants a null holder deliberately: the floor is
-open to every participant at once, and whoever's Brain is woken first may take
-it.
-
----
-
-## 6. Openings, and the one-active-session rule
-
-`phase-3e-conversation.md` §1.2 caps an actor at one session; §12 forbids
-silently switching when someone else addresses them. Both hold, because **the cap
-is on `active`**:
-
-```text
-active sessions per actor      at most 1
-opening sessions per actor     several, bounded by openingLimit
-```
-
-星さん calling to 渡辺 while he is talking to 澄子 creates an `opening` session
-holding both of them. It appears in his `openingsFor()`, it may become a legal
-`join_conversation` / `leave_conversation`-then-accept choice on a later turn,
-and it expires on its own after `openingExpiry` ticks so unanswered invitations
-do not accumulate.
-
-An `opening` that expires ends without ever becoming active — which is the
-correct world behaviour for calling to someone who was busy and did not turn
-round. It is recorded in audit and produces no speech.
-
-**An actor may never be `active` in two sessions.** Accepting an opening while
-active requires leaving first, and that is a choice the Brain makes explicitly,
-not something the engine does on its behalf.
-
----
-
-## 7. Audibility has exactly one implementation
-
-The transcript is rendered per observer (`phase-3e-conversation.md` §10), so
-something must know who could hear each line. By the time a Brain is woken, the
-perception queue that knew has been drained by delivery.
-
-Two rules, and they are the same rule the zone geometry follows — *two
-implementations of one containment test is where drift hides*:
-
-> **`heardBy` is computed once, at ingestion, from perception's own predicate.**
-
-`perception.canHear(observerId, speakerId, scope)` becomes a published pure
-query rather than an internal function. The session calls it; nothing
-reimplements distance or scope.
-
-> **`heardBy` is server-side and never model-visible.**
-
-It is a list of entity ids. It reaches a Brain only as the *absence* of a line
-from that observer's rendered transcript.
+Two implementations of one audibility test is where drift hides — the same
+reasoning that made `zones.json` carry a 300-position sample for the JS to
+reproduce. `heardBy` is server-side, never model-visible, and reaches a Brain
+only as the *absence* of a line from that observer's rendered transcript.
 
 ### 7.1 A gap in a transcript is a rendering, not a bug
 
-A participant who stepped away for two lines gets a transcript with those two
-lines missing. That is correct, it is the whole point of §10, and the engine must
-not paper over it with a placeholder. What it must not do is let the gap be
-silent about itself when the character then says something that assumes knowledge
-of what was missed — but that is a Brain-side consequence and 3E does not model
-it.
+Someone who stepped away for two lines gets a transcript missing those two lines.
+That is correct and the engine must not paper over it with a placeholder.
 
-### 7.2 Rendering rules, restated as an ordered fallback
-
-For each utterance in the observer's window, the speaker renders as:
+### 7.2 Speaker rendering — an ordered fallback
 
 ```text
-1  the observer's private label from 3D memory              森牧師
-2  currently visible          -> current ref + appearance    seen-2, 高瘦的中年男子
-3  known but not visible      -> private label if any
-4  otherwise                  -> neutral session-local description
+1  the observer's private label from 3D memory           森牧師
+2  currently visible -> current ref + appearance          seen-2, 高瘦的中年男子
+3  known but not visible -> private label if any
+4  otherwise -> neutral session-local description
 ```
 
 Never the target's canonical name, never an entity id, never a fallback that
@@ -329,108 +354,197 @@ applied to history.
 
 ---
 
-## 8. What the engine does with a Brain reply
+## 8. Speaking to a deterministic actor
 
-`commit(entityId, choice)` is the only door. Its contract:
+A character may address the dog, and the world may let the dog comply.
+
+This is not a courtesy feature. 辰 talking to ハナ is one of the most characteristic
+things this cast does, and a zone holding one person and their dog is a real
+scene rather than an empty one.
+
+### 8.1 The engine never reads the prose
+
+The engine cannot know that 「ハナ、おいで」 means *come here*, and it must not
+try. `phase-3c-venue-interactions.md` §3 already settled this for the café and
+the same rule applies unchanged:
+
+> **The Brain selects an act from the menu the engine supplied. The words are
+> what people hear; the act is what the world executes.**
+
+So when an addressable animal is in the zone, `menuFor()` includes animal-directed
+choices alongside the human ones:
+
+```text
+[ reply:seen-2, ask:seen-2, call_over:seen-4, praise:seen-4, shoo:seen-4,
+  nothing ]
+```
+
+`seen-4` is the dog, through the ordinary perception ref (`kind: animal_seen`).
+The Brain still never receives `dog-01`.
+
+The initial repertoire stays deliberately tiny — `call_over`, `praise`, `shoo` —
+because the point of 3E is to prove the *path*. What a deterministic actor can be
+asked to do belongs to whatever runtime owns it, and grows there.
+
+### 8.2 Compliance is parameters, never memory
+
+`dog-01` carries `bonds`, not `knows`, and has no memory store
+(`phase-3d-memory.md` §8). Compliance is therefore computed from authored data
+and current state only:
+
+```text
+familiarity   bonds[speaker].familiarity, or 0 for a stranger
+distance      how far the caller is
+occupied      what the dog is doing right now
+act           what was asked
+```
+
+The asymmetry falls out for free and is exactly right: 辰 and タタ are at
+familiarity 1.0, everyone else is at 0. **星さん calling ハナ mostly does not
+work, and 辰 calling ハナ mostly does.** Nobody had to write that rule; it is
+already in the character file.
+
+A deterministic actor must never acquire a memory from being spoken to, and 3D's
+mind gate already guarantees it structurally.
+
+The *human* side is unchanged and is worth noticing: calling the dog is speech
+aimed at an entity, so the caller's own memory records contact with ハナ in the
+ordinary way — `encounters`, and `spokenWith` (`phase-3d-memory.md` §2). A
+character who remembers having talked to a dog several times is exactly right,
+and nothing had to be added for it.
+
+### 8.3 Stable randomness, without touching the shared stream
+
+A dog that always obeys is a machine and a dog that never does is scenery. The
+decision needs to be uncertain and still deterministic, and it must not draw from
+the world rng — a stream's values depend on how many times anyone else has drawn
+from it, which is the reason `attendance.js` hashes instead:
+
+```text
+comply = hash01(`${seed}:${tick}:${speaker}:${act}:${animal}`) < p(familiarity, distance, occupied)
+```
+
+Same seed, same tick, same call, same answer, whatever else the run contains.
+
+### 8.4 What the dog produces
+
+Not speech. A committed action, and optionally an audible non-verbal fact:
+
+```text
+animal_responded   { animal, to, act, outcome: complied | ignored }
+```
+
+It is a fact because it is visible — the dog gets up and trots over, or it does
+not — and a renderer and a replay both need it. Perception already classifies the
+dog as `animal_seen`, so other characters observe the response through the
+ordinary channel with no special case.
+
+An ignored call is also a fact. A dog that visibly does not come when called is
+information about the caller, and it is the sort of small public failure this
+world should be able to show.
+
+### 8.5 What the dog never gets
+
+```text
+an offer                    it is never polled and never receives a context
+a menu                      it selects nothing
+a transcript                it renders nothing
+a memory                    3D minds gate, already enforced
+a self.md                   3B, unchanged
+```
+
+A zone qualifying for a floor because an animal is in it means the *person* is
+offered the floor. The animal is a possible target, never a participant.
+
+### 8.6 The cost guard for a person and a dog
+
+One LLM alone with an animal would otherwise be polled round after round with
+nobody to answer. So a zone that qualifies only through §5's animal clause
+**re-arms on events only** and never on a fresh round — the dog arriving, the dog
+doing something, another person walking in. Everything in §4 applies, more
+strictly.
+
+---
+
+## 9. What the engine does with a Brain reply
+
+`commit(entityId, choice)` is the only door.
 
 ```text
 in     { pick: 'reply:seen-2', text?: string, memory?: [...] }
 out    { act, target, spoken, refused? }
 ```
 
-Binding rules:
-
 ```text
-pick must be one of the strings menuFor() produced this turn      else refused
-refs in pick and in memory proposals are canonicalized (3D 1.1a)  else refused
-text is DISCARDED for a pick that carries no speech               not an error
+pick must be one of the strings menuFor() produced for this offer   else refused
+refs in pick and in memory proposals are canonicalized (3D 1.1a)    else refused
+text is DISCARDED for a pick that carries no speech                 not an error
 text is truncated to speechLimit, never rejected for length
-scope is derived from the act and never read from the reply       §4.1
-the engine builds the structured action; the model named a choice §5
+scope is derived from the act, never read from the reply            §4.1 of 3E
+an entity that does not hold an offer cannot commit                 refused
 ```
 
 A refusal is audit, changes nothing, and reaches only the actor that attempted it
-— which is exactly the `own_action_failed` path 3C already built, reused rather
-than reinvented.
+— the `own_action_failed` path 3C already built, reused rather than reinvented.
 
 **Discarding text rather than erroring** is deliberate. A model that returns a
-sentence alongside `continue_listening` has not malfunctioned; it has been
-slightly too helpful, and the right response is to take the choice and drop the
-prose.
+sentence alongside `nothing` has not malfunctioned; it has been slightly too
+helpful, and the right response is to take the choice and drop the prose.
 
 ---
 
-## 9. Wake reasons, and how fading avoids becoming a nag
+## 10. `openQuestion`
+
+The one structural stake the engine owns.
 
 ```text
-direct_address                 someone addressed you by act
-conversation_turn              you hold the floor
-conversation_opening           someone is inviting you                     §6
-conversation_join_opportunity  a session you can hear has an open floor
-conversation_fading            a session you are in has gone quiet         below
+act was ask                        -> openQuestion = { asker, asked, now }
+act was reply and speaker is asked -> openQuestion = null
+the asked leaves the zone          -> openQuestion = null
 ```
 
-Ranking is 3F-B's. 3E only guarantees `direct_address` outranks any optional
-social opportunity, which `phase-3e-conversation.md` §14 already requires.
+Its only mechanical effect is rank 2 in §3.1: a character with a question hanging
+in the air is offered the floor before the general population. That is enough to
+make an unanswered question feel unanswered, and it costs one nullable field.
 
-### 9.1 The rescue budget
-
-`conversation_fading` with no stopping condition produces a character who never
-lets anything end. The cast makes this concrete: 星さん is authored at
-`conversationDrive` 0.95, so she would rescue every silence in the park forever,
-and no conversation would ever reach `ended` except by someone walking away.
-
-Two bounds, both cheap:
-
-```text
-once per quiet spell     rescues can only fire again after somebody has spoken
-rescueLimit per session  after N rescues the session is allowed to die
-```
-
-The second is the one that matters. **A conversation that has been rescued twice
-and gone quiet a third time is over**, and saying so is not a failure of
-hospitality — it is the difference between a character who keeps a conversation
-alive and a character who cannot read a room.
-
-`conversationDrive` still decides *who* gets the fading reason among the
-participants. It does not decide whether the session may die.
+Deliberately not modelled: whether the reply actually answered the question. That
+is semantics, and `phase-3e-conversation.md` §8 keeps the engine out of it.
 
 ---
 
-## 10. `socialWeight()`
+## 11. `socialWeight()`
 
-One pure function, scoped exactly as `phase-3e-conversation.md` §17.0 requires.
+One pure function, and now it has a real consumer rather than a hypothetical one:
+it produces rank 3 of the offer order.
 
 ```text
 socialWeight(traits, situation) -> number
 
 traits      the ten-axis vector from character.json
-situation   { kind, withStranger, sessionState, quietTicks, weakLastTurn, ... }
+situation   { withStranger, quietRounds, roundIndex, lastSpeakerWasMe, ... }
 ```
 
 ```text
 no clock read, no rng, no world access, no memory access
-nothing inside 3E calls it to decide anything
-its only consumer today is the test that proves the cast stays asymmetric
+its consumers are the offer ranking and the asymmetry test
+concurrency, quotas, priority, dropping and retry remain 3F-B
 ```
 
-It exists so §7.1's eligibility inputs are real and checkable before a scheduler
-exists to consume them, and so 3F-B inherits a function rather than a paragraph.
-Making it a pure function of declared inputs is also what makes §17.12 testable
-statistically instead of by writing down the answer.
+Because it now decides ordering rather than merely being available for a future
+scheduler, `phase-3e-conversation.md` §17.12 becomes directly testable: rank 星さん
+against 渡辺 across many generated situations and assert the distribution
+separates. No scripted choices are involved, which is what that test needs.
 
 ---
 
-## 11. Determinism
-
-Everything already established, restated because conversation adds new places to
-break it:
+## 12. Determinism
 
 ```text
-session ids from a counter, never from a hash of participants or a clock
-participants and heardBy stored sorted
-sessions iterated in sorted id order in Pass B
-no Date, no rng, anywhere in this phase
+floors iterated in sorted zone id order
+offer batches ranked deterministically; ties by hash01, never by rng stream
+the taker is chosen by rank, never by response arrival                §3.2
+animal compliance by hash01, never by the shared rng                  §8.3
+no Date anywhere in this phase
 same seed + same recorded choices = same fact stream, byte for byte
 ```
 
@@ -438,38 +552,60 @@ The last line is the acceptance test that catches the rest.
 
 ---
 
-## 12. Replay
+## 13. Replay
 
-Replay is playback, not re-simulation. So:
+Replay is playback, not re-simulation:
 
 ```text
-replay MUST NOT construct a ConversationSession
-replay MUST NOT call canHear, menuFor, or socialWeight
-replay reads conversation_* facts and speech_said.conv, and draws
+replay MUST NOT construct a Floor
+replay MUST NOT call canHear, menuFor, socialWeight, or the compliance hash
+replay reads speech_said (with its zone), animal_responded, and positions
 ```
 
-`view.js` gains handling for the four membership facts. If a renderer ever needs
-something a session knows and a fact does not carry, the answer is a new fact,
-never a session rebuilt during playback. This is the same rule that keeps the
-Activity Runtime switched off during replay in 3A.
+`view.js` gains `animal_responded`. If a renderer ever needs something a floor
+knows and no fact carries, the answer is a new fact, never a floor rebuilt during
+playback — the same rule that keeps the Activity Runtime switched off during
+replay in 3A.
 
 ---
 
-## 13. What 3E cannot do, stated so nobody expects it to
+## 14. What was deleted, and why
 
-3E's job is to stop the *mechanism* from killing conversations: no re-opening a
-session every line, no round-robin, no forced speech, no timeout that fires
-faster than a model can answer.
+Recorded so the reasoning survives the deletion. Everything here was in the first
+draft of this document or in `phase-3e-conversation.md`, and is now gone.
+
+| deleted | because |
+|---|---|
+| `ConversationSession` and its four-state lifecycle | the zone is the session |
+| `join_conversation` / `leave_conversation` | walking in and out, already implemented |
+| membership facts | membership is position, already committed |
+| one-active-session-per-actor | physics: you are in one zone |
+| `opening` sessions, `openingExpiry`, `openingLimit` | calling to a busy person is a loud act plus a movement decision |
+| turn grants, `expiresTick`, turn expiry rules | the floor is offered, not granted |
+| `quietTicks` counting only unthought ticks | quiet is a round with no taker, and rounds have no duration |
+| `awaiting` as a latency-suspension mechanism | nothing is measured in ticks any more |
+| `conversation_fading` and `rescueLimit` | rescue is being ranked high on the next round |
+| `continue_listening` | no membership to maintain |
+| `conversation_join_opportunity` as a wake reason | being offered the floor in a zone you walked into is the same event |
+
+What survives from the first draft, unchanged: the 3D transcript boundary
+(`phase-3d-memory.md` §6.1), `canHear` as one published query, per-observer
+transcript rendering, `openQuestion`, `socialWeight`, act-derived transport,
+`menuFor`/`commit` with refusals, determinism and replay.
+
+---
+
+## 15. What 3E cannot do
+
+3E stops the *mechanism* from killing conversations: no re-opening anything every
+line, no forced speech, no timeout that fires faster than a model can answer, no
+poll of a scene that has nothing to say.
 
 **It cannot make a conversation good.** Nothing here gives a character a reason
 to want something from the person opposite. That lives in `self.md` and in
-memory, and `pacing-and-latency.md` §6d already identifies it as the real cause
-of cold conversation.
-
-The one structural lever 3E does own is `openQuestion`: a question asked and not
-answered is the cheapest possible stake, and it is the natural thing for
-`conversation_fading` to prefer when choosing whom to wake. That is worth
-implementing and it is worth not overselling.
+memory, and `pacing-and-latency.md` §6d already names it as the real cause of
+cold conversation. `openQuestion` is the one structural stake the engine owns,
+and it is worth implementing and worth not overselling.
 
 If conversations still go cold with all of this in place, the signal to read is
 the one already written down: the self sheets are not putting the cast's stakes
@@ -477,37 +613,37 @@ into the model's hands.
 
 ---
 
-## 14. Open, and needing a decision before 3E-1
+## 16. Open
 
-1. **`rescueLimit`.** Proposed 2. It decides how stubborn the world's most
-   sociable character is allowed to be, which is a characterisation question more
-   than an engineering one.
-2. **`idleLimit` / `fadeAfter` / `openingExpiry` / `speechLimit`.** All
-   configuration, all currently guesses: 40 / 120 / 200 ticks and 240 characters.
-   They want one scripted run to look at before being fixed.
-3. **Does membership belong in facts?** This document says yes (§3) on the
-   grounds that a huddle is visible. It is the one decision here that changes the
-   recording format, so it should be agreed rather than assumed.
+1. **`quietLimit`, `K`, `speechLimit`.** Proposed 1, 1-or-3, and 240 characters.
+   All configuration, all wanting one scripted run to look at.
+2. **The animal repertoire.** `call_over` / `praise` / `shoo` is enough to prove
+   the path. What else ハナ can be asked belongs with whoever owns deterministic
+   actors, and does not need deciding now.
+3. **Whether a dormant zone should ever re-arm on a long timer** as well as on
+   events — an hour of world time with nobody speaking might reasonably produce
+   one attempt. Currently: no. Events only.
 
 ---
 
-## 15. Revised implementation order
+## 17. Implementation order
 
-Supersedes `phase-3e-conversation.md` §19.
+Supersedes `phase-3e-conversation.md` §19 and the first draft's §15.
 
 ```text
-3E-0  the 3D transcript boundary (§9.3 there): no episode per utterance,
-      add spokenWith, keep the exactly-once cursor
-3E-1  publish perception.canHear as a pure query                        §7
-3E-2  ConversationSession store, Pass A ingestion, membership facts     §1-§3
-3E-3  turn ownership, openQuestion, the awaiting rule                   §4, §5
-3E-4  Pass B lifecycle: quiet, fading with its budget, winding_down     §2, §9
-3E-5  openings and the one-active-session rule                          §6
-3E-6  transcriptFor() per-observer rendering                            §7.2
-3E-7  menuFor() / commit(), act-derived scope, refusals                 §8
-3E-8  join / leave
-3E-9  socialWeight()                                                    §10
-3E-10 scripted acceptance scenarios + mutations, view.js replay support §12
+3E-0  the 3D transcript boundary: no episode per utterance, add spokenWith,
+      keep the exactly-once cursor                      phase-3d-memory.md 6.1
+3E-1  publish perception.canHear as a pure query                          §7
+3E-2  Floor store: qualification, creation, destruction, ingestion of
+      speech_said with zone and heardBy                                §2, §5
+3E-3  offer rounds: ranking, batching, rank-decides-the-taker           §3
+3E-4  quiet, dormancy, event re-arming                                  §4
+3E-5  transcriptFor() per-observer rendering                            §7.2
+3E-6  menuFor() / commit(), act-derived scope, refusals                  §9
+3E-7  openQuestion                                                      §10
+3E-8  addressing a deterministic actor, compliance, animal_responded     §8
+3E-9  socialWeight() and the asymmetry test                             §11
+3E-10 scripted acceptance scenarios + mutations, view.js replay support  §13
 ```
 
 3E-0 first because it is the only step that removes behaviour. 3E-1 second

@@ -59,7 +59,7 @@ The conceptual tick order is:
 5. commit resulting world facts
 6. refresh perception state for each present agent
 7. accumulate private memory from what was perceived      (added by 3D)
-8. update conversation sessions from committed speech      (3E, planned)
+8. advance each zone's conversation floor                   (3E, planned)
 9. evaluate whether any agent needs a Brain wakeup
 10. dispatch eligible Brain requests asynchronously through the scheduler
 ```
@@ -76,11 +76,11 @@ regardless of how rarely a Brain is woken. See `phase-3d-memory.md` §2.1.
 Step 8 is written into the order **before** it is implemented, deliberately. The
 order is the thing that keeps being got wrong by omission — perception existed
 for a phase before anything ran it, and memory was called by hand in tests until
-the review caught it. Its position is fixed by two dependencies: conversation
-state is built from committed speech facts (step 5), and the wake reasons in step
-9 are read from it. It is listed after memory only because nothing depends on the
+the review caught it. Its position is fixed by two dependencies: floor state is
+built from committed speech facts (step 5), and the offers dispatched at step 10
+are opened by it. It is listed after memory only because nothing depends on the
 other way round; the two stages are independent. See
-`phase-3e-conversation.md` §2.1.
+`phase-3e-implementation-structure.md` §2.
 
 `presentIds()` is the candidate population for perception. A rostered character who is absent today is not visible, audible, targetable or otherwise perceptible inside this scene.
 
