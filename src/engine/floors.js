@@ -9,6 +9,7 @@
  */
 import { SOCIAL_FACTS } from './events.js';
 import { SEAT } from './resources.js';
+import { ANIMAL_ACTS } from './animals.js';
 
 /**
  * Transport is derived from the act and never read from a model's reply
@@ -22,6 +23,9 @@ export const ACTS = {
   change_topic: { target: true, scope: 'normal' },
   address_group: { target: false, scope: 'normal' },
   call_across: { target: true, scope: 'broadcast' },
+  call_over: { target: true, scope: 'normal', animal: true },
+  praise: { target: true, scope: 'normal', animal: true },
+  shoo: { target: true, scope: 'normal', animal: true },
   nothing: { target: false, scope: null, silent: true }
 };
 
@@ -52,7 +56,7 @@ const OVERHEARD = 1500;
 const ORDINARY = 1000;
 
 export function createFloors(world, zones, perception, {
-  minds, config = {}, weigh = null, makeContext = null
+  minds, config = {}, weigh = null, makeContext = null, animals = null
 } = {}) {
   if (minds === undefined) {
     throw new Error('createFloors needs an explicit `minds` set: who can hold a floor');
@@ -255,7 +259,12 @@ export function createFloors(world, zones, perception, {
     let anyHere = false;
     for (const v of ctx.forModel.sensoryState.visible) {
       const target = ctx.refs.get(v.ref);
-      if (!target || !llm.has(target)) continue;
+      if (!target) continue;
+      if (animals?.knows(target)) {
+        if (zoneOf(target) === mine) for (const act of ANIMAL_ACTS) menu.push(`${act}:${v.ref}`);
+        continue;
+      }
+      if (!llm.has(target)) continue;
       if (zoneOf(target) === mine) {
         anyHere = true;
         for (const act of ['reply', 'ask', 'greet', 'change_topic']) menu.push(`${act}:${v.ref}`);
@@ -308,6 +317,9 @@ export function createFloors(world, zones, perception, {
     world.say(winner, said.speak, { scope: said.scope, to: said.target ?? null });
     const i = world.log.facts.length - 1;
     const committed = world.log.facts[i];
+    // The words are what people hear; the act is what the world executes. The
+    // engine never reads the prose to work out what was asked for.
+    if (said.animal) animals.respond(winner, said.target, said.act, { scope: said.scope });
 
     // A question is a conversational debt only if the target actually heard
     // the asking utterance. Same-zone membership is not an audibility guarantee.
@@ -388,7 +400,7 @@ export function createFloors(world, zones, perception, {
         return refuse(entityId, 'the act needs words and none arrived', pick);
       }
       f.claims.set(entityId, {
-        act: name, target, scope: act.scope, asks: !!act.asks,
+        act: name, target, scope: act.scope, asks: !!act.asks, animal: !!act.animal,
         speak: text.slice(0, cfg.speechLimit)
       });
       return { act: name, target, spoken: true };
@@ -433,6 +445,7 @@ export function createFloors(world, zones, perception, {
     },
 
     utterancesFor(entityId, limit = cfg.transcriptWindow) {
+      if (!llm.has(entityId)) return [];
       const mine = zoneOf(entityId);
       const facts = world.log.facts;
       const seen = [];

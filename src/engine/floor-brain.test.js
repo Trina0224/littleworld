@@ -153,7 +153,6 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   });
   check(mine && pickFor(mine, 'call_across'),
     `no cross-zone call was offered; menu was ${mine?.menu}`);
-  check(!mine.menu.some((m) => /^reply:/.test(m) && false), 'placeholder');
   const loud = world.log.facts.find((e) => e.type === 'speech_said' && e.scope === 'broadcast');
   check(!!loud, 'calling across the way did not use a carrying voice');
   check(loud?.to === 'shopkeeper-01', `the call was aimed at ${loud?.to}`);
