@@ -219,7 +219,7 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
     if (!p.open) {
       p.open = true;
       p.encounters += 1;
-      p.spoke = false;
+      p.spoke = false;                           // every meeting starts silent
     }
     if (words && !p.spoke) {
       p.spoke = true;
@@ -233,10 +233,10 @@ export function createMemory(world, { seeds = new Map(), minds, config = {} } = 
   function closeStale(observerId, tick) {
     for (const p of people.get(observerId)?.values() ?? []) {
       if (!p.open) continue;
-      if (tick - p.lastSeenTick > cfg.separationTicks) {
-        p.open = false;
-        p.spoke = false;                         // the next meeting starts silent
-      }
+      // `spoke` is reset when the NEXT encounter opens, not here. One reset,
+      // in the place that can be shown to bite - a second one would be a
+      // mutation the suite passes, which is not evidence of anything.
+      if (tick - p.lastSeenTick > cfg.separationTicks) p.open = false;
     }
   }
 

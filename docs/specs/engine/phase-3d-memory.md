@@ -252,7 +252,10 @@ So a long memory is expensive in a way a long self sheet is not.
 
 ### 6.1 The transcript boundary — the engine writes no episode for speech
 
-This section revises implemented behaviour. Until 3E there was nowhere else for
+> **Implemented** in 3E-0. `src/engine/memory.js`; proved by the 3E-0 block of
+> `src/engine/memory.test.js` and seven mutations.
+
+This section revised implemented behaviour. Until 3E there was nowhere else for
 a heard sentence to live, so memory wrote an episode for every one. That was
 wrong the moment `phase-3e-conversation.md` §9 gave conversation a transcript of
 its own, and the spec's own example is exactly what the old code produced:

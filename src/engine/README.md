@@ -179,6 +179,28 @@ keeps working and encounters keep counting** — only the interpretation is
 missing. Same invariant as everywhere: the world does not stop being a world
 when inference fails.
 
+Stated so it cannot be drifted away from: **the engine writes exactly one kind
+of episode, `first_meeting`. Everything else in the list was proposed by the
+Brain.** It used to write one per heard utterance, because until 3E gave
+conversation a transcript of its own there was nowhere else for a sentence to
+live — and the result was that four lines of こんにちは / そうですね cost a sixth
+of a character's permanent budget and preserved nothing. What it keeps instead
+is structural and one line per person:
+
+```
+encounters    distinct meetings
+spokenWith    how many of those meetings words passed in
+lastSeenTick  while contact holds
+```
+
+`spokenWith` is a count and not a judgement — the engine may honestly say *we
+have met four times and spoken on two of them*, and may not say what that
+amounts to. It lives inside the open encounter, so it needs nothing from 3E, and
+`buildContext` renders it as `timesSpoken` because a counter nothing can read is
+write-only. **The exactly-once cursor did not relax**: it is now what stops a
+re-ingested utterance inflating `spokenWith` and dragging `lastSeenTick`
+backwards.
+
 **A label belongs to the observer.** What the brothers call the shopkeeper is
 theirs; her name is hers. 3B made this structurally hard by an accident worth
 keeping — `character.json` carries **no name field at all**, so a label can only
@@ -234,22 +256,22 @@ readers with different rights: delivery to a Brain drains it, memory may never.
 So memory carries a per-observer cursor over the monotonic `seq` perception
 stamps on every queued event. A position in the array cannot work, because the
 array is being emptied by somebody else — and the old count-based version
-re-remembered the same sentence on every tick until delivery happened to drain
-it, which also dragged `lastSeenTick` backwards and made encounters climb by one
-a tick. A sentence is now remembered on the tick it is heard and is still waiting
-in the queue for a wakeup three hundred ticks later.
+re-ingested the same sentence on every tick until delivery happened to drain it,
+which also dragged `lastSeenTick` backwards and made encounters climb by one a
+tick. A sentence is now ingested on the tick it is heard and is still waiting in
+the queue for a wakeup three hundred ticks later.
 
 ### What the tests prove
 
-Every item in `phase-3d-memory.md` §11, now fifteen items rather than eleven.
-Thirteen mutations confirm they bite. The first five: routing memory writes to
+Every item in `phase-3d-memory.md` §11, now seventeen items rather than eleven.
+Twenty mutations confirm they bite. The first five: routing memory writes to
 the fact stream, accepting an uncanonicalized ref into storage, giving seeded
 knowledge a first-met tick, evicting by age rather than by value, and borrowing a
 label from another character's store — that last one fails with *"the pastor
 recognised 3 people: 辰ちゃん, 孫女, 星さん"*, which is precisely the leak the
 phase exists to prevent.
 
-Eight more came out of the review that found the four integration bugs above:
+Eight came out of the review that found the four integration bugs above:
 
 | mutation | fails with |
 |---|---|
@@ -269,6 +291,23 @@ because a mutation that passes is not evidence:
 - two removed belt-and-braces mind gates that a third gate already covered. Both
   were genuine no-ops, which is the argument for having removed the redundant
   gates rather than the argument for keeping them.
+
+Seven more came from 3E-0, the step that removed the per-utterance episode:
+
+| mutation | fails with |
+|---|---|
+| write an episode per utterance again | *the engine wrote 1 episodes it may not: direct_address* |
+| `spokenWith` counts sentences, not meetings | *a second sentence in one meeting counted 1/2* |
+| never count `spokenWith` | *hearing someone speak counted 0* |
+| a new meeting inherits the last one's `spoke` flag | *a second meeting with words counted 4/1* |
+| proximity counts as words | *a silent meeting counted 1 as spoken-with* |
+| the cursor never advances | *a third silent meeting counted 63/62* |
+| `buildContext` hides `spokenWith` | *spokenWith never reaches the Brain, which makes it write-only* |
+
+The fourth of those needed the test extended before it bit, and the reason is the
+recurring one: `spoke` was being reset in two places, so removing either left the
+other working. One reset now, when an encounter opens, in the place a mutation
+can reach.
 
 The encounter mutation is worth one more line, because it corrected the review's
 own reading. Restoring the gap heuristic **alone** changes nothing: while contact

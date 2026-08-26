@@ -384,6 +384,18 @@ const check = (ok, label) => { if (!ok) problems.push(label); };
   const third = memory.recall('grandma-01', 'man-01');
   check(third.encounters === 3 && third.spokenWith === 1,
     `a third silent meeting counted ${third.encounters}/${third.spokenWith}`);
+
+  // And a meeting that has words after an earlier one did counts again. The
+  // flag belongs to the open encounter, not to the pair.
+  world.depart('man-01');
+  loop.run(40 + 120 + 20 + 120 + 20 + 120, {});
+  world.arrive('man-01');
+  loop.run(40 + 120 + 20 + 120 + 20 + 120 + 20, { beforeTick: (t) => {
+    if (t === 445) world.say('man-01', 'また', { to: 'grandma-01' });
+  } });
+  const fourth = memory.recall('grandma-01', 'man-01');
+  check(fourth.encounters === 4 && fourth.spokenWith === 2,
+    `a second meeting with words counted ${fourth.encounters}/${fourth.spokenWith}`);
 }
 
 // --- 11.5  no ref may reach storage ---
