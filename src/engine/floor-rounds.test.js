@@ -48,7 +48,7 @@ function setup(config = {}) {
     world, runtime: createActivityRuntime(world), perception, floors
   });
   world.start();
-  return { world, zones, perception, floors, loop };
+  return { world, zones, nav, perception, floors, loop };
 }
 
 const problems = [];
@@ -341,6 +341,60 @@ function drive(loop, floors, n, policy = () => 'decline') {
     check((nudged.get(id) ?? 0) <= 1,
       `${id} was polled ${nudged.get(id)} times by one conversation`);
   }
+}
+
+// --- walking into a room is how you join it ---------------------------------
+// agent_arrived is only for coming into the SCENE. Between rooms people walk,
+// and until this was whitelisted a sleeping table could not be woken by anybody
+// coming over to it - which left a measured run 99% silent.
+{
+  // Walkable cells, found rather than written down: the centroids the other
+  // scenarios stand on are furniture, which is fine to stand on and impossible
+  // to path from or to.
+  const { world, zones, nav, floors, loop } = setup();
+  const walkable = (zone, n) => {
+    const out = [];
+    for (let y = 60; y < 330 && out.length < n; y += 2) {
+      for (let x = 20; x < 620 && out.length < n; x += 2) {
+        if (zones.at(x, y) === zone && nav.walkableAt(x, y)) out.push([x, y]);
+      }
+    }
+    return out;
+  };
+  const park = walkable('park-open', 2);
+  const table = walkable('near-table', 3);
+  check(park.length === 2 && table.length === 3,
+    `the test premise is wrong: found ${park.length} park and ${table.length} table cells`);
+  world.spawn('grandma-01', park[0]);
+  world.spawn('pastor-01', park[1]);
+  world.spawn('shopkeeper-01', table[0]);
+  world.spawn('brother-01', table[1]);
+  drive(loop, floors, 8);
+  check(floors.floor('near-table')?.state === 'dormant',
+    'the test premise is wrong: the table is still awake');
+
+  check(floors.floor('park-open')?.state === 'dormant',
+    'the test premise is wrong: the park is still awake');
+
+  // Somebody sets off from the park. Neither the room they left nor the room
+  // they are heading for is woken by the setting off: only by the arrival.
+  check(world.moveTo('grandma-01', table[2]), 'the test premise is wrong: she could not set off');
+  const onSetOff = step(loop, floors);
+  for (const o of onSetOff) floors.decline(o.entityId);
+  check(floors.floor('park-open')?.state === 'dormant',
+    'the park was woken by somebody merely setting off out of it');
+  check(floors.floor('near-table')?.state === 'dormant',
+    'a table was woken by somebody merely setting off towards it');
+
+  // She arrives, and now it is a new social situation.
+  let woke = [];
+  for (let i = 0; i < 200 && !woke.length; i += 1) {
+    woke = step(loop, floors).filter((o) => o.zone === 'near-table');
+    for (const o of woke) floors.decline(o.entityId);
+  }
+  check(world.log.facts.some((e) => e.type === 'move_completed' && e.agent === 'grandma-01'),
+    'the test premise is wrong: she never got there');
+  check(woke.length > 0, 'a table stayed asleep while somebody walked up to it');
 }
 
 console.log('');

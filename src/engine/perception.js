@@ -94,7 +94,9 @@ export const DEFAULTS = {
   queueLimit: 40,
   // How many contexts may be waiting to settle at once. Not a tuning knob: a
   // caller that never settles is a bug, and this is where it stops being silent.
-  heldLimit: 16,
+  // Four was the most ever outstanding in a measured run - one per open floor -
+  // so eight is headroom that still catches a leak within a few offers.
+  heldLimit: 8,
   visibleLimit: 8,          // how many people one request describes, most salient first
   // A transport window, not a retention policy. Refs only have to survive from a
   // request to its answer; anything durable is canonicalised at commit, so

@@ -62,6 +62,7 @@ export const SOCIAL_FACTS = new Set([
   'agent_arrived',
   'agent_departed',
   'speech_said',            // narrowed further by audibility, see floors.js
+  'move_completed',         // somebody walked into this room
   'resource_occupied',      // seats only, not stations
   'resource_released',
   'animal_responded'        // 3E-9

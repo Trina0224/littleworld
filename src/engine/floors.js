@@ -25,9 +25,10 @@ export const ACTS = {
 };
 
 export const DEFAULTS = {
-  transcriptWindow: 12,
+  // Measured, not guessed - docs/specs/engine/phase-3e-tuning.md.
+  transcriptWindow: 8,     // the spec's own lower bound; a third off the suffix
   speechLimit: 240,
-  quietLimit: 1
+  quietLimit: 1            // 57 conversations, median 19 lines, 31% quiet
 };
 
 function hash01(text) {
@@ -218,6 +219,15 @@ export function createFloors(world, zones, perception, {
       if (e.scope === 'broadcast') for (const id of e.heardBy) { const z = zoneOf(id); if (z) out.add(z); }
       if (e.zone) out.add(e.zone);
       return [...out].sort();
+    }
+    // Walking into a room is how somebody joins it: agent_arrived is only for
+    // coming into the SCENE. One fact per move rather than per step, so this is
+    // a new social situation rather than the machinery §4 excludes. Setting off
+    // is deliberately not social - a room that somebody just left does not need
+    // waking to be told so.
+    if (e.type === 'move_completed') {
+      const z = zones.at(e.at[0], e.at[1]);
+      return z ? [z] : [];
     }
     if (e.type === 'resource_occupied' || e.type === 'resource_released') {
       const r = world.resource(e.resource);
