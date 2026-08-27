@@ -299,6 +299,50 @@ function drive(loop, floors, n, policy = () => 'decline') {
   if (nudge) floors.decline(nudge.entityId);
 }
 
+// --- two people sitting quietly together are not "in a conversation" -------
+// clarifications 10.3 says never for an actor already on a floor with an ACTIVE
+// conversation. Reading that as "never for anyone with company" left the two
+// characters the mechanism exists for permanently inert beside a party they
+// could hear.
+{
+  const { world, floors, loop } = setup();
+  world.spawn('grandma-01', PARK[0]);
+  world.spawn('pastor-01', PARK[1]);          // the party, in the park
+  world.spawn('shopkeeper-01', [336, 170]);   // the quiet pair, at the far table
+  world.spawn('brother-01', [342, 174]);      // ~65 units off: audible
+  const quiet = new Set(['shopkeeper-01', 'brother-01']);
+
+  const nudged = new Map();
+  let lines = 0;
+  drive(loop, floors, 60, (o) => {
+    if (quiet.has(o.entityId)) {
+      if (o.why === 'overheard') nudged.set(o.entityId, (nudged.get(o.entityId) ?? 0) + 1);
+      return 'decline';                        // they never join in
+    }
+    lines += 1;
+    return { pick: 'address_group', text: `park ${lines}` };
+  });
+
+  check(lines >= 10, `the test premise is wrong: the park said ${lines} lines`);
+  const heard = world.log.facts.filter((e) => e.type === 'speech_said'
+    && e.heardBy.includes('shopkeeper-01')).length;
+  check(heard >= 10, `the test premise is wrong: they heard ${heard} of it`);
+  check(floors.floor('far-table')?.state === 'dormant',
+    'the test premise is wrong: their own table is still awake');
+
+  // Deliberately not pinned to which of them: the far table is 64 units from one
+  // park speaker and 71 from the other, and eligibility is judged against
+  // whoever spoke last, so naming the winner would be pinning the geometry
+  // rather than the rule. The rule is that having company is not being in a
+  // conversation - before this it was nought for both, forever.
+  const total = [...quiet].reduce((n, id) => n + (nudged.get(id) ?? 0), 0);
+  check(total >= 1, 'two people sitting quietly together were never nudged at all');
+  for (const id of quiet) {
+    check((nudged.get(id) ?? 0) <= 1,
+      `${id} was polled ${nudged.get(id)} times by one conversation`);
+  }
+}
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);

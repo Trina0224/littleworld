@@ -97,9 +97,13 @@ export function createFloors(world, zones, perception, {
    * historical: moving close may create the nudge, but never grants words the
    * observer did not actually hear.
    */
+  // Is there an outside conversation this person can hear and has not yet been
+  // nudged about? Says nothing about whether they are free to be nudged - that
+  // is the caller's question, and keeping them apart is what stops the answer
+  // depending on the order the two are asked in.
   function nudgeSource(entityId) {
     const mine = zoneOf(entityId);
-    if (!mine || qualifiesPhysically(mine)) return null;
+    if (!mine) return null;
     for (const zoneId of zones.ids) {
       if (zoneId === mine) continue;
       const f = floors.get(zoneId);
@@ -121,6 +125,7 @@ export function createFloors(world, zones, perception, {
       zone: zoneId, socialSpell: spell, state: 'open',
       round: 0, quietRounds: 0,
       lastSpeechTick: null, lastSpeaker: null, addressed: null, openQuestion: null,
+      nudgedFor: new Map(),
       offeredTo: [], offeredAt: null, why: new Map(), menus: new Map(),
       asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map()
     });
@@ -149,6 +154,32 @@ export function createFloors(world, zones, perception, {
 
   function carriesLiveOffer(f, zoneId) {
     return f.offeredTo.some((id) => f.why.get(id) !== 'open_floor' && zoneOf(id) === zoneId);
+  }
+
+  /**
+   * A conversation somebody here can hear but is not part of is worth one look
+   * up. The nudge is spent HERE - when it buys the chance - rather than when the
+   * offer is built: by then the floor has been woken or created for it and no
+   * longer looks like somewhere nobody was talking, so spending it there depends
+   * on the order two questions are asked in.
+   *
+   * Only for a floor that is asleep or has never had a word said on it. Somebody
+   * already in a conversation is not looking for another one.
+   */
+  function settleNudges() {
+    for (const zoneId of zones.ids) {
+      const f = floors.get(zoneId);
+      if (!f || (f.state !== 'dormant' && f.lastSpeechTick !== null)) continue;
+      let woke = false;
+      for (const id of heads(zoneId)) {
+        const source = nudgeSource(id);
+        if (!source || f.nudgedFor.has(id)) continue;
+        spent.add(`${id}|${source}|${floors.get(source).socialSpell}`);
+        f.nudgedFor.set(id, source);
+        woke = true;
+      }
+      if (woke && f.state === 'dormant') rearm(f);
+    }
   }
 
   function requalify() {
@@ -201,7 +232,7 @@ export function createFloors(world, zones, perception, {
   function rankOf(f, entityId) {
     if (pendingAddress.has(entityId) || f.addressed === entityId) return ADDRESSED;
     if (f.openQuestion?.asker === entityId) return ASKED;
-    if (nudgeSource(entityId)) return OVERHEARD;
+    if (f.nudgedFor.has(entityId)) return OVERHEARD;
 
     const situation = {
       zone: f.zone,
@@ -227,6 +258,7 @@ export function createFloors(world, zones, perception, {
     f.round += 1;
     f.quietRounds += 1;
     f.asked.clear();
+    f.nudgedFor.clear();
     if (f.quietRounds >= cfg.quietLimit) {
       f.state = 'dormant';
       world.log.note(world.tick, 'floor_dormant', { zone: f.zone, round: f.round });
@@ -247,10 +279,8 @@ export function createFloors(world, zones, perception, {
     f.offeredAt = world.tick; // audit/debug metadata only; never an expiry clock
     f.state = 'offered';
     f.asked.add(id);
-    const source = nudgeSource(id);
     const why = rankOf(f, id) === ADDRESSED ? 'addressed'
-      : source ? 'overheard' : 'open_floor';
-    if (why === 'overheard') spent.add(`${id}|${source}|${floors.get(source).socialSpell}`);
+      : f.nudgedFor.has(id) ? 'overheard' : 'open_floor';
     const ctx = makeContext ? makeContext(id) : perception.contextFor(id);
     const menu = menuOf(id, ctx);
     f.epochs.set(id, ctx.epochId);
@@ -350,6 +380,7 @@ export function createFloors(world, zones, perception, {
     f.round += 1;
     f.quietRounds = 0;
     f.asked.clear();
+    f.nudgedFor.clear();
   }
 
   return {
@@ -385,6 +416,10 @@ export function createFloors(world, zones, perception, {
         const f = floors.get(z);
         if (f && f.state === 'dormant') rearm(f);
       }
+      // A conversation somebody here can hear but is not part of wakes this
+      // floor once - the nudge is already spent per observer and source spell,
+      // so a lively neighbour cannot poll a quiet table line after line.
+      settleNudges();
 
       for (const zoneId of zones.ids) {
         const f = floors.get(zoneId);

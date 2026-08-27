@@ -367,6 +367,21 @@ without becoming a driver, and **渡辺 remains the least eligible however long
 the silence runs** — which is the point. A low trait is a permission not to act,
 not a defect for a scheduler to repair.
 
+**Company is not a conversation.** The nudge is refused to somebody already in a
+live conversation — and reading that as *refused to anybody with company* left
+two people sitting quietly together permanently inert beside a party they could
+hear. A soak found it: the far table went dormant at tick 3, heard 204 lines of
+the park over the next 400, and was never asked again. 熊田 and 小野 are exactly
+the pair the mechanism exists for. The test is deliberately not pinned to which
+of them gets the nudge — the table is 64 units from one park speaker and 71 from
+the other, so naming the winner would pin the geometry rather than the rule.
+
+The nudge is also **spent when it is granted, not when the offer is built**. By
+then the floor has been woken or created for it and no longer looks like
+somewhere nobody was talking, so spending it there makes the answer depend on
+the order two questions are asked in — which it did, for one round, at 29 nudges
+in a sixty-line conversation.
+
 **Nudge suppression lives on the source zone's social spell**, not on the target
 floor that happens to be showing the nudge. A cross-zone overhearer gets one
 *should I go over?* per conversation, and the target's temporary floor may be
@@ -411,7 +426,7 @@ coming survives into a recording.
 
 ### What the tests prove
 
-Sixty mutations, all biting — the two most recent covering the sequential offer
+Sixty-three mutations, all biting — the two most recent covering the sequential offer
 rule the owner's latency correction restored: a floor that gives up on a Brain
 that is still thinking, and a pending request that outlives the person it was
 waiting for.
