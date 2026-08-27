@@ -157,17 +157,6 @@ for (const id of CAST) {
     'traitsFor as a function gave a different answer than as a map');
 }
 
-console.log('');
-if (problems.length) {
-  console.log(`FAILED\n  ${problems.join('\n  ')}`);
-} else {
-  console.log('OK  the vector is complete and in range; the weight is pure; 星さん');
-  console.log('    outranks 渡辺 in every otherwise-equal situation and he stays');
-  console.log('    last however long the silence runs; 草野 is curious without');
-  console.log('    becoming a driver; hesitation bites harder with a stranger');
-}
-process.exitCode = problems.length ? 1 : 0;
-
 // --- waiting is what breaks a two-person lock ------------------------------
 // The first real Brain run had a man sit through six rounds at the same table
 // without being asked once, because an addressee always ranks first and every
@@ -203,3 +192,16 @@ process.exitCode = problems.length ? 1 : 0;
     }
   }
 }
+
+
+console.log('');
+if (problems.length) {
+  console.log(`FAILED\n  ${problems.join('\n  ')}`);
+} else {
+  console.log('OK  the vector is complete and in range; the weight is pure; 星さん');
+  console.log('    outranks 渡辺 in every otherwise-equal situation and he stays');
+  console.log('    last however long the silence runs, though waiting alone can');
+  console.log('    lift an eager character over a direct addressee; 草野 is curious');
+  console.log('    without becoming a driver; hesitation bites harder with a stranger');
+}
+process.exitCode = problems.length ? 1 : 0;
