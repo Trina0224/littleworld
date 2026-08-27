@@ -450,6 +450,14 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
         }).refused,
         // ...and the pair that IS legal, on the same live offer, so a refusal
         // above cannot be the offer having gone stale.
+        // Every pick has to be on the menu, not just the first one: a second
+        // act is exactly where an invented choice would try to ride in.
+        invented: floors.commit(o.entityId, {
+          picks: [here, 'reply:seen-99'], text: 'x'
+        }).refused,
+        smuggled: floors.commit(o.entityId, {
+          picks: [here, 'order:coffee'], text: 'x'
+        }).refused,
         both: floors.commit(o.entityId, { picks: [here, other], text: 'ねえ、それでね' }).refused
       };
     }
@@ -458,6 +466,8 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   check(tried?.volumes, 'a quiet remark was welded to a shout across the room');
   check(tried?.three, 'three acts came out of one breath');
   check(tried?.questions, 'two questions were asked in one breath');
+  check(tried?.invented, 'an invented ref rode in as the second act');
+  check(tried?.smuggled, 'an invented act rode in as the second act');
   check(tried && !tried.both, `two ordinary acts at two people were refused: ${tried?.both}`);
 }
 

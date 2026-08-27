@@ -531,9 +531,10 @@ export function createFloors(world, zones, perception, {
       if (!chosen.every((c) => menu.includes(c))) {
         return refuse(entityId, 'not a choice this offer supplied', shown);
       }
-      if (new Set(chosen).size !== chosen.length) {
-        return refuse(entityId, 'the same choice twice', shown);
-      }
+      // No separate check for the same choice twice: for anything with a
+      // target the same-person check below already refuses it, and for a remark
+      // to the room repeating it commits the same single utterance either way.
+      // It could not be shown to change behaviour.
 
       const parsed = chosen.map((c) => {
         const [name, ref] = String(c).split(':');
