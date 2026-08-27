@@ -86,7 +86,7 @@ where grounding should be.
 ### 3. One act per turn is not how people talk — FIXED
 
 辰 wrote 「ハナも連れてっていい？ハナ、おいで、ほらちゃんと来るでしょ。」 inside a
-`reply:seen-1`. He answered his grandmother and called the dog in one breath,
+`reply:seen-1`. He answered 星さん and called the dog in one breath,
 which is what a seven-year-old does — and because the act was `reply` and not
 `call_over`, **ハナ was never called.** The engine saw one act; the sentence
 contains two.
@@ -143,8 +143,15 @@ know her name. His `self.md` is built around 「おばあちゃん一直給我�
 
 He papered over it — she had called herself ばあちゃん in the line he was
 answering, which is a legitimate way to learn a name (3D §4.2). In a run where
-she had not, he would have had to address his own grandmother as a stranger.
-**A data gap, not an engine bug**, and the kind only a real reader surfaces.
+she had not, he would have had to address the neighbourhood grandmother who
+feeds him as somebody whose name he does not know.
+
+**Not kinship.** 辰 is not her grandson — her granddaughter is `woman-01`, and
+her own prose has the two boys as 「奧山家那兩個小男孩」. 「おばあちゃん」 is what
+any child on that street calls her. The gap is smaller than it first looked and
+it is still a gap: he plainly knows her, and the engine does not know that he
+does. **Character data, not an engine bug**, and the kind only a real reader
+surfaces.
 
 ### 7. `conversation` changes shape line by line
 

@@ -528,9 +528,9 @@ everybody. It is stated in the Brain's own prefix and still enforced, because
 LLM OUTPUT = PROPOSAL; an over-budget line is cut at the end of a sentence, and
 the trim reaches audit rather than happening in silence.
 
-**One breath may carry two acts.** A boy answered his grandmother and called the
-dog in one sentence, smuggled into a `reply`, and the dog was never called
-because the engine saw one act. `speech_said.to` is now the list of everybody a
+**One breath may carry two acts.** A boy answered the woman at his table and
+called the dog in one sentence, smuggled into a `reply`, and the dog was never
+called because the engine saw one act. `speech_said.to` is now the list of everybody a
 line is aimed at, so perception, the addressee ranking and the transcript all
 read one shape whether one person was addressed or two.
 

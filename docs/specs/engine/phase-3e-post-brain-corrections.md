@@ -127,4 +127,7 @@ Recorded in `docs/notes/pre-3f-brain-findings.md` §6 and not fixed here:
 2. **Episode gists name nobody** — `{"kind":"first_meeting","gist":"met for the
    first time"}`, twice over, is worse than saying nothing.
 3. **`knows` needs auditing against each `self.md`** — `brother-01` has no entry
-   for his own grandmother.
+   for `grandma-01`, though his own prose is built around her feeding him. Not
+   kinship: her granddaughter is `woman-01`, and 「おばあちゃん」 is what any
+   child on that street calls her. He still plainly knows her, and the engine
+   does not know that he does.
