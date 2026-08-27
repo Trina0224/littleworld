@@ -1,6 +1,6 @@
 # AGENTS.md — LittleWorld Collaboration Contract
 
-**Last updated:** 2026-08-25 00:18 PT (`America/Los_Angeles`)
+**Last updated:** 2026-08-26 (`America/Los_Angeles`)
 
 This file applies to the entire repository. Every AI agent, coding assistant, and human contributor must read it before changing files.
 
@@ -44,11 +44,13 @@ An initial unattended setting may treat roughly one real hour as one simulation 
 
 ### Part B — Replay / Presentation
 
-Replay is the preferred audience-facing demonstration path. It consumes committed Simulation facts and does not rerun LLMs.
+Replay is the preferred audience-facing demonstration path. It consumes committed Simulation facts and does not rerun character Brains.
 
-Replay may remove provider-latency gaps, compress long idle spans, preserve readable speech and visible movement, and build a separate presentation timeline.
+Replay may remove provider-latency gaps, compress long idle spans, preserve readable speech and visible movement, and build a separate presentation timeline. A completed recording may first pass through a whole-record presentation/script pass before rendering.
 
 > **Replay preserves causality, not provider latency.**
+
+Replay is not required to preserve Simulation tick spacing one-for-one. Low-level fact replay may remain exact for engine tests, while final audience presentation owns a separate clock.
 
 The binding architecture is `docs/specs/engine/simulation-replay-architecture.md`. If another document still assumes that live provider timing must be entertaining to an audience, this newer architecture wins for presentation/pacing decisions.
 
@@ -113,7 +115,7 @@ Do not add detailed presentation animation to the Simulation merely because Repl
 
 ## 4. Current implementation status
 
-The active runtime milestone is **Simulation intelligence after Phase 3C**, not scene foundation.
+The active runtime milestone is **after Phase 3E Conversation / Social Runtime**.
 
 Current `main` contains:
 
@@ -125,13 +127,17 @@ Current `main` contains:
 - twelve characters placed in the live scene, sized, seated, and cut by whatever stands in front of them;
 - deterministic engine foundations under `src/engine/`: integer ticks, movement/navigation, reservations, attendance, canonical tick loop, fact/audit recording and replay view;
 - Phase 3C perception: subjective sensory state, appearance-only observations, ephemeral `seen-N` refs, pending perceived-event queues and semantic placement;
-- no Phase 3D private memory yet;
-- no persistent conversation/session layer yet;
+- Phase 3D private memory: seeded recognition, encounter/spokenWith structure, observer-private labels and bounded Brain-authored episodes;
+- Phase 3E conversation/social runtime: one offered Floor per semantic zone, hearing/`heardBy`, observer-specific transcript, legal engine-authored speech actions, open-question handoff, deterministic animal interaction, social ranking and dormancy/re-arm;
+- **owner-corrected 3E offer semantics:** one conversational Brain is asked at a time; elapsed simulation ticks never turn an unanswered Brain into a decline; moving into current earshot of an active neighboring conversation may create one bounded `overheard` opportunity without retroactive hearing;
 - no deterministic café/venue runtime yet;
-- no bounded real LLM provider integration yet;
-- no audience presentation-timeline builder yet.
+- no bounded Brain/provider scheduler yet;
+- no real LLM provider integration yet;
+- no final audience presentation-timeline builder yet.
 
-The next Simulation phase is **3D Private Memory**.
+Phase 3E is complete. Before Phase 3F, an optional manual real-LLM Brain harness may be used as interface validation; see `docs/notes/pre-3f-manual-llm-demo.md`.
+
+The next required Simulation phase is **3F-A Cafe / Venue Runtime**, followed by **3F-B Brain Scheduler**, then **3G real provider integration**.
 
 The current clean background is a **2560 × 1440 losslessly encoded WebP** at `docs/assets/showa/scene-clean-2560.webp`, loaded directly by Phaser. A pixel-identical PNG master lives outside the published directory at `assets/showa/scene-clean-2560.png`.
 
@@ -164,11 +170,17 @@ GitHub Pages preview:
 ### Current engine documentation
 
 - `docs/specs/engine/simulation-replay-architecture.md` — binding split between world generation and audience presentation
-- `docs/specs/engine/world-engine-2.5.md` — detailed World Engine architecture; older replay/pacing assumptions are superseded by the simulation/replay architecture where they conflict
-- `docs/specs/engine/pacing-and-latency.md` — current settled pacing/latency decisions
+- `docs/specs/engine/world-engine-2.5.md` — detailed World Engine architecture; older replay/pacing assumptions are superseded by the simulation/replay architecture and later phase corrections where they conflict
+- `docs/specs/engine/pacing-and-latency.md` — settled pacing/latency decisions
 - `docs/specs/engine/phase-3c-perception.md` — implemented perception contract
 - `docs/specs/engine/phase-3c-implementation-clarifications.md` — binding 3C clarifications
-- `docs/specs/engine/phase-3c-venue-interactions.md` — later café/venue runtime contract
+- `docs/specs/engine/phase-3d-memory.md` — implemented private-memory contract
+- `docs/specs/engine/phase-3e-conversation.md` — conversation design baseline
+- `docs/specs/engine/phase-3e-implementation-structure.md` — offered-Floor implementation structure
+- `docs/specs/engine/phase-3e-floor-clarifications.md` and `phase-3e-pre-floor-corrections.md` — 3E clarifications
+- `docs/specs/engine/phase-3e-owner-latency-correction.md` — **latest binding correction for sequential offers, no simulation-tick Brain timeout, and movement-created overheard opportunity**
+- `docs/specs/engine/phase-3e-completion.md` — current 3E completion record
+- `docs/specs/engine/phase-3c-venue-interactions.md` — 3F-A café/venue runtime contract
 - `docs/specs/engine/cafe-menu-1960.md` — café menu and service timing data/design
 
 ### Current documentation
@@ -178,9 +190,11 @@ GitHub Pages preview:
 
 ### Legacy / stale material
 
-There is none left in the working tree. The Jerusalem-era assets, the superseded root-level preview, the intermediate scene versions, and the Base64 fragment directories have all been removed. Recover anything from git history if it is genuinely needed.
+The repository still contains earlier design text inside superseded architecture documents where later correction files explicitly say they win. Do not revive a superseded mechanism merely because it remains in historical prose.
 
-Every tracked file is now active. Do not add scratch files, half-finished uploads, or parallel `-v2` directories to the repository; keep work in progress on a branch until it is complete.
+The Jerusalem-era assets, the superseded root-level preview, the intermediate scene versions, and the Base64 fragment directories have all been removed. Recover anything from git history only if it is genuinely needed.
+
+Every tracked file is active unless a later binding spec explicitly marks part of an older document superseded. Do not add scratch files, half-finished uploads, or parallel `-v2` directories to the repository; keep work in progress on a branch until it is complete.
 
 Deletions still belong in their own commit, separate from unrelated work, so they are easy to review.
 
@@ -309,21 +323,43 @@ Unless the owner explicitly changes priorities, work in this order.
 - deterministic World Engine 3A foundations;
 - attendance / presence;
 - canonical tick loop;
-- Phase 3C perception and semantic placement.
+- Phase 3C perception and semantic placement;
+- Phase 3D private memory;
+- Phase 3E conversation / social runtime, including the 2026-08-26 owner latency correction.
 
 ### Simulation workstream — current order
 
 ```text
-3D   private memory                 <- NEXT
-3E   conversation sessions + speech transport
-3F-A cafe / venue runtime           <- REQUIRED, do not skip
+optional pre-3F manual real-LLM Brain harness   <- interface validation only
+3F-A cafe / venue runtime                       <- NEXT REQUIRED PHASE
 3F-B scheduler + mock Brain
 3G   real LLM provider integration
 ```
 
 `3F-A` remains a hard gate before real provider integration. See `phase-3c-venue-interactions.md`.
 
+The manual Brain harness does **not** change that gate. It is manual transport for validating the already-defined Brain boundary, not provider integration.
+
 The Simulation may run slowly and produce long recordings. Do not tune its day length merely to fit a demonstration window.
+
+### Conversation latency rule — do not reverse
+
+The owner has explicitly corrected the 3E implementation back to the intended Simulation model:
+
+```text
+one Floor selects one Brain
+  -> ask whether it wants to speak
+  -> wait for that Brain's actual answer
+  -> world/deterministic activity may keep ticking
+  -> elapsed simulation ticks NEVER mean "decline"
+  -> explicit speech commits, or explicit `nothing` advances to the next ranked Brain
+```
+
+There is no K=3 conversational batch and no simulation-tick `offerExpiry` in normal 3E flow. Provider timeout/drop/retry belongs to 3F-B as explicit infrastructure policy.
+
+A character moving into current ordinary hearing range of an active neighboring social Floor may receive one bounded `why = overheard` opportunity for that source social spell. This creates no retroactive hearing: old lines spoken while the character was too far away stay absent from perception/transcript.
+
+The binding correction is `docs/specs/engine/phase-3e-owner-latency-correction.md`.
 
 ### Replay / Presentation workstream
 
@@ -331,7 +367,8 @@ Replay is a parallel project block consuming committed fact recordings.
 
 It may be developed independently as soon as a recording feature needs presentation support. Its eventual responsibilities include:
 
-- reading committed fact streams only;
+- reading committed fact streams only for low-level playback;
+- optionally consuming an approved whole-record presentation/script pass for the audience-facing cut;
 - building presentation time separately from simulation ticks;
 - removing/compressing provider-latency gaps;
 - compressing uninteresting idle spans;
@@ -339,7 +376,7 @@ It may be developed independently as soon as a recording feature needs presentat
 - preserving readable dialogue and non-teleporting movement;
 - adding presentation camera/subtitle/UI policy where useful.
 
-Replay does **not** rerun Agent Brains or the Activity Runtime.
+Replay does **not** rerun character Brains or the Activity Runtime. Final presentation is not required to reproduce Simulation tick spacing one-for-one.
 
 When a new Simulation feature is added, ensure its fact stream contains enough information for Replay to reconstruct what happened later. Detailed presentation polish does not have to be implemented at the same time.
 
@@ -503,6 +540,9 @@ The owner may communicate in English, Traditional Chinese, or Japanese.
 - Static props may remain baked into the background.
 - **LittleWorld is two major systems: Simulation / World Generation and Replay / Presentation.**
 - **Simulation correctness does not depend on being entertaining at live provider latency.**
-- **Replay is the preferred audience-facing path and may compress provider latency while preserving causal order.**
+- **One conversational Floor asks one Brain at a time; provider wall-clock latency never becomes a simulation-tick decline.**
+- **The World Engine may keep ticking while that Floor waits for the selected Brain's answer.**
+- **Moving into earshot of an active neighboring conversation may create one bounded optional overheard opportunity, with no retroactive hearing.**
+- **Replay is the preferred audience-facing path, owns a separate presentation clock, and may compress provider latency while preserving causal integrity.**
 - Human director controls alter world conditions, not an Agent's private mind, and must be recorded if they change history.
 - The project prioritizes finishing a beautiful, understandable demo over adding many systems.
