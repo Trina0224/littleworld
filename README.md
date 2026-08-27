@@ -14,17 +14,23 @@ The Simulation is the autonomous world itself. World Engine, perception, memory,
 
 It may run slowly or unattended for a long real-world time. LLM latency is acceptable: the world never blocks on inference, and the Simulation's job is to create a causally correct, believable recording rather than to entertain a viewer every second.
 
+Conversation has an important additional rule: a Floor asks **one Brain at a time** and waits for that Brain's actual choice. The rest of the deterministic world may keep ticking, but elapsed simulation ticks never turn a slow model into an implicit decline. Provider timeout/drop policy belongs to the later scheduler, not to fictional conversation time.
+
 A human director may change world-level conditions — for example requesting the next day, selecting arrivals, or introducing deterministic actors — without directly controlling an Agent's private mind.
 
 An initial unattended configuration may treat roughly one real hour as one simulation day, but day length is configuration rather than a presentation constraint.
 
 ### Part B — Replay / Presentation
 
-Replay is the preferred demonstration path. It consumes committed Simulation facts and never reruns an LLM.
+Replay is the preferred demonstration path. It consumes committed Simulation history and never reruns character Brains.
 
-Replay may remove provider-latency gaps, compress long idle spans, preserve readable dialogue and visible movement, and build a separate presentation timeline. Its core rule is:
+Replay may remove provider-latency gaps, compress long idle spans, preserve readable dialogue and visible movement, and build a separate presentation timeline. A completed recording may first pass through a whole-record/script presentation pass.
+
+Its core rule is:
 
 > **Replay preserves causality, not provider latency.**
+
+Final presentation is not required to reproduce Simulation tick spacing one-for-one. Low-level fact replay remains useful as an exact engine regression; the audience-facing cut owns a separate presentation clock.
 
 The formal contract is in `docs/specs/engine/simulation-replay-architecture.md`.
 
@@ -96,17 +102,22 @@ These locations provide semantic areas, occupancy rules, and social destinations
 - **twelve characters standing and sitting in the live page**, each at its own scale, on its own seat, facing the right way, and cut by whatever stands in front of it;
 - deterministic World Engine foundations: integer ticks, navigation, reservations, attendance, fact/audit streams and replay view;
 - Phase 3C perception: semantic zones, appearance-only observations, ephemeral `seen-N` refs, pending perceived events and semantic placement;
+- Phase 3D private memory: observer-private seeded recognition, encounter/spokenWith structure, labels and bounded Brain-authored episodes;
+- Phase 3E conversation/social runtime: one offered Floor per zone, authoritative hearing/`heardBy`, private transcript rendering, legal engine-authored action menus, open-question handoff, deterministic animal interaction, social ranking, silence/dormancy and social re-arm;
+- owner-corrected conversation latency semantics: **one Brain offer at a time, no simulation-tick Brain timeout**;
+- a character moving into current earshot of an active neighboring conversation may receive one bounded optional `overheard` opportunity without gaining old unheard transcript lines;
 - a `層` button (or the `D` key) that overlays the whole painted visual spec on the scene.
 
 ### Not implemented yet
 
 - browser wiring from the current engine runtime into the production scene;
 - runtime pose changes / movement presentation;
-- Phase 3D private memory;
-- persistent conversation sessions and final speech transport;
-- deterministic café/venue runtime;
-- bounded LLM scheduler and provider integration;
-- presentation timeline builder for audience replay.
+- deterministic café/venue runtime (Phase 3F-A);
+- bounded Brain scheduler / provider policy (Phase 3F-B);
+- real LLM provider integration (Phase 3G);
+- final presentation timeline builder / whole-record presentation pass.
+
+Before 3F, an optional manual real-LLM Brain harness may be built to let ChatGPT/Claude inhabit characters through manual request/response transport. See `docs/notes/pre-3f-manual-llm-demo.md`.
 
 ## How the world is described
 
@@ -164,6 +175,11 @@ The earlier Base64-fragment transport workaround has been removed from the activ
 AGENTS.md                                AI collaboration rules and project source of truth
 README.md                                Public project overview
 
+characters/                              private character identity sources
+  <id>/character.json                    public appearance + machine data / social vector
+  <id>/self.md                           private stable prefix for that character Brain only
+  <id>/bible.md                          author/director reference; NEVER model-visible
+
 docs/                                    Canonical GitHub Pages application
   index.html                             Active page entry
   styles.css                             Preview UI styles
@@ -171,12 +187,18 @@ docs/                                    Canonical GitHub Pages application
   assets/showa/scene-clean-2560.webp     Production background
   assets/characters/                     Cut sprites the live page loads
 
+  notes/pre-3f-manual-llm-demo.md        parked manual ChatGPT/Claude Brain experiment
+
   specs/engine/                          Simulation architecture and phase contracts
     simulation-replay-architecture.md    Binding two-part project architecture
     world-engine-2.5.md                  World Engine architecture
     pacing-and-latency.md                Pacing / latency decisions
     phase-3c-perception.md               Perception contract
-    phase-3c-venue-interactions.md       Café and venue interaction contract
+    phase-3d-memory.md                   Private-memory contract
+    phase-3e-*.md                        Conversation/Floor implementation and corrections
+    phase-3e-owner-latency-correction.md Latest binding offer/latency correction
+    phase-3c-venue-interactions.md       Phase 3F-A café/venue interaction contract
+    cafe-menu-1960.md                    Café menu/runtime baseline
 
   specs/world/                           The painted world spec
     world.json                           Coordinates, entrances, height ramp
@@ -185,14 +207,14 @@ docs/                                    Canonical GitHub Pages application
     seats.png  seatsurfaces.png          Seats and the surfaces sat on
     tables.png                           Cafe tabletops
     occdepth.png                         Floor line per pixel, for the browser
-    anchors.json                         Fourteen seats and one work station
-    zones.json                           Semantic zones used by Perception
+    anchors.json                         Seats and work station
+    zones.json                           Semantic zones used by Perception/Floors
     derive.py  seat-derive.py            Read the paintings into the spec
     tables-derive.py
     README.md                            Why each layer exists and what broke
 
-  specs/characters/                      The cast
-    pose-matrix.json                     Sizes, buttock lines, offsets, views
+  specs/characters/                      The cast visual placement/pose system
+    pose-matrix.json                     Sizes, marks, offsets, views
     marks/                               Owner-marked sit sheets
     read-marks.py                        Reads the marks into pose-matrix.json
     preview.py                           Offline render, the reference picture
@@ -206,7 +228,7 @@ assets/                                  Source masters, not published
   characters/                            The twelve reference sheets
 ```
 
-Every file in the repository is now part of the active Showa direction. The Jerusalem / Bethesda material and the superseded root-level preview have been removed; they remain in git history if they are ever needed again.
+Every file in the repository is part of the active Showa direction. The Jerusalem / Bethesda material and the superseded root-level preview have been removed; they remain in git history if they are ever needed again.
 
 ## Local preview
 
@@ -248,19 +270,34 @@ Opening `docs/index.html` directly through `file://` is still not recommended; s
 
 2. ~~**Define scene semantics**~~ — done.
 
-3. ~~**Design the character system**~~ — done for standing and sitting.
+3. ~~**Design the character system**~~ — done for standing/sitting identity and private self sheets.
 
 4. ~~**Build deterministic Simulation foundations**~~ — engine clock, activities, reservations, navigation, attendance, recording/replay foundation and Phase 3C perception are working.
 
-5. **Continue Simulation intelligence** ← next
-   - Phase 3D private memory;
-   - Phase 3E persistent conversation + speech transport;
-   - Phase 3F-A deterministic café/venue runtime;
-   - Phase 3F-B scheduler + Mock Brain;
-   - Phase 3G real provider integration.
+5. ~~**Phase 3D private memory**~~ — done.
 
-6. **Build Replay / Presentation as the audience-facing block**
-   - consume committed fact recordings only;
+6. ~~**Phase 3E conversation / social runtime**~~ — done, including the owner correction restoring sequential, latency-independent Floor offers.
+
+7. **Optional pre-3F manual Brain demo**
+   - manually transport private Brain requests to ChatGPT / Claude;
+   - keep world ticks independent from model wall-clock latency;
+   - validate `self.md` + personality guidance + dynamic private context before provider automation.
+
+8. **Phase 3F-A deterministic café/venue runtime** ← next required Simulation milestone
+   - venue obligation / grace / refresh-due;
+   - structured menu actions and deterministic semantic routing;
+   - order queue, preparation timing, serving/clearing and routine shopkeeper work.
+
+9. **Phase 3F-B scheduler + Mock Brain**
+   - provider/global concurrency and budget policy;
+   - explicit retry/drop/cancellation/stale-request handling;
+   - infrastructure timeout must not be confused with Simulation tick time.
+
+10. **Phase 3G real provider integration**
+
+11. **Build Replay / Presentation as the audience-facing block**
+   - consume committed Simulation history;
+   - optionally run the approved whole-record/script presentation pass;
    - construct presentation time separately from simulation ticks;
    - compress provider latency and uninteresting idle spans;
    - preserve readable speech, causal ordering and visible movement;
@@ -311,8 +348,8 @@ It defines:
 
 Recommended parallel workstreams now include:
 
-- Simulation engine / memory / conversation;
 - deterministic café and world activities;
+- Brain scheduler / prompt assembly after 3F-A boundaries are settled;
 - Replay / presentation timeline and renderer integration;
 - live scene and asset integration;
 - projection, iPad, and browser QA.
