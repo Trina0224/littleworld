@@ -434,8 +434,20 @@ coming survives into a recording.
 
 ### What the tests prove
 
-Sixty-five mutations, all biting — the two most recent covering the rule the
-tuning run turned up (below): arriving in a room is not social, and setting off
+Eighty mutations, all biting. The fifteen most recent come from the first real
+Brain run and the three changes it forced: the budget that is the character's
+own rather than the cast's, the sentence-boundary cut, a second act silently
+dropped, a second act that skips the menu, a second person named who is not owed
+an answer, a second person who hears it as somebody else's conversation, a
+speaker who records only the first person they addressed, a transcript that
+shows only the first name, one breath in two volumes, three acts in one, two
+questions in one, waiting that counts for nothing, waiting that is the same for
+everybody, waiting that can never overtake an addressee, and a woken floor that
+counts everybody as having waited since round zero. Three more were written,
+could not be shown to change any behaviour, and led to guards being removed
+instead of kept.
+
+Before them, two covering the rule the tuning run turned up (below): arriving in a room is not social, and setting off
 wakes the room you left. The second of those first caught nothing, and for an
 instructive reason: it was written against `rearmedBy`, which never sees
 `move_started` at all because `SOCIAL_FACTS` gates it first. Mutating the branch
@@ -501,6 +513,74 @@ The station one first caught nothing: the test fired a made-up resource id, so
 the `resource()` lookup already refused it and the `kind` check was doing no
 work. It now reserves and occupies the real `cafe-counter` station and the real
 `counter-stool-1` beside it, and asserts the two behave differently.
+
+### What the first real Brain changed
+
+`docs/notes/pre-3f-brain-findings.md` is the run; three of its findings are now
+in the engine.
+
+**A line is as long as the person.** 240 characters for the whole cast cut 星さん
+mid-word on her first real turn — the world committed 「…脱いでお」 and told
+nobody — and would never have bound on 渡辺 at all. The budget now comes from
+`talkativeness`: 93 for 渡辺, 240 for 澄子, 408 for 星さん. 0.5 lands on 240,
+which is what the flat number really was, the average person's budget applied to
+everybody. It is stated in the Brain's own prefix and still enforced, because
+LLM OUTPUT = PROPOSAL; an over-budget line is cut at the end of a sentence, and
+the trim reaches audit rather than happening in silence.
+
+**One breath may carry two acts.** A boy answered his grandmother and called the
+dog in one sentence, smuggled into a `reply`, and the dog was never called
+because the engine saw one act. `speech_said.to` is now the list of everybody a
+line is aimed at, so perception, the addressee ranking and the transcript all
+read one shape whether one person was addressed or two.
+
+The constraint that could not be relaxed is **volume**: an utterance has one
+scope, so a quiet remark cannot be welded to a call across the room — either
+choice changes who heard the other half. Two acts at the same person, two
+questions in one breath (the floor holds one open question), and saying nothing
+as half an act are refused too. Two *shouts* in one breath are fine, and reach
+two rooms: 「澄子さん、牧師さん！」 is one thing said.
+
+Three guards written alongside those did not survive their own mutations and
+were removed rather than kept: a rule against a shout carrying a passenger (the
+volume check already covers the mixed case, and two shouts are legitimate), a
+duplicate-pick check (the same-person rule refuses anything with a target, and a
+repeated remark to the room commits the same single utterance), and a pass over
+the addressees inside `rearmedBy` (it cannot reach a room the speaker's zone and
+the broadcast audience do not — the menu only offers a quiet act toward somebody
+in the speaker's own zone).
+
+**Waiting breaks a two-person lock.** An addressee ranks first and every
+utterance restarts the round, so a pair answering each other never yields: the
+run had 渡辺 sit through six rounds at the same table without being asked once.
+Being asked and saying no is the design; never being asked is not silence, it is
+absence. Rank is now class plus personality rather than class alone, and
+`socialWeight` counts rounds spent in this conversation without once being
+offered — scaled by the character's own eagerness, so 星さん cuts in after a few
+exchanges, 澄子 after many, and 渡辺 not at all.
+
+Two things that measurement said and intuition would not have. The step is a
+**plateau, not a peak**: anywhere from 140 to 420 per round gives the same
+flattened distribution, so only being inside the band matters. And **bigger is
+worse**: by 840 the room is measurably less fair than with no waiting at all,
+because the term scales with eagerness and so amplifies whoever was already
+talking instead of rescuing whoever was not.
+
+Mutation testing caught a bug inside that change. Clearing the waiting on
+re-arm was not enough: with the fallback at round zero, a floor that had slept
+through forty rounds woke treating everybody as having waited the maximum, and a
+bonus that large makes a direct address ignorable. Waiting is counted from the
+start of the current conversation, and the scenario that watches for it drives a
+long exchange, lets the table sleep, walks somebody in, and asserts the person
+spoken to in the new conversation is the one asked next.
+
+One thing the run showed that is not a defect and is worth knowing: **the
+addressee is usually offered the floor in the same tick the line is said**,
+because `resolve` sets the floor open and `offer` runs immediately after it in
+the same pass. Their package therefore carries the line in `conversation` but
+not yet in `recentPerceivedEvents`. Memory is unaffected — it reads the queue
+with a cursor on the following tick — and the test asserts against the
+transcript for the first person named and against perception for the second.
 
 ### Tuning the constants
 

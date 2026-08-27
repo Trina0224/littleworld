@@ -50,7 +50,7 @@ conversation. 3E-6 behaves as specified against a real reader.
 
 ## What broke
 
-### 1. `speechLimit: 240` cuts a real Brain mid-word — silently
+### 1. `speechLimit: 240` cuts a real Brain mid-word — silently — FIXED
 
 Two of 星さん's three lines were truncated: 271 and 280 characters against a limit
 of 240. The world committed 「…脱いでお」 and threw away 「いで、ばあちゃんが
@@ -64,6 +64,13 @@ Worse than the number: **the truncation is silent in both directions.** The Brai
 is never told its line was cut, and the listener sees a sentence that stops. A
 cut at 240 characters is not a shorter sentence, it is a broken one.
 
+**Fixed.** The budget now comes from `talkativeness` — 93 for 渡辺, 240 for 澄子,
+408 for 星さん — so it stops being a rule and becomes the difference between
+somebody who runs on and somebody who says one sentence. 0.5 lands on 240, which
+is what the old flat number really was: the average person's budget applied to
+the whole cast. It is stated in the Brain's own prefix and still enforced, an
+over-budget line is cut at the end of a sentence, and the trim reaches audit.
+
 ### 2. A Brain with no situational grounding invents world state
 
 星さん said she had walked over from the park a moment ago. She said 辰's sleeve
@@ -76,7 +83,7 @@ A model asked to speak as a person will supply what a person would know. The
 invention is not the model misbehaving; it is the package leaving a hole exactly
 where grounding should be.
 
-### 3. One act per turn is not how people talk
+### 3. One act per turn is not how people talk — FIXED
 
 辰 wrote 「ハナも連れてっていい？ハナ、おいで、ほらちゃんと来るでしょ。」 inside a
 `reply:seen-1`. He answered his grandmother and called the dog in one breath,
@@ -84,10 +91,22 @@ which is what a seven-year-old does — and because the act was `reply` and not
 `call_over`, **ハナ was never called.** The engine saw one act; the sentence
 contains two.
 
-The act vocabulary belongs to 3F-A. This is the first evidence about what it
-needs to be.
+**Fixed.** One utterance may now carry two acts. `speech_said.to` is the list of
+everybody the line is aimed at, so perception, the addressee ranking and the
+transcript all read one shape. The constraint that could not be relaxed is
+volume: an utterance has one scope, so a quiet remark cannot be welded to a call
+across the room — either choice would change who heard the other half. Also
+refused: two acts at the same person, two questions in one breath (the floor
+holds one), and saying nothing as half an act.
 
-### 4. The addressee-first rule never yields the floor
+On the very first request of the next run, 星さん used it unprompted — greeting a
+man she does not know and calling ハナ in the same breath. The dog ignored her,
+because familiarity is authored and only 辰's is 1.
+
+The *cafe* acts (`order`, `ask_shopkeeper:…`) still belong to 3F-A. What changed
+is the shape one utterance may have.
+
+### 4. The addressee-first rule never yields the floor — FIXED
 
 Seven offers; five went to whoever had just been addressed. Each utterance
 re-arms the floor, each new round clears `asked`, and the addressee ranks first
@@ -98,6 +117,16 @@ This is the ranking working as written, and it may be right: two people talking
 to each other do not hand a third a turn. But it is worth deciding on purpose
 rather than discovering later, because it also explains the tuning run's
 `top3Share: 0.77`.
+
+**Fixed, with waiting rather than a rule.** Rank is now class plus personality
+rather than class alone, and `socialWeight` gains a term for rounds spent in this
+conversation without once being *offered*. How fast it grows is the character's
+own eagerness, so 星さん cuts in after a few exchanges, 澄子 after many, and 渡辺
+not at all — his silence stays his rather than the infrastructure's. Measured
+over five 3000-tick runs: top3 0.57 against 0.62, and nobody in the cast goes
+unasked on any seed. Bigger is not better — past 840 per round the room gets
+*less* fair, because the term scales with eagerness and so amplifies whoever was
+already talking.
 
 ### 5. `memory` says a person met somebody, but not whom
 
@@ -146,17 +175,19 @@ was the right answer.
 
 ## What to decide before 3F-A
 
-1. **`speechLimit`.** Raise it, cut at a sentence boundary, or refuse and let the
-   Brain retry? Silent mid-word truncation is the one thing it must not stay.
-2. **Grounding.** The package needs, at minimum: what time it is, where I am, and
+1. ~~**`speechLimit`.**~~ **DONE** — per character, from `talkativeness`, cut at
+   a sentence boundary, and audited.
+2. **Grounding.** *Still open, and now the biggest one left.* The package needs, at minimum: what time it is, where I am, and
    what I am doing. Without it a Brain invents, and inventions become facts.
-3. **The act vocabulary** (3F-A owns this) — whether one utterance may carry a
-   second act, e.g. speaking to a person while calling an animal.
-4. **Whether the addressee rule should ever yield**, or whether a two-person
-   exchange locking out the room is correct.
+3. ~~**The act vocabulary**~~ **DONE for the shape** — two acts per breath, one
+   volume. What a cafe order looks like is still 3F-A.
+4. ~~**Whether the addressee rule should ever yield**~~ **DONE** — it yields to
+   waiting, at a rate the character sets.
 5. **Episode gists** — an episode a Brain cannot attach to a person is a wasted
    line of package.
 6. **`knows` audit** across the whole cast against each `self.md`.
 
-Items 1, 2, 5 and 7 are engine-side and small. Item 6 is character data. Items 3
-and 4 are design decisions and belong to the owner.
+Items 1, 3 and 4 are done. Items 2, 5 and 7 are engine-side and still open —
+grounding is the one that matters, because a Brain with a hole where the
+situation should be fills it with invented world state that then commits as
+fact. Item 6 is character data.
