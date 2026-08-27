@@ -519,6 +519,48 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
     'only the first person named heard it as addressed to them');
 }
 
+// --- two shouts in one breath, into two different rooms --------------------
+// 「澄子さん、小野さん！」 is one thing said. Both of them are in rooms of their
+// own, so each one's floor exists only because a heard direct address reached
+// it - which is the cross-zone handoff, and the only thing that can carry it
+// to the SECOND person named.
+{
+  const { world, floors, loop } = setup();
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('brother-01', NEAR_TABLE[1]);    // so her own floor qualifies
+  world.spawn('shopkeeper-01', COUNTER);       // one room away
+  world.spawn('pastor-01', [336, 170]);        // another room, still within a shout
+  let shouted = false;
+  for (let i = 0; i < 30 && !shouted; i += 1) {
+    for (const o of step(loop, floors)) {
+      const a = pickAt(o, 'call_across', 'shopkeeper-01');
+      const b = pickAt(o, 'call_across', 'pastor-01');
+      if (o.entityId !== 'grandma-01' || !a || !b) { floors.decline(o.entityId); continue; }
+      const r = floors.commit(o.entityId, { picks: [a, b], text: '澄子さん、牧師さん！' });
+      check(!r.refused, `two shouts in one breath were refused: ${r.refused}`);
+      shouted = !r.refused;
+    }
+  }
+  check(shouted, 'the test premise is wrong: she was never able to shout at both');
+
+  const addressed = new Set();
+  for (let i = 0; i < 14; i += 1) {
+    for (const o of step(loop, floors)) {
+      if (o.why === 'addressed') addressed.add(`${o.entityId}|${o.zone}`);
+      floors.decline(o.entityId);
+    }
+  }
+  const said = world.log.facts.filter((e) => e.type === 'speech_said');
+  check(said.length === 1, `${said.length} utterances came out of one breath`);
+  check(said[0]?.scope === 'broadcast', `two shouts carried at ${said[0]?.scope}`);
+  check(said[0]?.to.length === 2, `the shout was aimed at ${JSON.stringify(said[0]?.to)}`);
+
+  check(addressed.has('shopkeeper-01|cafe-counter'),
+    'the first person shouted at was never offered a floor of her own');
+  check(addressed.has('pastor-01|far-table'),
+    'the second person shouted at was never offered a floor of his own');
+}
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
