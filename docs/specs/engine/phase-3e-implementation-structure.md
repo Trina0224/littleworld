@@ -1,5 +1,7 @@
 # Phase 3E — Implementation Structure
 
+**Further corrected by `phase-3e-post-brain-corrections.md`** (2026-08-27), which wins on speech length, how many acts one utterance may carry, and whether a direct addressee's priority ever yields.
+
 **Status:** binding supplement before implementation
 **Created:** 2026-08-26
 **Revised:** 2026-08-26 — rebuilt around the **offered floor**; the session

@@ -132,10 +132,19 @@ So the choice is made on the spec, not the sweep: **8**, the bottom of the state
 band, one third cheaper than the 12 it replaces. Should a real Brain visibly lose
 the thread, 12 is where to go, and this is the number to revisit first.
 
-### `speechLimit: 240` — unchanged
+### ~~`speechLimit: 240` — unchanged~~ — SUPERSEDED
 
-Never bound in any run; a line long enough to be truncated never occurred. Left
-where the spec put it.
+> Recorded here as "never bound in any run; a line long enough to be truncated
+> never occurred." It never bound **for a scripted brain saying `…3`**. It bound
+> on the first real turn of a talkative character, twice in three lines, and cut
+> her mid-word. See `phase-3e-post-brain-corrections.md` §1: the budget is now
+> per character, derived from `talkativeness`, stated in the Brain's own prefix,
+> and cut at a sentence boundary.
+>
+> The lesson generalises past this one constant. §1 of this file warns that a
+> knob changing what a Brain *sees* cannot be judged by a brain that does not
+> look. This is the mirror: a knob bounding what a Brain *writes* cannot be
+> judged by a brain that does not write.
 
 ### `queueLimit: 16` — was 40
 

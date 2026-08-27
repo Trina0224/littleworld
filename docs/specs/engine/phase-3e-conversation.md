@@ -6,6 +6,8 @@
 boundary made concrete (§9.3), engine effect of `continue_listening` (§5.3), turn
 ownership reconciled with `world-engine-2.5.md` §11.4 (§11.0), acceptance
 mechanism sharpened (§17.0)  
+**Further corrected by `phase-3e-post-brain-corrections.md`** (2026-08-27), which wins on speech length, how many acts one utterance may carry, and whether a direct addressee's priority ever yields.
+
 **Supplemented and partly superseded by:**
 `phase-3e-implementation-structure.md`. Writing the structure out found that a
 session object was the wrong shape: conversation is now **an offered floor, one
