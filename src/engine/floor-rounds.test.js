@@ -1,5 +1,8 @@
 /**
- * Phase 3E-4 and 3E-5: offer rounds, quiet, dormancy and re-arm.
+ * Phase 3E offer rounds, quiet, dormancy and re-arm.
+ *
+ * Owner correction 2026-08-26: conversation offers are sequential (K=1), and
+ * provider latency never becomes a simulation-tick timeout.
  *
  *   node src/engine/floor-rounds.test.js
  */
@@ -50,13 +53,12 @@ function setup(config = {}) {
 
 const problems = [];
 const check = (ok, label) => { if (!ok) problems.push(label); };
-/** Step once and return the offers that opened. */
 const step = (loop, floors) => { loop.step(); return floors.offers(); };
 
 /**
  * Step n times, answering every offer with `policy(offer)` - 'decline', or an
- * object to commit. Returns every offer seen. A round that is never answered
- * blocks the floor until offerExpiry, so a scenario has to answer.
+ * object to commit. An intentionally unanswered offer blocks only its Floor;
+ * world ticks and deterministic runtime continue.
  */
 function drive(loop, floors, n, policy = () => 'decline') {
   const seen = [];
@@ -77,7 +79,7 @@ function drive(loop, floors, n, policy = () => 'decline') {
   world.spawn('grandma-01', PARK[0]);
   world.spawn('pastor-01', PARK[1]);
   world.spawn('man-01', PARK[2]);
-  drive(loop, floors, 4);                       // settle whatever is outstanding
+  drive(loop, floors, 8);
   world.say('grandma-01', '牧師さん、こちらへ', { to: 'pastor-01' });
 
   let offers = [];
@@ -88,72 +90,63 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(offers[0]?.why === 'addressed', `why was ${offers[0]?.why}`);
 }
 
-// --- rank decides the taker, never who answered first -------------------
+// --- open floors ask one Brain at a time, in rank order -----------------
 {
   const { world, floors, loop } = setup();
   for (const [i, id] of ['grandma-01', 'pastor-01', 'man-01'].entries()) {
     world.spawn(id, PARK[i]);
   }
-  let offers = [];
-  for (let i = 0; i < 3 && offers.length < 2; i += 1) offers = step(loop, floors);
-  check(offers.length === 3, `an open floor offered ${offers.length}, expected the batch of 3`);
-
-  // Everyone wants to speak, and the lowest-ranked answers first.
-  const order = offers.map((o) => o.entityId);
-  for (const id of [...order].reverse()) floors.commit(id, { pick: 'address_group', text: `${id} speaks` });
-  const heldBefore = offers.map((o) => o.epochId);
-  step(loop, floors);
-
-  const said = world.log.facts.filter((e) => e.type === 'speech_said');
-  check(said.length === 1, `${said.length} people spoke out of one floor`);
-  check(said[0]?.agent === order[0],
-    `the floor went to ${said[0]?.agent}; rank said ${order[0]}`);
-  const lost = world.log.audit.filter((e) => e.type === 'floor_lost').map((e) => e.agent);
-  check(lost.length === 2 && !lost.includes(order[0]),
-    `floor_lost recorded ${lost}`);
-  void heldBefore;
+  let first = [];
+  for (let i = 0; i < 3 && !first.length; i += 1) first = step(loop, floors);
+  check(first.length === 1, `an open floor exposed ${first.length} simultaneous offers`);
+  const firstId = first[0]?.entityId;
+  floors.decline(firstId);
+  const second = step(loop, floors);
+  check(second.length === 1, `after one decline the floor exposed ${second.length} offers`);
+  check(second[0]?.entityId !== firstId,
+    'declining the first ranked character did not advance to the next one');
+  check(!world.log.audit.some((e) => e.type === 'floor_lost'),
+    'sequential conversation still produced a counterfactual floor_lost');
 }
 
-// --- a loser commits nothing and loses nothing --------------------------
+// --- unanswered means still thinking, not decline -----------------------
 {
   const { world, perception, floors, loop } = setup();
-  for (const [i, id] of ['grandma-01', 'pastor-01', 'man-01'].entries()) {
-    world.spawn(id, PARK[i]);
-  }
-  drive(loop, floors, 4);
-  world.say('grandma-01', 'みなさん、こんばんは');     // heard by both others
+  world.spawn('grandma-01', PARK[0]);
+  world.spawn('pastor-01', PARK[1]);
   let offers = [];
-  for (let i = 0; i < 4 && offers.length < 2; i += 1) offers = step(loop, floors);
-  const contenders = offers.filter((o) => o.entityId !== 'grandma-01');
-  check(contenders.length >= 2, 'the test premise is wrong: not enough contenders');
+  for (let i = 0; i < 3 && !offers.length; i += 1) offers = step(loop, floors);
+  const o = offers[0];
+  check(!!o, 'nothing was offered at all');
+  const issuedAt = world.tick;
 
-  const queued = new Map(contenders.map((o) => [o.entityId, o.context.forModel
-    .recentPerceivedEvents.filter((e) => e.said === 'みなさん、こんばんは').length]));
-  check([...queued.values()].every((n) => n === 1),
-    'the test premise is wrong: the utterance was not in both packages');
-
-  for (const o of offers) {
-    if (o.entityId === 'grandma-01') floors.decline(o.entityId);
-    else floors.commit(o.entityId, { pick: 'address_group', text: `${o.entityId} replies` });
+  // Thousands of simulation ticks are allowed to pass while this Brain is
+  // thinking. The Floor still owns the same one offer and opens no replacement.
+  for (let i = 0; i < 1200; i += 1) {
+    const more = step(loop, floors);
+    check(more.length === 0, 'a second Brain was offered while the first was still pending');
   }
+  const f = floors.floor('park-open');
+  check(world.tick > issuedAt + 1000, 'the world clock did not continue while the Brain was pending');
+  check(f?.state === 'offered' && f?.offeredTo?.[0] === o.entityId,
+    'elapsed simulation ticks expired or replaced the outstanding Brain offer');
+  check(perception.heldCount() === 1,
+    `the outstanding Brain context was not retained exactly once: held=${perception.heldCount()}`);
+  check(!world.log.audit.some((e) => e.type === 'floor_declined' && e.agent === o.entityId),
+    'elapsed simulation ticks were recorded as an implicit decline');
+
+  // Once the Brain actually answers nothing, the context is delivered and the
+  // next ranked character may be asked.
+  floors.decline(o.entityId);
   const next = step(loop, floors);
-
-  const winner = world.log.facts.filter((e) => e.type === 'speech_said').at(-1).agent;
-  const loser = contenders.map((o) => o.entityId).find((id) => id !== winner);
-  check(!world.log.facts.some((e) => e.type === 'speech_said' && e.text.includes(loser)),
-    'a losing claim reached the world as speech');
-
-  // The loser's queue was restored and then immediately taken into the next
-  // offer, which is the whole round trip: still owed, and offered again.
-  const owed = (id) => [
-    ...perception.pendingFor(id).map((e) => e.text),
-    ...(next.find((o) => o.entityId === id)?.context.forModel
-      .recentPerceivedEvents.map((e) => e.said) ?? [])
-  ];
-  check(owed(loser).includes('みなさん、こんばんは'),
-    'the loser lost the utterance it was woken for');
-  check(!owed(winner).includes('みなさん、こんばんは'),
-    'the winner was not charged for the context it used');
+  check(perception.heldCount() === 1,
+    'settling the first context and opening the next did not keep one outstanding context');
+  check(next.length === 1 && next[0].entityId !== o.entityId,
+    'an explicit decline did not advance the sequential offer round');
+  floors.decline(next[0].entityId);
+  step(loop, floors);
+  check(perception.heldCount() === 0,
+    'all answered contexts did not settle');
 }
 
 // --- everyone declines: the round ends and the floor sleeps -------------
@@ -162,7 +155,7 @@ function drive(loop, floors, n, policy = () => 'decline') {
   for (const [i, id] of ['grandma-01', 'pastor-01', 'man-01'].entries()) {
     world.spawn(id, PARK[i]);
   }
-  const asked = new Set(drive(loop, floors, 8).map((o) => o.entityId));
+  const asked = new Set(drive(loop, floors, 12).map((o) => o.entityId));
   check(asked.size === 3, `only ${asked.size} of the three were ever asked`);
   const f = floors.floor('park-open');
   check(f?.state === 'dormant', `the floor is ${f?.state} after a round with no taker`);
@@ -172,25 +165,12 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(after.length === 0, `a dormant floor opened ${after.length} offers`);
 }
 
-// --- an offer nobody answers becomes a decline --------------------------
-{
-  const { world, floors, loop } = setup({ offerExpiry: 5 });
-  world.spawn('grandma-01', PARK[0]);
-  world.spawn('pastor-01', PARK[1]);
-  let offers = [];
-  for (let i = 0; i < 3 && !offers.length; i += 1) offers = step(loop, floors);
-  check(offers.length > 0, 'nothing was offered at all');
-  for (let i = 0; i < 12; i += 1) step(loop, floors);
-  check(floors.floor('park-open')?.state === 'dormant',
-    'an offer nobody ever answered kept the floor awake forever');
-}
-
 // --- 3E-5: background machinery does not wake a sleeping floor ----------
 {
   const { world, floors, loop } = setup();
   world.spawn('grandma-01', PARK[0]);
   world.spawn('pastor-01', PARK[1]);
-  drive(loop, floors, 6);
+  drive(loop, floors, 8);
   const asleep = floors.floor('park-open');
   check(asleep?.state === 'dormant', 'the test premise is wrong: not asleep');
 
@@ -209,13 +189,13 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(floors.floor('park-open')?.socialSpell === asleep.socialSpell,
     'background machinery started a new social spell');
 
-  // Somebody arriving is a new social situation, and it is a new spell.
   world.spawn('man-01', PARK[2]);
   const woke = step(loop, floors);
   const f = floors.floor('park-open');
   check(f?.state !== 'dormant', 'an arrival did not wake the floor');
   check(f?.socialSpell > asleep.socialSpell, 'waking did not start a new social spell');
-  check(woke.length > 0, 'the woken floor opened no offer');
+  check(woke.length === 1, `the woken floor opened ${woke.length} offers instead of one`);
+  for (const o of woke) floors.decline(o.entityId);
 }
 
 // --- a seat wakes a floor; the shopkeeper's workstation does not --------
@@ -227,13 +207,10 @@ function drive(loop, floors, n, policy = () => 'decline') {
     'the test premise is wrong: those positions are not both at the counter');
   world.spawn('shopkeeper-01', A);
   world.spawn('grandma-01', B);
-  drive(loop, floors, 6);
+  drive(loop, floors, 8);
   const asleep = floors.floor('cafe-counter');
   check(asleep?.state === 'dormant', 'the test premise is wrong: the counter is not asleep');
 
-  // Seats and stations are one thing to a reservation, on purpose, so the
-  // difference has to be made here: her claiming her workstation is the
-  // machinery the whitelist exists to exclude.
   world.reserve('cafe-counter', 'shopkeeper-01');
   world.occupy('cafe-counter', 'shopkeeper-01');
   check(world.log.facts.some((e) => e.type === 'resource_occupied' && e.resource === 'cafe-counter'),
@@ -241,16 +218,15 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(step(loop, floors).length === 0, 'the workstation woke the floor');
   check(floors.floor('cafe-counter')?.state === 'dormant', 'the workstation woke the floor');
 
-  // A stool is somebody sitting down with you.
   world.reserve('counter-stool-1', 'grandma-01');
   world.occupy('counter-stool-1', 'grandma-01');
   const woke = step(loop, floors);
   check(floors.floor('cafe-counter')?.state !== 'dormant', 'a seat did not wake the floor');
-  check(woke.length > 0, 'the woken floor opened no offer');
+  check(woke.length === 1, `the woken floor opened ${woke.length} offers instead of one`);
   for (const o of woke) floors.decline(o.entityId);
 }
 
-// --- clarifications §10: one overheard nudge per source spell -----------
+// --- one overheard nudge per source spell -------------------------------
 {
   const { world, floors, loop } = setup();
   world.spawn('grandma-01', NEAR_TABLE[0]);
@@ -258,9 +234,7 @@ function drive(loop, floors, n, policy = () => 'decline') {
   world.spawn('shopkeeper-01', COUNTER);          // alone, 57 units away: audible
   let nudges = 0;
   let lines = 0;
-  // A LIVE conversation: the two at the table keep taking the floor, so their
-  // floor never sleeps and the spell never turns over.
-  const seen = drive(loop, floors, 40, (o) => {
+  drive(loop, floors, 60, (o) => {
     if (o.entityId === 'shopkeeper-01') {
       check(o.why === 'overheard', `she was offered the floor as ${o.why}`);
       nudges += 1;
@@ -273,19 +247,63 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(floors.floor('near-table')?.state !== 'dormant',
     'the test premise is wrong: the source conversation died');
   check(nudges === 1, `a ${lines}-line conversation nudged her ${nudges} times`);
-  void seen;
   check(floors.floor('cafe-counter') === null, 'the temporary counter floor never closed');
+}
+
+// --- walking/current geometry can create the nudge before another line --
+{
+  const { world, floors, loop } = setup();
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('brother-01', NEAR_TABLE[1]);
+  world.spawn('shopkeeper-01', PARK[0]);          // initially far from the table
+
+  // Establish a live source conversation and make sure the remote observer was
+  // not in the historical audience of its first line.
+  let firstLine = null;
+  for (let i = 0; i < 12 && !firstLine; i += 1) {
+    for (const o of step(loop, floors)) {
+      if (o.entityId === 'shopkeeper-01') { floors.decline(o.entityId); continue; }
+      floors.commit(o.entityId, { pick: 'address_group', text: 'まだ遠くで話している' });
+    }
+    firstLine = world.log.facts.find((e) => e.type === 'speech_said' && e.text === 'まだ遠くで話している');
+  }
+  check(!!firstLine, 'the source conversation never produced its first line');
+  check(!firstLine?.heardBy.includes('shopkeeper-01'),
+    'the movement test premise is wrong: she already heard the first line');
+
+  // Test-only reposition through the World API: spawn replaces the authoritative
+  // agent record at the new position and emits a social fact. No new speech is
+  // committed between this move and the expected nudge.
+  const speechCount = world.log.facts.filter((e) => e.type === 'speech_said').length;
+  world.spawn('shopkeeper-01', COUNTER);
+  let nudge = null;
+  for (let i = 0; i < 4 && !nudge; i += 1) {
+    const offers = step(loop, floors);
+    nudge = offers.find((o) => o.entityId === 'shopkeeper-01') ?? null;
+    for (const o of offers) if (o !== nudge) floors.decline(o.entityId);
+  }
+  check(world.log.facts.filter((e) => e.type === 'speech_said').length === speechCount,
+    'another utterance happened before movement-created nudge could be observed');
+  check(nudge?.why === 'overheard',
+    `moving into current earshot produced ${nudge?.why ?? 'no'} social opportunity`);
+  check(!(nudge?.context.forModel.recentPerceivedEvents ?? [])
+    .some((e) => e.said === 'まだ遠くで話している'),
+    'moving into earshot retroactively delivered words spoken while she was too far away');
+  check(!(nudge?.context.forModel.conversation ?? [])
+    .some((e) => e.said === 'まだ遠くで話している'),
+    'moving into earshot retroactively inserted the old line into her transcript');
+  if (nudge) floors.decline(nudge.entityId);
 }
 
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
 } else {
-  console.log('OK  the person spoken to is offered the floor alone; rank decides');
-  console.log('    the taker and a loser commits nothing and loses nothing; a');
-  console.log('    round with no taker puts the floor to sleep and an unanswered');
-  console.log('    offer counts as a decline; background machinery never wakes it');
-  console.log('    and an arrival does, with a new social spell; one overheard');
-  console.log('    nudge for a whole conversation');
+  console.log('OK  one Brain is offered the floor at a time; explicit decline');
+  console.log('    advances to the next ranked character; elapsed simulation ticks');
+  console.log('    never fabricate a decline; a full declined round sleeps; background');
+  console.log('    machinery stays quiet; social events re-arm; one overheard nudge');
+  console.log('    is allowed per source spell, including when movement newly brings');
+  console.log('    an observer into earshot without retroactive transcript leakage');
 }
 process.exitCode = problems.length ? 1 : 0;
