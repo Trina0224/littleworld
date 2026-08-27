@@ -494,7 +494,8 @@ export function createPerception(world, zones, {
      *
      * A false settlement puts the events back where they came from, in `seq`
      * order, so the agent is still owed exactly what it was owed. That is what
-     * lets a losing parallel offer commit nothing AND lose nothing
+     * lets a request that was cancelled or dropped before use commit nothing AND
+     * lose nothing - a floor whose offeree walked away, or a scheduler drop
      * (clarifications 3 and 8.2).
      *
      * 3D needs no part in this: memory reads the queue with a cursor and never

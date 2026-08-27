@@ -18,6 +18,7 @@ node src/engine/floors.test.js
 node src/engine/floor-rounds.test.js
 node src/engine/floors-address-decline.test.js
 node src/engine/floor-brain.test.js
+node src/engine/exactly-once-3e.test.js
 node src/engine/animals.test.js
 node src/engine/social.test.js
 node src/engine/social.test.js
@@ -57,6 +58,7 @@ node src/engine/run-3e.js          # a scripted afternoon, and the fifteen 3E ac
 | `floor-rounds.test.js` | who is asked, who speaks, and when the room goes quiet |
 | `floors-address-decline.test.js` | that saying no to somebody settles what they asked |
 | `floor-brain.test.js` | what a Brain is shown, and what it is allowed to pick |
+| `exactly-once-3e.test.js` | that one decision becomes one utterance, once |
 | `animals.test.js` | that 辰's dog comes when he calls, and mostly not otherwise |
 | `social.test.js` | that the cast stays asymmetric and nothing repairs a low trait |
 | `run-3c.js` | the 3C acceptance scenario, printed |
@@ -274,23 +276,37 @@ destroyed, so a zone that empties and fills again reads back exactly what it
 read before. The rebuild-from-facts property is true by construction rather than
 by maintenance — there is no second copy to keep in step.
 
-**The floor is offered, never granted.** A round asks the top K in rank order —
-addressee first, then an overhearer being nudged, then everybody else by weight
-with a hash tie-break — and K is 1 when there is somebody who was just spoken to.
-Everyone answers, and then **rank decides who speaks, not who answered first**.
-Provider response order is network timing, and letting it pick the speaker would
-lose *same seed + same recorded choices = same fact stream*, which is the claim
-replay rests on. So a `commit` is a **claim**, not an utterance: the highest-
-ranked claimant speaks and every other claim is a counterfactual that reaches
-nothing — no fact, no memory — while its perception context is settled as never
-used, so the loser is still owed exactly what it was owed and is offered again
-next round.
+**The floor is offered to one character at a time, and it waits.** A round asks
+the highest-ranked eligible character — addressee first, then an overhearer being
+nudged, then everybody else by weight with a hash tie-break. If they decline, it
+asks the next. A full pass in which everyone declined is one quiet round, and
+`quietLimit` of those puts the floor to sleep.
 
-**A round with no taker is what silence means**, and it costs nothing to measure
-because it does not involve a clock. Whether each answer took three seconds or
-forty does not enter into it — which is the whole reason the session object was
-thrown away. An offer nobody answers becomes a decline after `offerExpiry`, and
-`quietLimit` rounds with no taker put the floor to sleep.
+**A Brain that has not answered is not silence.** The floor waits for the
+decision it actually asked for, however long the provider takes; the rest of the
+world keeps ticking meanwhile. Elapsed simulation ticks never turn a slow model
+into an implicit decline — that was a tick deadline shorter than an ordinary
+model call, which is precisely the failure the session object was thrown away
+for, put back in a new place. Provider timeout, retry and drop are 3F-B's, and
+when 3F-B drops a request that is an explicit scheduler outcome rather than a
+timer hidden in here.
+
+An earlier version asked three at once and let **rank** rather than arrival
+decide the speaker, so that provider latency could be hidden behind parallel
+generation. That optimisation is withdrawn (`phase-3e-owner-latency-correction.md`):
+Simulation is *allowed* to take real time to generate history, and Replay is the
+audience-facing pacing layer, so the whole apparatus — counterfactual utterances,
+`floor_lost`, rank-versus-arrival races — was paying for a problem the
+architecture had already deleted.
+
+**What does invalidate a pending request is the world changing under it.** A
+character who walked out of the zone is not still thinking about its floor, so
+the offer is cancelled, its perception context is settled as never used, and the
+round carries on with whoever is still there. Without that the floor waits
+forever and the whole zone stops conversing — which it did, until a probe found
+it: nought utterances in twenty-five ticks after somebody left mid-request, and
+twenty-four after the fix. That is also what the provisional-delivery API is
+still for, now that a normal sequential resolution simply settles as delivered.
 
 **Waking is a declared property of the fact type**, in `events.js` where facts
 are defined, defaulting to false. A whitelist kept by the consumer is a list the
@@ -368,23 +384,24 @@ t=  2  near-table   normal    うん、もう終わった
 t=  3  near-table   broadcast 澄子さん、お茶をもう一杯
 t=  4  near-table   normal    いいお天気ね
 t=  5  cafe-counter broadcast はい、ただいま
-t=  8  near-table   normal    ハナ、おいで
-t=  8  (ハナ)        call_over complied
+t=  9  near-table   normal    ハナ、おいで
+t=  9  (ハナ)        call_over complied
 ```
 
-Twenty-six offers produced nine utterances. **渡辺 was asked five times and
-never spoke.** 澄子 heard every word from her counter, was nudged **once** in the
-whole conversation, and said nothing until she was called by name — and when she
-answered she *called back across*, because she was not standing at their table
-and the menu therefore never offered her a reply into it. ハナ came when 辰
-called her, and would mostly not have for anyone else.
+Fifteen offers produced nine utterances — one offer at a time, each waited for.
+**渡辺 was asked and allowed to decline**, every time. 澄子 heard every word from
+her counter, was nudged **once** in the whole conversation, and said nothing
+until she was called by name — and when she answered she *called back across*,
+because she was not standing at their table and the menu therefore never offered
+her a reply into it. ハナ came when 辰 called her, and would mostly not have for
+anyone else.
 
 **Scripted, not mocked.** Every choice is written in the file. A stand-in that
 *decided* would make the run pass for reasons the run does not control, and 3E is
 about session mechanics rather than about judgement (clarifications §17.0). The
 script reacts to committed facts rather than to its own claims, because a claim
-that lost the floor did not happen — which is a mistake the first version of it
-made and the fact stream caught.
+that did not become an utterance did not happen — a mistake the first version of
+it made and the fact stream caught.
 
 All fifteen items of `phase-3e-conversation.md` §17 are asserted there, and
 **live and replay produce an identical frame every tick** — the live view fed
@@ -394,7 +411,12 @@ coming survives into a recording.
 
 ### What the tests prove
 
-Fifty-eight mutations, all biting. The store: dropping step 8 from the loop, not
+Sixty mutations, all biting — the two most recent covering the sequential offer
+rule the owner's latency correction restored: a floor that gives up on a Brain
+that is still thinking, and a pending request that outlives the person it was
+waiting for.
+
+Fifty-eight before them. The store: dropping step 8 from the loop, not
 stamping the zone, letting an unheard address qualify a zone, letting a pending
 address not qualify one, opening a floor for one person alone, refusing one for a
 person and their dog, clearing the utterance index when a floor closes, copying
