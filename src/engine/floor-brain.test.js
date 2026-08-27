@@ -324,26 +324,67 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
     'an unheard address created a response opportunity');
 }
 
-// --- an addressed offer that nobody ever answers resolves the address -------
+// --- a Brain that has not answered is not silence --------------------------
+// The owner correction: a floor waits for the decision it asked for, however
+// long the provider takes, and never decides a decline because ticks elapsed.
 {
-  const { world, floors, loop } = setup({ offerExpiry: 4 });
+  const { world, floors, loop } = setup();
   world.spawn('grandma-01', [227, 235]);
   world.spawn('brother-01', [232, 238]);
   world.spawn('shopkeeper-01', [222, 178]);
   world.say('grandma-01', '澄子さん', { to: 'shopkeeper-01' });
 
   let hers = 0;
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < 60; i += 1) {
     for (const o of step(loop, floors)) {
-      if (o.entityId === 'shopkeeper-01') { hers += 1; continue; }   // never answered
+      if (o.entityId === 'shopkeeper-01') { hers += 1; continue; }   // still thinking
       floors.decline(o.entityId);
     }
   }
-  check(hers === 1, `she was offered the same address ${hers} times without ever answering`);
-  check(floors.pendingAddressFor('shopkeeper-01') === null,
-    'an offer that timed out left the address pending');
+  check(hers === 1, `she was asked ${hers} times while she had not answered once`);
+  check(floors.floor('cafe-counter')?.state === 'offered',
+    'the floor gave up on a Brain that was still thinking');
+  check(floors.pendingAddressFor('shopkeeper-01') !== null,
+    'an unanswered address stopped being owed after enough ticks');
+  check(!world.log.audit.some((e) => e.type === 'floor_declined' && e.agent === 'shopkeeper-01'),
+    'waiting was recorded as a decline');
+
+  // But the world changing under a pending request does invalidate it. She walks
+  // away, and the counter stops waiting on somebody who is not there.
+  world.roster('shopkeeper-01', { at: [222, 178] });
+  world.depart('shopkeeper-01');
+  for (let i = 0; i < 4; i += 1) for (const o of step(loop, floors)) floors.decline(o.entityId);
   check(floors.floor('cafe-counter') === null,
-    'the temporary floor outlived the offer it was opened for');
+    'the counter went on waiting for somebody who had gone home');
+  check(floors.pendingAddressFor('shopkeeper-01') === null,
+    'an address stayed owed by somebody who has gone home');
+}
+
+// --- and a table does not freeze because one of its people walked off -------
+{
+  const { world, floors, loop } = setup();
+  world.spawn('grandma-01', PARK[0]);
+  world.spawn('pastor-01', PARK[1]);
+  world.spawn('man-01', PARK[2]);
+  let held = null;
+  for (let i = 0; i < 4 && !held; i += 1) {
+    for (const o of step(loop, floors)) {
+      if (!held) held = o.entityId; else floors.decline(o.entityId);
+    }
+  }
+  check(!!held, 'nobody was offered the floor at all');
+  world.roster(held, { at: PARK[0] });
+  world.depart(held);                              // never answers, and leaves
+  let spoke = 0;
+  for (let i = 0; i < 20; i += 1) {
+    for (const o of step(loop, floors)) {
+      const r = floors.commit(o.entityId, { pick: 'address_group', text: 'まだここにいる' });
+      if (!r.refused) spoke += 1;
+    }
+  }
+  check(world.log.audit.some((e) => e.type === 'floor_cancelled' && e.agent === held),
+    'the request outlived the person it was waiting for');
+  check(spoke > 3, `the zone managed ${spoke} turns after one person walked off mid-request`);
 }
 
 console.log('');

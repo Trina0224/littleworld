@@ -208,10 +208,22 @@ check(memory.recall('shopkeeper-01', 'grandma-01')?.spokenWith >= 1,
 // Identity safety.
 const packages = JSON.stringify([sumikoContext?.forModel, watanabeContext?.forModel]);
 for (const id of CAST) check(!packages.includes(id), `an entity id reached a package: ${id}`);
-const his = JSON.stringify(watanabeContext?.forModel);
+// A name spoken out loud is allowed to reach him - that is how a character
+// learns one at all (phase-3d-memory.md 4.2), and 星さん says 辰ちゃん and
+// 澄子さん in his hearing. What may never reach him is a name the ENGINE knew:
+// recognition, appearance, a label he was never told. So the strict check runs
+// against his package with the quoted speech taken out of it.
+const hisModel = JSON.parse(JSON.stringify(watanabeContext?.forModel ?? {}));
+for (const e of hisModel.recentPerceivedEvents ?? []) delete e.said;
+for (const u of hisModel.conversation ?? []) delete u.said;
+const his = JSON.stringify(hisModel);
 for (const n of ['星', 'チヤ', '森ジョナサン', '国分', '澄子', '渡辺', '奧山', '辰']) {
   check(!his.includes(n), `a canonical name reached the package of a man told nothing: ${n}`);
 }
+check(JSON.stringify(watanabeContext?.forModel).includes('澄子'),
+  'the test premise is wrong: no spoken name reached him, so it proved nothing');
+check(!(hisModel.conversation ?? []).some((u) => typeof u.speaker === 'string'
+  && u.speaker !== 'you'), 'he was handed a name for somebody he has never been told about');
 
 // Act-derived transport.
 check(said.some((e) => e.scope === 'normal') && said.some((e) => e.scope === 'broadcast'),

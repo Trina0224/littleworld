@@ -295,6 +295,23 @@ export function createFloors(world, zones, perception, {
   function resolve(f) {
     const id = f.offeredTo[0];
     if (!id) return;
+
+    // The one thing that DOES invalidate a pending request: the world changed
+    // under it. A character who walked out of this zone is not still thinking
+    // about its floor, and without this the floor waits on them forever - the
+    // whole zone stops conversing and a perception context is never given back.
+    if (zoneOf(id) !== f.zone) {
+      settleQuietly(id, f.epochs.get(id), false);    // never used, so still owed
+      f.epochs.delete(id);
+      f.menus.delete(id);
+      f.claims.delete(id);
+      f.declines.delete(id);
+      f.offeredTo = [];
+      f.state = 'open';
+      world.log.note(world.tick, 'floor_cancelled', { zone: f.zone, agent: id, reason: 'left' });
+      return;
+    }
+
     const answered = f.claims.has(id) || f.declines.has(id);
 
     // No simulation-tick timeout here. A Brain that is still thinking has not
