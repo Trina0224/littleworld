@@ -439,7 +439,11 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
       if (!here || !other || !shout) { floors.decline(o.entityId); continue; }
       tried = {
         volumes: floors.commit(o.entityId, { picks: [here, shout], text: 'x' }).refused,
-        three: floors.commit(o.entityId, { picks: [here, other, shout], text: 'x' }).refused,
+        // Three acts that are otherwise entirely legal - same volume, three
+        // different targets - so only the limit itself can refuse them.
+        three: floors.commit(o.entityId, {
+          picks: [here, other, 'address_group'], text: 'x'
+        }).refused,
         questions: floors.commit(o.entityId, {
           picks: [pickAt(o, 'ask', o.entityId === 'grandma-01' ? 'brother-01' : 'grandma-01'), other],
           text: 'x'

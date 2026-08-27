@@ -551,9 +551,11 @@ export function createFloors(world, zones, perception, {
       if (new Set(parsed.map((a) => a.scope)).size > 1) {
         return refuse(entityId, 'one breath cannot be two volumes', shown);
       }
-      if (parsed.length > 1 && parsed[0].scope === 'broadcast') {
-        return refuse(entityId, 'a call across the room goes on its own', shown);
-      }
+      // No separate rule against a shout carrying a passenger. Mixing a shout
+      // with a quiet remark is already refused above, and two shouts in one
+      // breath -「澄子さん、小野さん！」- is a thing people do. The guard that
+      // was here could not be shown to change any behaviour the volume check
+      // did not already cover.
       // The floor holds one open question. Two in one breath would silently
       // lose one of them, which is worse than refusing.
       if (parsed.filter((a) => a.asks).length > 1) {
@@ -584,7 +586,7 @@ export function createFloors(world, zones, perception, {
         acts: parsed.map((a) => ({
           act: a.name, target: a.target, asks: !!a.asks, animal: !!a.animal
         })),
-        scope: parsed[0].scope,
+        scope: parsed[0].scope,   // all equal: the volume check above saw to it
         speak
       });
       return { acts: parsed.map((a) => a.name), targets: aimed, spoken: true };
