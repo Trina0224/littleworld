@@ -1,12 +1,14 @@
 /**
- * Phase 3E acceptance: a scripted afternoon, and the fifteen things
- * phase-3e-conversation.md 17 asks to be proved without a provider.
+ * Phase 3E acceptance: a scripted afternoon, covering the conversation contract
+ * without a provider. The original numbered list has 18 items; the 2026-08-26
+ * owner correction supersedes its parallel-offer / simulation-tick-timeout
+ * mechanics with one sequential Brain offer at a time.
  *
  *   node src/engine/run-3e.js
  *
  * Scripted, not mocked: every choice below is written here. A stand-in that
  * DECIDED would make these pass for reasons the run does not control, and 3E is
- * about session mechanics rather than about judgement (clarifications 17.0).
+ * about session mechanics rather than about judgement.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +34,6 @@ const read = (...p) => JSON.parse(readFileSync(join(...p), 'utf8'));
 const CAST = ['grandma-01', 'pastor-01', 'man-01', 'shopkeeper-01', 'brother-01', 'dog-01'];
 const NEAR_TABLE = [[227, 235], [232, 238], [222, 240]];
 const COUNTER = [222, 178];
-const PARK = [[392, 202], [400, 202]];
 
 function build() {
   const entities = new Map();
@@ -68,7 +69,7 @@ function build() {
   return { world, zones, perception, memory, animals, floors, loop };
 }
 
-const { world, perception, memory, floors, loop } = build();
+const { world, memory, floors, loop } = build();
 world.start();
 world.spawn('grandma-01', NEAR_TABLE[0]);
 world.spawn('brother-01', NEAR_TABLE[1]);
@@ -82,12 +83,13 @@ const pickAt = (o, act, target) => o.menu.find(
   (m) => m.startsWith(`${act}:`) && o.context.refs.get(m.split(':')[1]) === target) ?? null;
 
 const log = [];
-const seen = { nudges: 0, refusals: 0, lost: 0, turns: 0 };
+const seen = { nudges: 0, refusals: 0, turns: 0 };
 const spoken = (text) => world.log.facts.some((e) => e.type === 'speech_said' && e.text === text);
 const ASK = '辰ちゃん、宿題は終わったの';
 const ANSWER = 'うん、もう終わった';
 const CALL = '澄子さん、お茶をもう一杯';
 const DOG = 'ハナ、おいで';
+const SUMIKO_REPLY = 'はい、ただいま';
 let remarks = 0;
 let sumikoContext = null;
 let watanabeContext = null;
@@ -96,18 +98,15 @@ const live = createView();
 
 /** The script. Every branch is written here; nothing decides. */
 function choose(o) {
-  // 渡辺 never wants to talk. That is his character, not a scheduler defect.
   if (o.entityId === 'man-01') { watanabeContext = watanabeContext ?? o.context; return 'decline'; }
 
   if (o.entityId === 'shopkeeper-01') {
     if (o.why === 'overheard') { seen.nudges += 1; sumikoContext = o.context; return 'decline'; }
     if (o.why === 'addressed') {
-      // She is standing at her counter, not at their table, so she may not take
-      // their floor. She calls back across, which is 9.1's handoff in reverse.
       const back = pickAt(o, 'call_across', 'grandma-01');
       check(!pickAt(o, 'reply', 'grandma-01'),
         'she was offered a reply into a floor she is not standing on');
-      return back ? { pick: back, text: 'はい、ただいま' } : 'decline';
+      return back ? { pick: back, text: SUMIKO_REPLY } : 'decline';
     }
     return 'decline';
   }
@@ -137,7 +136,7 @@ function choose(o) {
   return 'decline';
 }
 
-loop.run(90, {
+loop.run(120, {
   onFrame(fresh, t) {
     for (const o of floors.offers()) {
       seen.turns += 1;
@@ -156,34 +155,28 @@ loop.run(90, {
 const facts = world.log.facts;
 const said = facts.filter((e) => e.type === 'speech_said');
 const audit = world.log.audit;
-seen.lost = audit.filter((e) => e.type === 'floor_lost').length;
 
-// 17.1  persistence: one floor carried the whole exchange
-check(said.length >= 6, `only ${said.length} utterances in ninety ticks`);
+// Persistence: one floor carried the whole exchange.
+check(said.length >= 6, `only ${said.length} utterances in the scripted run`);
 check(said.filter((e) => e.zone === 'near-table').length >= 5,
   'the table conversation did not stay on one floor');
 
-// 17.2  no round-robin: 澄子 is in another zone and is never offered that floor
+// No round-robin across zones: 澄子 is never offered the table's floor.
 check(!audit.some((e) => e.type === 'floor_offered'
   && e.agent === 'shopkeeper-01' && e.zone === 'near-table'),
   'somebody in another zone was offered the table floor');
 
-// 17.3  walking in is joining - asserted by there being no join action at all
+// Walking in is joining: there is no join/leave conversation action.
 check(!Object.keys(await import('./floors.js').then((m) => m.ACTS))
   .some((a) => /join|leave/.test(a)), 'a join or leave action exists');
 
-// 17.4  silence is legal, and produces no speech
+// Silence is legal; 渡辺 remains himself.
 check(!said.some((e) => e.agent === 'man-01'), '渡辺 was made to speak');
 check(audit.some((e) => e.type === 'floor_declined' && e.agent === 'man-01'),
-  '渡辺 was never even asked');
+  '渡辺 was never even asked once after the stronger speakers were exhausted');
+check(!!watanabeContext, '渡辺 was never handed a private package');
 
-// 17.5  declining does not remove you: he keeps being offered, and still gets a package
-const hisOffers = audit.filter((e) => e.type === 'floor_offered' && e.agent === 'man-01');
-check(hisOffers.length >= 3, `渡辺 was asked only ${hisOffers.length} times`);
-check(!!watanabeContext, '渡辺 was never handed a package');
-
-// 17.6  physical boundary: he is in another zone and hears without being in it
-// She heard every word at the table and holds only what was said to or by her.
+// Physical boundary / cross-zone transcript.
 const hersHeard = facts.filter((e) => e.type === 'speech_said'
   && e.heardBy.includes('shopkeeper-01')).length;
 check(hersHeard >= 5, `the test premise is wrong: she heard ${hersHeard} lines`);
@@ -194,11 +187,11 @@ check(floors.utterancesFor('shopkeeper-01').length === 2,
   `her transcript holds ${floors.utterancesFor('shopkeeper-01').length} lines`);
 
 check(spoken(ANSWER), '辰 never answered the question he was asked');
-check(spoken(CALL) && said.some((e) => e.text === 'はい、ただいま'),
+check(spoken(CALL) && said.some((e) => e.text === SUMIKO_REPLY),
   '澄子 was called across the way and never called back');
 check(floors.openQuestionIn('near-table') === null, 'the answered question is still a debt');
 
-// 17.7 / 17.8  a conversation is not ten episodes, and meaning is still possible
+// Transcript is not long-term memory; deliberate meaning still can be.
 for (const id of ['grandma-01', 'brother-01']) {
   check(memory.episodesFor(id).every((e) => e.kind === 'first_meeting'),
     `${id} turned a conversation into ${memory.episodesFor(id).length} episodes`);
@@ -207,25 +200,22 @@ memory.note('grandma-01', 'brother-01', '宿題を終わらせたと言ってい
 check(memory.episodesFor('grandma-01').some((e) => e.kind === 'note'),
   'a deliberate memory could not be written');
 
-// 17.9  a nonparticipant may remember what it heard, without being a participant
+// A cross-zone direct exchange can be remembered without making the observer a
+// participant in the other zone's Floor.
 check(memory.recall('shopkeeper-01', 'grandma-01')?.spokenWith >= 1,
   'being called across the way was not remembered as a conversation');
 
-// 17.10  identity safety
+// Identity safety.
 const packages = JSON.stringify([sumikoContext?.forModel, watanabeContext?.forModel]);
 for (const id of CAST) check(!packages.includes(id), `an entity id reached a package: ${id}`);
-// A name may reach a package as somebody's OWN seeded label - 澄子 really does
-// call her 星さん, and that is her knowledge rather than a leak. The strict
-// check therefore belongs to 渡辺, who knows nobody and was told nothing.
 const his = JSON.stringify(watanabeContext?.forModel);
 for (const n of ['星', 'チヤ', '森ジョナサン', '国分', '澄子', '渡辺', '奧山', '辰']) {
   check(!his.includes(n), `a canonical name reached the package of a man told nothing: ${n}`);
 }
 
-// 17.11  act-derived transport
+// Act-derived transport.
 check(said.some((e) => e.scope === 'normal') && said.some((e) => e.scope === 'broadcast'),
   'both transports were not exercised');
-// Every carrying voice is a call across a zone boundary, and nothing else.
 const zoneNow = (id) => facts.filter((e) => e.type === 'speech_said' && e.agent === id).at(-1)?.zone;
 check(said.filter((e) => e.scope === 'broadcast')
   .every((e) => e.to && zoneNow(e.to) !== e.zone),
@@ -234,21 +224,24 @@ check(said.filter((e) => e.scope === 'normal').every((e) => !e.to || zoneNow(e.t
   || e.to === 'dog-01'),
   'an ordinary voice was used to reach another zone');
 
-// 17.12  the cast stays asymmetric
+// One bounded overheard nudge for the source social spell.
 check(seen.nudges === 1, `澄子 was nudged ${seen.nudges} times by one conversation`);
 
-// 17.13 / 17.14  no provider anywhere, and nothing waited for one
+// No provider implementation belongs in 3E. The floor store is synchronous
+// engine state: waiting for a Brain means retaining an outstanding offer, not
+// awaiting a Promise inside the tick loop.
 check(!/await|Promise|then\(/.test(readFileSync(join(HERE, 'floors.js'), 'utf8')),
-  'the floor store learned to wait for something');
+  'the floor store learned to block a tick on provider machinery');
 
-// 17.15  exactly-once speech
-for (const line of said.map((e) => e.text)) {
-  check(said.filter((e) => e.text === line).length
-    === facts.filter((e) => e.type === 'speech_said' && e.text === line).length,
-    `"${line}" was committed more than once`);
+// Exactly once: the authored unique lines each commit once. The deeper
+// perception/memory regression lives in exactly-once-3e.test.js.
+for (const line of [ASK, ANSWER, CALL, DOG, SUMIKO_REPLY]) {
+  check(said.filter((e) => e.text === line).length === 1,
+    `"${line}" was committed ${said.filter((e) => e.text === line).length} times`);
 }
 
-// replay: the same facts, the same frames, with nothing but view.js
+// Low-level fact replay remains exact. Final audience presentation is a later
+// timeline/script pass and is not required to preserve these tick intervals.
 {
   const out = [];
   replay({ facts }, { onTick: (f) => out.push(JSON.stringify(f)) });
@@ -257,10 +250,9 @@ for (const line of said.map((e) => e.text)) {
     `live ran ${liveFrames.length} frames, replay ${out.length}`);
   let bad = -1;
   for (let i = 0; i < n; i += 1) if (out[i] !== liveFrames[i]) { bad = i; break; }
-  check(bad === -1, `live and replay differ at frame ${bad}`);
+  check(bad === -1, `low-level fact replay differs at frame ${bad}`);
 }
 
-// the dog: called, and the fact is there either way
 const dogs = facts.filter((e) => e.type === 'animal_responded');
 check(dogs.length > 0, 'nobody ever spoke to ハナ');
 check(memory.knownTo('dog-01').length === 0, 'the dog acquired a memory');
@@ -278,18 +270,16 @@ for (const e of facts.filter((x) => x.type === 'speech_said' || x.type === 'anim
   }
 }
 console.log('');
-console.log(`  frames ${liveFrames.length}   offers ${seen.turns}   utterances ${said.length}   floor_lost ${seen.lost}`
+console.log(`  frames ${liveFrames.length}   offers ${seen.turns}   utterances ${said.length}`
   + `   refusals ${seen.refusals}   nudges ${seen.nudges}   dog ${dogs.map((d) => d.outcome).join(',')}`);
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
 } else {
-  console.log('OK  one floor carried the whole exchange and nobody in another zone');
-  console.log('    was offered it; 渡辺 was asked repeatedly and never made to');
-  console.log('    speak; 澄子 heard it all, was nudged once, and answered only');
-  console.log('    when called; transport came from the act; no id or name');
-  console.log('    reached a package; a conversation left no episodes but a');
-  console.log('    deliberate memory still could; live and replay identical every');
-  console.log('    frame; no provider anywhere');
+  console.log('OK  one sequential floor carried the exchange; 渡辺 was allowed to');
+  console.log('    decline; 澄子 heard without joining, was nudged once, and');
+  console.log('    answered only when called; transport came from the act; no id');
+  console.log('    or unknown name reached a package; ordinary conversation made');
+  console.log('    no long-term episodes; exact fact replay still matches');
 }
 process.exitCode = problems.length ? 1 : 0;
