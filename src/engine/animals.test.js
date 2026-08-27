@@ -183,6 +183,62 @@ function callFor(who, acts = 'call_over') {
     'the boy does not remember talking to his own dog');
 }
 
+// --- answering a person and calling the dog is one breath ------------------
+// The first real Brain run had 辰 write 「ハナも連れてっていい？ハナ、おいで」
+// inside a reply to his grandmother. The engine saw one act, so the dog was
+// never called. One utterance can now carry both.
+{
+  const { world, floors, loop } = setup();
+  world.spawn('brother-01', PARK[0]);
+  world.spawn('grandma-01', PARK[1]);
+  world.spawn('dog-01', PARK[2]);
+  let done = false;
+  const refusals = [];
+  for (let i = 0; i < 40 && !done; i += 1) {
+    for (const o of step(loop, floors)) {
+      if (o.entityId !== 'brother-01') { floors.decline(o.entityId); continue; }
+      const her = pickAt(o, 'greet', 'grandma-01');
+      const dog = pickAt(o, 'call_over', 'dog-01');
+      if (!her || !dog) { floors.decline(o.entityId); continue; }
+
+      // The rules first, on the same live offer, so a refusal cannot be an
+      // accident of the offer having gone stale.
+      const shout = pickAt(o, 'call_across', 'grandma-01');
+      if (shout) {
+        refusals.push(floors.commit(o.entityId, { picks: [her, shout], text: 'x' }).refused);
+      }
+      refusals.push(floors.commit(o.entityId, {
+        picks: [her, pickAt(o, 'ask', 'grandma-01')], text: 'x'
+      }).refused);
+      refusals.push(floors.commit(o.entityId, { picks: [her, 'nothing'], text: 'x' }).refused);
+      refusals.push(floors.commit(o.entityId, {
+        picks: [her, dog, pickAt(o, 'praise', 'dog-01')], text: 'x'
+      }).refused);
+
+      const r = floors.commit(o.entityId, {
+        picks: [her, dog], text: 'おばあちゃん、ハナも連れてっていい？ハナ、おいで。'
+      });
+      check(!r.refused, `two acts in one breath were refused: ${r.refused}`);
+      done = true;
+    }
+  }
+  check(done, 'the test premise is wrong: 辰 never got a usable offer');
+  for (let i = 0; i < 3; i += 1) step(loop, floors);
+
+  const said = world.log.facts.filter((e) => e.type === 'speech_said');
+  check(said.length === 1, `${said.length} utterances came out of one breath`);
+  check(said[0]?.to.length === 2
+    && said[0].to.includes('grandma-01') && said[0].to.includes('dog-01'),
+    `the line was aimed at ${JSON.stringify(said[0]?.to)}`);
+  check(world.log.facts.some((e) => e.type === 'animal_responded' && e.animal === 'dog-01'),
+    'the dog was called inside the sentence and still never heard it');
+
+  // Two acts at one person, two volumes, two questions, and nothing-as-half:
+  // each refused rather than half-applied.
+  check(refusals.every(Boolean), `a bad combination was accepted: ${JSON.stringify(refusals)}`);
+}
+
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
@@ -192,6 +248,8 @@ if (problems.length) {
   console.log('    comes when he calls and mostly not for anyone else, from the');
   console.log('    character file alone; being ignored is a fact; compliance is');
   console.log('    deterministic and inaudible calls fail physically; she still');
-  console.log('    has no memory, no menu, no offer and no transcript');
+  console.log('    has no memory, no menu, no offer and no transcript; and');
+  console.log('    answering a person while calling her is one breath, while');
+  console.log('    two volumes, two questions or two acts at one person are not');
 }
 process.exitCode = problems.length ? 1 : 0;
