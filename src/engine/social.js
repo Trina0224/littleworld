@@ -14,6 +14,21 @@ const AXES = [
 const mid = (traits, key) => (typeof traits?.[key] === 'number' ? traits[key] : 0.5);
 
 /**
+ * How long a line this character is allowed. A rule, replaced by a fact: 240
+ * characters for everybody truncated 星さん mid-word on her first real turn and
+ * would never have bound on 渡辺 at all. Derived from `talkativeness`, so the
+ * budget IS the difference between somebody who runs on and somebody who says
+ * one sentence. 0.5 lands on 240, which is what the old flat limit really was:
+ * the average person's budget applied to the whole cast.
+ */
+export const SPEECH = { min: 30, span: 420 };
+
+export function speechBudget(traits, config = {}) {
+  const { min, span } = { ...SPEECH, ...config };
+  return Math.round(min + span * mid(traits, 'talkativeness'));
+}
+
+/**
  * @param situation {{ withStranger, quietRounds, roundIndex, lastSpeakerWasMe }}
  * @returns a number, larger meaning more eligible for an open floor.
  */

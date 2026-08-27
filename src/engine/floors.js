@@ -27,9 +27,31 @@ export const ACTS = {
 export const DEFAULTS = {
   // Measured, not guessed - docs/specs/engine/phase-3e-tuning.md.
   transcriptWindow: 8,     // the spec's own lower bound; a third off the suffix
-  speechLimit: 240,
+  // The fallback and the hard ceiling, not the budget: a character's own budget
+  // comes from its talkativeness through `budgetFor`. See phase-3e-tuning.md 4
+  // and notes/pre-3f-brain-findings.md 1.
+  speechLimit: 480,
   quietLimit: 1            // 57 conversations, median 19 lines, 31% quiet
 };
+
+/**
+ * Cut a line that came back over budget - at the end of a sentence if there is
+ * one, never in the middle of a word. The first real Brain run committed
+ *「…脱いでお」and told nobody; a line cut at an arbitrary character is not a
+ * shorter sentence, it is a broken one.
+ */
+const SENTENCE_END = /[。！？!?」』）\)]/g;
+
+export function trimSpeech(text, budget) {
+  if (text.length <= budget) return text;
+  let cut = 0;
+  SENTENCE_END.lastIndex = 0;
+  for (let m = SENTENCE_END.exec(text); m; m = SENTENCE_END.exec(text)) {
+    if (m.index + 1 > budget) break;
+    cut = m.index + 1;
+  }
+  return cut > 0 ? text.slice(0, cut) : text.slice(0, budget);
+}
 
 function hash01(text) {
   let h = 2166136261;
@@ -49,7 +71,8 @@ const OVERHEARD = 1500;
 const ORDINARY = 1000;
 
 export function createFloors(world, zones, perception, {
-  minds, config = {}, weigh = null, makeContext = null, animals = null
+  minds, config = {}, weigh = null, makeContext = null, animals = null,
+  budgetFor = null
 } = {}) {
   if (minds === undefined) {
     throw new Error('createFloors needs an explicit `minds` set: who can hold a floor');
@@ -460,9 +483,16 @@ export function createFloors(world, zones, perception, {
       if (typeof text !== 'string' || !text.trim()) {
         return refuse(entityId, 'the act needs words and none arrived', pick);
       }
+      const budget = Math.min(budgetFor?.(entityId) ?? cfg.speechLimit, cfg.speechLimit);
+      const speak = trimSpeech(text, budget);
+      if (speak.length < text.length) {
+        world.log.note(world.tick, 'speech_trimmed', {
+          agent: entityId, budget, sent: text.length, kept: speak.length
+        });
+      }
       f.claims.set(entityId, {
         act: name, target, scope: act.scope, asks: !!act.asks, animal: !!act.animal,
-        speak: text.slice(0, cfg.speechLimit)
+        speak
       });
       return { act: name, target, spoken: true };
     },

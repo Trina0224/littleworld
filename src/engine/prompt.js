@@ -11,6 +11,7 @@
  * author material and never reaches a Brain; this file takes self.md text as an
  * argument so it cannot reach for the wrong file on its own.
  */
+import { speechBudget } from './social.js';
 
 /** Strong at 0.80 / 0.20, mild at 0.62 / 0.38, silent between. */
 const STRONG_HIGH = 0.80, MILD_HIGH = 0.62, MILD_LOW = 0.38, STRONG_LOW = 0.20;
@@ -127,7 +128,9 @@ const CONTRACT = `## 你會收到什麼
 - \`choices\` 以外的東西一律不接受，代號也不能自己改。
 - 「不說話」是一個真正的答案，不是失敗。沒話想說就選 \`nothing\`。
 - 說出來的話就是你這個人會說的話。不要描寫動作、不要加旁白、不要解釋自己為什麼這樣說。
-- 這是昭和三十年代的日本。你講的是日文。`;
+- 這是昭和三十年代的日本。你講的是日文。
+- **一次最多 %BUDGET% 個字。** 這是你這個人一口氣講得完的長度，不是格式限制。
+  超過的話，世界只會收下前面講完的那幾句，後面就沒有人聽到了。`;
 
 /**
  * The whole prefix. `selfText` is the character's own self.md, passed in rather
@@ -135,13 +138,14 @@ const CONTRACT = `## 你會收到什麼
  */
 export function buildPrefix(character, selfText) {
   const parts = [strip(selfText), '', '## 我說話的樣子', ''];
+  const budget = speechBudget(character.social);
   parts.push(...personality(character.social).map((s) => `- ${s}`));
   if (character.interests?.length) {
     parts.push('', '## 我會注意的事', '',
       character.interests.join('、') + '。這些是你自然會留意、也聊得起來的東西，'
       + '不是每次都要講到的題目。');
   }
-  parts.push('', CONTRACT);
+  parts.push('', CONTRACT.replace('%BUDGET%', String(budget)));
   return parts.join('\n');
 }
 

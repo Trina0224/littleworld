@@ -30,7 +30,7 @@ const PARK = [[392, 202], [400, 202], [396, 206]];
 const NEAR_TABLE = [[227, 235], [232, 238]];
 const COUNTER = [222, 178];
 
-function setup(config = {}) {
+function setup({ budgetFor = null, ...config } = {}) {
   const entities = new Map();
   const seeds = new Map();
   const minds = new Set();
@@ -49,7 +49,7 @@ function setup(config = {}) {
   });
   let floors;
   floors = createFloors(world, zones, perception, {
-    minds, config,
+    minds, config, budgetFor,
     makeContext: (id) => buildContext(perception, memory, id, floors)
   });
   const loop = createLoop({
@@ -136,6 +136,38 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   const long = w3.log.facts.find((e) => e.type === 'speech_said');
   check(long?.text.length === 12, `a 50-character line came out ${long?.text.length} long`);
   check(long?.scope === 'normal', `an ordinary remark carried at ${long?.scope}`);
+
+  // ...but a line that HAS sentences is cut at the end of one, never mid-word.
+  // The first real Brain run committed 「…脱いでお」 and told nobody, which is
+  // not a shorter sentence - it is a broken one.
+  const { world: w4, floors: f4, loop: l4 } = setup({ speechLimit: 20 });
+  w4.spawn('grandma-01', PARK[0]);
+  w4.spawn('pastor-01', PARK[1]);
+  drive(l4, f4, 6, (x) => (x.entityId === 'grandma-01'
+    ? { pick: 'address_group', text: 'あら、こんにちは。今日はいいお天気ですねえ。' } : 'decline'));
+  const cut = w4.log.facts.find((e) => e.type === 'speech_said');
+  check(cut?.text === 'あら、こんにちは。',
+    `a line was cut at ${JSON.stringify(cut?.text)} instead of at the full stop`);
+  check(w4.log.audit.some((e) => e.type === 'speech_trimmed' && e.sent > e.kept),
+    'a line was silently shortened');
+
+  // And the budget is the character's own, not one number for the whole cast:
+  // 240 for everybody truncated the most talkative character on her first turn
+  // and would never have bound on the least talkative at all.
+  const { world: w5, floors: f5, loop: l5 } = setup({
+    speechLimit: 480, budgetFor: (id) => (id === 'grandma-01' ? 6 : 480)
+  });
+  w5.spawn('grandma-01', PARK[0]);
+  w5.spawn('pastor-01', PARK[1]);
+  drive(l5, f5, 8, (x) => ({ pick: 'address_group', text: 'あ'.repeat(30) }));
+  const byWho = new Map();
+  for (const e of w5.log.facts) {
+    if (e.type === 'speech_said') byWho.set(e.agent, e.text.length);
+  }
+  check(byWho.get('grandma-01') === 6,
+    `her own budget was ignored: ${byWho.get('grandma-01')}`);
+  check(byWho.get('pastor-01') === 30,
+    `somebody else was cut to her budget: ${byWho.get('pastor-01')}`);
 }
 
 // --- 3E-7  transport comes from the act, never from the reply -----------

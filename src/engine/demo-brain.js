@@ -29,9 +29,9 @@ import { createNav } from './nav.js';
 import { createZones } from './zones.js';
 import { createPerception } from './perception.js';
 import { createMemory, buildContext } from './memory.js';
-import { createFloors } from './floors.js';
+import { createFloors, trimSpeech } from './floors.js';
 import { createAnimals } from './animals.js';
-import { createSocialWeigher } from './social.js';
+import { createSocialWeigher, speechBudget } from './social.js';
 import { createActivityRuntime } from './activity.js';
 import { createLoop } from './loop.js';
 import { buildPrefix } from './prompt.js';
@@ -167,7 +167,8 @@ for (let t = 0; t < TICKS && calls < MAX_CALLS; t += 1) {
     // What the WORLD took, not what the Brain sent: the first run printed the
     // Brain's text and so hid a truncation that only surfaced two turns later,
     // inside somebody else's transcript.
-    const took = answer.text.slice(0, floors.config.speechLimit);
+    const took = trimSpeech(answer.text, Math.min(
+      speechBudget(traits.get(offer.entityId)), floors.config.speechLimit));
     say(`  **${offer.entityId}**（${answer.pick}）：${took}`
       + (took === answer.text ? '' : `\n  *（引擎切掉了後面 ${answer.text.length - took.length} 個字）*`));
   }

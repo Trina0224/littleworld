@@ -21,7 +21,7 @@ import { createPerception } from './perception.js';
 import { createMemory, buildContext } from './memory.js';
 import { createFloors } from './floors.js';
 import { createAnimals } from './animals.js';
-import { createSocialWeigher } from './social.js';
+import { createSocialWeigher, speechBudget } from './social.js';
 import { createActivityRuntime } from './activity.js';
 import { createLoop } from './loop.js';
 import { createView, replay } from './view.js';
@@ -61,6 +61,7 @@ function build() {
   floors = createFloors(world, zones, perception, {
     minds, animals,
     weigh: createSocialWeigher({ traitsFor: traits, memory }),
+    budgetFor: (id) => speechBudget(traits.get(id)),
     makeContext: (id) => buildContext(perception, memory, id, floors)
   });
   const loop = createLoop({
