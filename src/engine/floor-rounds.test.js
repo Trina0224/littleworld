@@ -120,8 +120,6 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(!!o, 'nothing was offered at all');
   const issuedAt = world.tick;
 
-  // Thousands of simulation ticks are allowed to pass while this Brain is
-  // thinking. The Floor still owns the same one offer and opens no replacement.
   for (let i = 0; i < 1200; i += 1) {
     const more = step(loop, floors);
     check(more.length === 0, 'a second Brain was offered while the first was still pending');
@@ -135,8 +133,6 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(!world.log.audit.some((e) => e.type === 'floor_declined' && e.agent === o.entityId),
     'elapsed simulation ticks were recorded as an implicit decline');
 
-  // Once the Brain actually answers nothing, the context is delivered and the
-  // next ranked character may be asked.
   floors.decline(o.entityId);
   const next = step(loop, floors);
   check(perception.heldCount() === 1,
@@ -250,40 +246,48 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(floors.floor('cafe-counter') === null, 'the temporary counter floor never closed');
 }
 
-// --- walking/current geometry can create the nudge before another line --
+// --- current geometry can create the nudge before another line ----------
 {
   const { world, floors, loop } = setup();
   world.spawn('grandma-01', NEAR_TABLE[0]);
   world.spawn('brother-01', NEAR_TABLE[1]);
   world.spawn('shopkeeper-01', PARK[0]);          // initially far from the table
 
-  // Establish a live source conversation and make sure the remote observer was
-  // not in the historical audience of its first line.
+  let claimed = false;
   let firstLine = null;
-  for (let i = 0; i < 12 && !firstLine; i += 1) {
-    for (const o of step(loop, floors)) {
+  let pendingSource = null;
+  for (let i = 0; i < 12 && (!firstLine || !pendingSource); i += 1) {
+    const offers = step(loop, floors);
+    for (const o of offers) {
       if (o.entityId === 'shopkeeper-01') { floors.decline(o.entityId); continue; }
-      floors.commit(o.entityId, { pick: 'address_group', text: 'まだ遠くで話している' });
+      if (!claimed) {
+        floors.commit(o.entityId, { pick: 'address_group', text: 'まだ遠くで話している' });
+        claimed = true;
+      } else {
+        // Deliberately leave the next source Brain unanswered. The active Floor
+        // is still a meeting; no second utterance is needed for the observer to
+        // notice it after current geometry changes.
+        pendingSource = o;
+      }
     }
     firstLine = world.log.facts.find((e) => e.type === 'speech_said' && e.text === 'まだ遠くで話している');
   }
   check(!!firstLine, 'the source conversation never produced its first line');
+  check(!!pendingSource, 'the source floor did not keep its next Brain decision pending');
   check(!firstLine?.heardBy.includes('shopkeeper-01'),
-    'the movement test premise is wrong: she already heard the first line');
+    'the geometry test premise is wrong: she already heard the first line');
 
-  // Test-only reposition through the World API: spawn replaces the authoritative
-  // agent record at the new position and emits a social fact. No new speech is
-  // committed between this move and the expected nudge.
   const speechCount = world.log.facts.filter((e) => e.type === 'speech_said').length;
+  // Test-only authoritative reposition through the World API. This isolates the
+  // rule from path shape: only current geometry changes, and no new speech does.
   world.spawn('shopkeeper-01', COUNTER);
   let nudge = null;
   for (let i = 0; i < 4 && !nudge; i += 1) {
     const offers = step(loop, floors);
     nudge = offers.find((o) => o.entityId === 'shopkeeper-01') ?? null;
-    for (const o of offers) if (o !== nudge) floors.decline(o.entityId);
   }
   check(world.log.facts.filter((e) => e.type === 'speech_said').length === speechCount,
-    'another utterance happened before movement-created nudge could be observed');
+    'another utterance happened before the geometry-created nudge could be observed');
   check(nudge?.why === 'overheard',
     `moving into current earshot produced ${nudge?.why ?? 'no'} social opportunity`);
   check(!(nudge?.context.forModel.recentPerceivedEvents ?? [])
@@ -303,7 +307,7 @@ if (problems.length) {
   console.log('    advances to the next ranked character; elapsed simulation ticks');
   console.log('    never fabricate a decline; a full declined round sleeps; background');
   console.log('    machinery stays quiet; social events re-arm; one overheard nudge');
-  console.log('    is allowed per source spell, including when movement newly brings');
-  console.log('    an observer into earshot without retroactive transcript leakage');
+  console.log('    is allowed per source spell, including when current movement/geometry');
+  console.log('    newly brings an observer into earshot without retroactive transcript');
 }
 process.exitCode = problems.length ? 1 : 0;
