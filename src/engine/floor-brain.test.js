@@ -187,7 +187,7 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
     `no cross-zone call was offered; menu was ${mine?.menu}`);
   const loud = world.log.facts.find((e) => e.type === 'speech_said' && e.scope === 'broadcast');
   check(!!loud, 'calling across the way did not use a carrying voice');
-  check(loud?.to === 'shopkeeper-01', `the call was aimed at ${loud?.to}`);
+  check(loud?.to.includes('shopkeeper-01'), `the call was aimed at ${loud?.to}`);
   const ordinary = world.log.facts.find((e) => e.type === 'speech_said' && e.scope === 'normal');
   check(!ordinary || ordinary.t !== loud.t, 'one act produced two transports');
 }
@@ -332,7 +332,7 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   drive(loop, floors, 10, (o) => {
     if (asked) {
       if (qAtCommit === 'unchecked' && world.log.facts.some(
-        (e) => e.type === 'speech_said' && e.to === 'pastor-01')) {
+        (e) => e.type === 'speech_said' && e.to.includes('pastor-01'))) {
         qAtCommit = floors.openQuestionIn('park-open');
       }
       return 'decline';
@@ -345,7 +345,8 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   });
   if (qAtCommit === 'unchecked') qAtCommit = floors.openQuestionIn('park-open');
   check(asked, 'she was never offered a way to ask him');
-  const call = world.log.facts.find((e) => e.type === 'speech_said' && e.to === 'pastor-01');
+  const call = world.log.facts.find(
+    (e) => e.type === 'speech_said' && e.to.includes('pastor-01'));
   check(call && !call.heardBy.includes('pastor-01'),
     'the test premise is wrong: he heard it after all');
   check(floors.openQuestionIn('park-open') === null,

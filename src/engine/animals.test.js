@@ -98,7 +98,8 @@ function callFor(who, acts = 'call_over') {
   const spoken = world.log.facts.filter((e) => e.type === 'speech_said');
   check(spoken.length === responses.length,
     'the words and the act did not come in pairs');
-  check(spoken.every((e) => e.to === 'dog-01'), 'the call was not aimed at the dog');
+  check(spoken.every((e) => e.to.length === 1 && e.to[0] === 'dog-01'),
+    'the call was not aimed at the dog');
 }
 
 // --- 辰's dog comes when he calls; she mostly does not for a stranger ----

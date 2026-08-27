@@ -324,7 +324,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   const { world: w5, perception: p5 } = setup();
   w5.spawn('grandma-01', [470, 262]);
   w5.spawn('pastor-01', [480, 262]);
-  w5.say('pastor-01', 'おばあさん、こちらへ。', { scope: 'normal', to: 'grandma-01' });
+  w5.say('pastor-01', 'おばあさん、こちらへ。', { scope: 'normal', to: ['grandma-01'] });
   p5.tick();
   for (let i = 0; i < 120; i += 1) {         // flood with low-value movement
     w5.advance();
@@ -438,7 +438,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   w7.spawn('pastor-01', [480, 262]);
   w7.spawn('shopkeeper-01', [180, 240]);
   w7.log.fact(w7.tick, 'speech_said', {
-    agent: 'pastor-01', text: '記録が真実。', scope: 'normal', to: null,
+    agent: 'pastor-01', text: '記録が真実。', scope: 'normal', to: [],
     heardBy: ['shopkeeper-01']                  // the far one, and not the near one
   });
   p7.tick();
@@ -455,7 +455,7 @@ check(/near|nearby|across/.test(textA), 'no human-scale distance language in the
   const { world: w8, perception: p8 } = setup();
   w8.spawn('grandma-01', [470, 262]);
   w8.spawn('pastor-01', [480, 262]);
-  w8.log.fact(w8.tick, 'speech_said', { agent: 'pastor-01', text: 'x', scope: 'normal', to: null });
+  w8.log.fact(w8.tick, 'speech_said', { agent: 'pastor-01', text: 'x', scope: 'normal', to: [] });
   let threw = false;
   try { p8.tick(); } catch (e) { threw = true; }
   check(threw, 'a speech fact with no heardBy was accepted');
@@ -481,7 +481,7 @@ try {
   const { world: w9, perception: p9 } = setup();
   w9.spawn('grandma-01', [470, 262]);
   w9.spawn('pastor-01', [480, 262]);
-  w9.say('pastor-01', 'おばあさん、こちらへ。', { scope: 'normal', to: 'grandma-01' });
+  w9.say('pastor-01', 'おばあさん、こちらへ。', { scope: 'normal', to: ['grandma-01'] });
   w9.advance();
   w9.say('pastor-01', 'お茶でもいかがですか。', { scope: 'normal' });
   p9.tick();
@@ -538,7 +538,7 @@ try {
   const { world: wC, perception: pC } = setup();
   wC.spawn('grandma-01', [470, 262]);
   wC.spawn('pastor-01', [480, 262]);
-  wC.say('pastor-01', '最初の一言。', { scope: 'normal', to: 'grandma-01' });
+  wC.say('pastor-01', '最初の一言。', { scope: 'normal', to: ['grandma-01'] });
   pC.tick();
   const out = pC.contextFor('grandma-01');
   for (let i = 0; i < pC.config.queueLimit + 5; i += 1) {   // noise while she was out

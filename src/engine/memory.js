@@ -258,7 +258,7 @@ export function buildContext(perception, memory, observerId, floors = null) {
       .map((u) => ({
         said: u.text,
         speaker: name(u.speaker),
-        ...(u.addressed ? { to: name(u.addressed) } : {})
+        ...(u.addressed.length ? { to: u.addressed.map(name) } : {})
       }));
   }
   return ctx;

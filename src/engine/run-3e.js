@@ -182,7 +182,7 @@ const hersHeard = facts.filter((e) => e.type === 'speech_said'
   && e.heardBy.includes('shopkeeper-01')).length;
 check(hersHeard >= 5, `the test premise is wrong: she heard ${hersHeard} lines`);
 check(floors.utterancesFor('shopkeeper-01')
-  .every((u) => u.speaker === 'shopkeeper-01' || u.addressed === 'shopkeeper-01'),
+  .every((u) => u.speaker === 'shopkeeper-01' || u.addressed.includes('shopkeeper-01')),
   'an overheard table conversation entered her transcript');
 check(floors.utterancesFor('shopkeeper-01').length === 2,
   `her transcript holds ${floors.utterancesFor('shopkeeper-01').length} lines`);
@@ -231,10 +231,10 @@ check(said.some((e) => e.scope === 'normal') && said.some((e) => e.scope === 'br
   'both transports were not exercised');
 const zoneNow = (id) => facts.filter((e) => e.type === 'speech_said' && e.agent === id).at(-1)?.zone;
 check(said.filter((e) => e.scope === 'broadcast')
-  .every((e) => e.to && zoneNow(e.to) !== e.zone),
+  .every((e) => e.to.length && e.to.every((t) => zoneNow(t) !== e.zone)),
   'a carrying voice was used for something other than calling across');
-check(said.filter((e) => e.scope === 'normal').every((e) => !e.to || zoneNow(e.to) === e.zone
-  || e.to === 'dog-01'),
+check(said.filter((e) => e.scope === 'normal').every(
+  (e) => e.to.every((t) => zoneNow(t) === e.zone || t === 'dog-01')),
   'an ordinary voice was used to reach another zone');
 
 // One bounded overheard nudge for the source social spell.

@@ -251,16 +251,17 @@ export function createPerception(world, zones, {
             // TO knows, and the person who spoke does not. An address that
             // nobody heard is not queued, because it was not an exchange
             // (phase-3d-memory.md 2.0.1, clarifications 1).
-            if (e.to && heard.has(e.to)) {
+            for (const target of e.to) {
+              if (!heard.has(target)) continue;
               queue(e.agent, {
-                kind: 'own_speech_directed', t: e.t, entityId: e.to, text: e.text
+                kind: 'own_speech_directed', t: e.t, entityId: target, text: e.text
               });
             }
             for (const observerId of world.presentIds()) {
               if (observerId === e.agent) continue;
               if (heard.has(observerId)) {
                 queue(observerId, {
-                  kind: e.to === observerId ? 'direct_address' : 'speech_heard',
+                  kind: e.to.includes(observerId) ? 'direct_address' : 'speech_heard',
                   t: e.t, entityId: e.agent, text: e.text, scope: e.scope
                 });
               } else if (gap(observerId, e.agent) <= cfg.soundRange

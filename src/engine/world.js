@@ -239,11 +239,18 @@ export function createWorld({ anchors, nav = null, seed = 1, tickDurationMs = 10
      * later without re-running containment against where the speaker stood, and
      * replay is playback rather than re-simulation (3E clarifications 8.1, 9.2).
      */
-    say(agentId, text, { scope = 'normal', to = null } = {}) {
+    /**
+     * One utterance, one scope, and everybody it is aimed at. `to` is a list
+     * because a person answering one neighbour and calling the dog in the same
+     * breath is one thing said, not two - see notes/pre-3f-brain-findings.md 3.
+     * Empty means it was said to the room.
+     */
+    say(agentId, text, { scope = 'normal', to = [] } = {}) {
       if (!here.has(agentId)) return false;
       const at = agents.get(agentId).at;
+      const aimed = (Array.isArray(to) ? to : [to]).filter(Boolean);
       log.fact(clock.tick, 'speech_said', {
-        agent: agentId, text, scope, to,
+        agent: agentId, text, scope, to: aimed,
         heardBy: hearing.audience(agentId, scope),
         ...(zones ? { zone: zones.at(at[0], at[1]) } : {})
       });

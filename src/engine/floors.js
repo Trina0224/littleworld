@@ -31,7 +31,12 @@ export const DEFAULTS = {
   // comes from its talkativeness through `budgetFor`. See phase-3e-tuning.md 4
   // and notes/pre-3f-brain-findings.md 1.
   speechLimit: 480,
-  quietLimit: 1            // 57 conversations, median 19 lines, 31% quiet
+  quietLimit: 1,           // 57 conversations, median 19 lines, 31% quiet
+  // How many acts one utterance may carry. Two, because answering somebody and
+  // calling the dog in the same breath is what a person does - the first real
+  // Brain run had a boy smuggle 「ハナ、おいで」 into a reply, and the dog was
+  // never called. See notes/pre-3f-brain-findings.md 3.
+  actLimit: 2
 };
 
 /**
@@ -148,7 +153,7 @@ export function createFloors(world, zones, perception, {
     floors.set(zoneId, {
       zone: zoneId, socialSpell: spell, state: 'open',
       round: 0, quietRounds: 0,
-      lastSpeechTick: null, lastSpeaker: null, addressed: null, openQuestion: null,
+      lastSpeechTick: null, lastSpeaker: null, addressed: [], openQuestion: null,
       nudgedFor: new Map(),
       offeredTo: [], offeredAt: null, why: new Map(), menus: new Map(),
       asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map(),
@@ -230,8 +235,12 @@ export function createFloors(world, zones, perception, {
   }
 
   function registerAddress(e) {
-    if (!e.to || !e.heardBy.includes(e.to) || !llm.has(e.to)) return;
-    pendingAddress.set(e.to, { tick: e.t, from: e.agent, zone: e.zone ?? null, scope: e.scope });
+    for (const target of e.to) {
+      if (!e.heardBy.includes(target) || !llm.has(target)) continue;
+      pendingAddress.set(target, {
+        tick: e.t, from: e.agent, zone: e.zone ?? null, scope: e.scope
+      });
+    }
   }
 
   function record(e, index) {
@@ -244,14 +253,17 @@ export function createFloors(world, zones, perception, {
     if (!f) return;
     f.lastSpeechTick = e.t;
     f.lastSpeaker = e.agent;
-    f.addressed = e.to && e.heardBy.includes(e.to) ? e.to : null;
+    f.addressed = e.to.filter((id) => e.heardBy.includes(id));
   }
 
   function rearmedBy(e) {
     if (!SOCIAL_FACTS.has(e.type)) return [];
     if (e.type === 'speech_said') {
       const out = new Set();
-      if (e.to && e.heardBy.includes(e.to)) { const z = zoneOf(e.to); if (z) out.add(z); }
+      for (const target of e.to) {
+        if (!e.heardBy.includes(target)) continue;
+        const z = zoneOf(target); if (z) out.add(z);
+      }
       if (e.scope === 'broadcast') for (const id of e.heardBy) { const z = zoneOf(id); if (z) out.add(z); }
       if (e.zone) out.add(e.zone);
       return [...out].sort();
@@ -276,7 +288,7 @@ export function createFloors(world, zones, perception, {
   }
 
   function classOf(f, entityId) {
-    if (pendingAddress.has(entityId) || f.addressed === entityId) return ADDRESSED;
+    if (pendingAddress.has(entityId) || f.addressed.includes(entityId)) return ADDRESSED;
     if (f.openQuestion?.asker === entityId) return ASKED;
     if (f.nudgedFor.has(entityId)) return OVERHEARD;
     return ORDINARY;
@@ -419,17 +431,21 @@ export function createFloors(world, zones, perception, {
     if (!said) return;
     pendingAddress.delete(id);
 
-    world.say(id, said.speak, { scope: said.scope, to: said.target ?? null });
+    world.say(id, said.speak, {
+      scope: said.scope, to: said.acts.map((a) => a.target).filter(Boolean)
+    });
     const i = world.log.facts.length - 1;
     const committed = world.log.facts[i];
-    if (said.animal) animals.respond(id, said.target, said.act, { scope: said.scope });
 
-    if (said.asks && said.target && committed.heardBy.includes(said.target)) {
-      f.openQuestion = { asker: id, asked: said.target, sinceTick: world.tick };
-    } else if (said.act === 'reply') {
-      for (const other of floors.values()) {
-        if (other.openQuestion?.asked === id
-            && other.openQuestion.asker === said.target) other.openQuestion = null;
+    for (const a of said.acts) {
+      if (a.animal) animals.respond(id, a.target, a.act, { scope: said.scope });
+      if (a.asks && a.target && committed.heardBy.includes(a.target)) {
+        f.openQuestion = { asker: id, asked: a.target, sinceTick: world.tick };
+      } else if (a.act === 'reply') {
+        for (const other of floors.values()) {
+          if (other.openQuestion?.asked === id
+              && other.openQuestion.asker === a.target) other.openQuestion = null;
+        }
       }
     }
 
@@ -491,23 +507,72 @@ export function createFloors(world, zones, perception, {
       return opened.splice(0, opened.length);
     },
 
-    commit(entityId, { pick, text = null } = {}) {
+    /**
+     * One utterance may carry more than one act - answering a neighbour and
+     * calling the dog in the same breath is one thing said, not two. `picks`
+     * takes the list; `pick` remains the shorthand for the ordinary single act.
+     *
+     * The constraint that cannot be relaxed is volume: an utterance has ONE
+     * scope, so a quiet remark cannot be welded to a shout across the room
+     * without changing who heard the whole line.
+     */
+    commit(entityId, { pick, picks, text = null } = {}) {
+      const chosen = picks ?? (pick === undefined ? [] : [pick]);
       const f = floors.get(zoneOf(entityId));
+      const shown = chosen.join(' + ');
       if (!f || !f.offeredTo.includes(entityId)) {
-        return refuse(entityId, 'no offer outstanding', pick);
+        return refuse(entityId, 'no offer outstanding', shown);
       }
-      if (!f.menus.get(entityId)?.includes(pick)) {
-        return refuse(entityId, 'not a choice this offer supplied', pick);
+      if (!chosen.length) return refuse(entityId, 'no choice arrived', shown);
+      if (chosen.length > cfg.actLimit) {
+        return refuse(entityId, `more than ${cfg.actLimit} acts in one breath`, shown);
       }
-      const [name, ref] = String(pick).split(':');
-      const act = ACTS[name];
-      if (act.silent) { this.decline(entityId); return { act: name, spoken: false }; }
+      const menu = f.menus.get(entityId) ?? [];
+      if (!chosen.every((c) => menu.includes(c))) {
+        return refuse(entityId, 'not a choice this offer supplied', shown);
+      }
+      if (new Set(chosen).size !== chosen.length) {
+        return refuse(entityId, 'the same choice twice', shown);
+      }
 
-      const target = ref ? perception.resolve(f.epochs.get(entityId), ref) : null;
-      if (act.target && !target) return refuse(entityId, 'a stale ref', pick);
-      if (typeof text !== 'string' || !text.trim()) {
-        return refuse(entityId, 'the act needs words and none arrived', pick);
+      const parsed = chosen.map((c) => {
+        const [name, ref] = String(c).split(':');
+        return { name, ref, ...ACTS[name] };
+      });
+
+      if (parsed.some((a) => a.silent)) {
+        if (parsed.length > 1) return refuse(entityId, 'saying nothing is not half an act', shown);
+        this.decline(entityId);
+        return { act: parsed[0].name, spoken: false };
       }
+      // One utterance, one volume. Broadcast reaches further than normal, so a
+      // pair sharing a line would have to pick one - and either choice changes
+      // who heard the other half.
+      if (new Set(parsed.map((a) => a.scope)).size > 1) {
+        return refuse(entityId, 'one breath cannot be two volumes', shown);
+      }
+      if (parsed.length > 1 && parsed[0].scope === 'broadcast') {
+        return refuse(entityId, 'a call across the room goes on its own', shown);
+      }
+      // The floor holds one open question. Two in one breath would silently
+      // lose one of them, which is worse than refusing.
+      if (parsed.filter((a) => a.asks).length > 1) {
+        return refuse(entityId, 'two questions in one breath', shown);
+      }
+
+      for (const a of parsed) {
+        a.target = a.ref ? perception.resolve(f.epochs.get(entityId), a.ref) : null;
+        if (a.target === undefined) a.target = null;
+        if (ACTS[a.name].target && !a.target) return refuse(entityId, 'a stale ref', shown);
+      }
+      const aimed = parsed.map((a) => a.target).filter(Boolean);
+      if (new Set(aimed).size !== aimed.length) {
+        return refuse(entityId, 'two acts aimed at the same person', shown);
+      }
+      if (typeof text !== 'string' || !text.trim()) {
+        return refuse(entityId, 'the act needs words and none arrived', shown);
+      }
+
       const budget = Math.min(budgetFor?.(entityId) ?? cfg.speechLimit, cfg.speechLimit);
       const speak = trimSpeech(text, budget);
       if (speak.length < text.length) {
@@ -516,10 +581,13 @@ export function createFloors(world, zones, perception, {
         });
       }
       f.claims.set(entityId, {
-        act: name, target, scope: act.scope, asks: !!act.asks, animal: !!act.animal,
+        acts: parsed.map((a) => ({
+          act: a.name, target: a.target, asks: !!a.asks, animal: !!a.animal
+        })),
+        scope: parsed[0].scope,
         speak
       });
-      return { act: name, target, spoken: true };
+      return { acts: parsed.map((a) => a.name), targets: aimed, spoken: true };
     },
 
     menuFor(entityId) {
@@ -555,7 +623,7 @@ export function createFloors(world, zones, perception, {
         const e = facts[i];
         return {
           tick: e.t, speaker: e.agent, text: e.text, scope: e.scope,
-          addressed: e.to ?? null, heardBy: e.heardBy
+          addressed: e.to, heardBy: e.heardBy
         };
       });
     },
@@ -569,10 +637,10 @@ export function createFloors(world, zones, perception, {
         for (const i of list) {
           const e = facts[i];
           if (e.agent !== entityId && !e.heardBy.includes(entityId)) continue;
-          if (zoneId !== mine && e.agent !== entityId && e.to !== entityId) continue;
+          if (zoneId !== mine && e.agent !== entityId && !e.to.includes(entityId)) continue;
           seen.push({
             tick: e.t, speaker: e.agent, text: e.text,
-            addressed: e.to ?? null, zone: zoneId
+            addressed: e.to, zone: zoneId
           });
         }
       }
