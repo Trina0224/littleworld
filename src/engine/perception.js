@@ -91,7 +91,12 @@ export const DEFAULTS = {
   // rather than a correctness problem.
   nearRange: 40,
   personalSpace: 6,
-  queueLimit: 40,
+  // Measured, not guessed - docs/specs/engine/phase-3e-tuning.md. Two to three
+  // events reach a Brain in the median offer and thirteen at p95, so sixteen is
+  // headroom; the old forty only ever showed up as a four-minute backlog handed
+  // to somebody nobody had asked in a while. Direct address is protected from
+  // the trim, so what falls off is the crowd walking past.
+  queueLimit: 16,
   // How many contexts may be waiting to settle at once. Not a tuning knob: a
   // caller that never settles is a bug, and this is where it stops being silent.
   // Four was the most ever outstanding in a measured run - one per open floor -
