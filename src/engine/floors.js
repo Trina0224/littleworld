@@ -180,8 +180,12 @@ export function createFloors(world, zones, perception, {
     f.state = 'open';
     f.quietRounds = 0;
     f.asked.clear();
-    f.lastOffered.clear();          // a new spell: nobody has waited IN it yet
-    f.spellStartRound = f.round;    // ...and nobody has waited SINCE before it
+    // Waiting restarts with the conversation. Only the start round is moved:
+    // clearing lastOffered as well was tried and could not be shown to change
+    // anything, because by the time a floor sleeps everyone present has been
+    // offered at least once and their entries are already at the current round.
+    // One gate, not two.
+    f.spellStartRound = f.round;
     world.log.note(world.tick, 'floor_rearmed', { zone: f.zone, spell });
   }
 
