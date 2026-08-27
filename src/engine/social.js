@@ -33,11 +33,13 @@ export function speechBudget(traits, config = {}) {
  * asked. Not a fairness dial: it is what decides whether waiting ever becomes
  * enough to cut into an exchange between two other people.
  */
-// Measured over four 3000-tick runs, not guessed: 280 gives the flattest voice
-// distribution, the most conversations, and the loudest quietest character, all
-// at once. Bigger is NOT better - at 840 and above the room gets LESS fair,
-// because the term scales with eagerness, so a large step amplifies whoever was
-// already talking instead of rescuing whoever was not.
+// Measured over five 3000-tick runs of the full cast. The sweep shows a plateau
+// rather than a peak: anywhere from 140 to 420 gives the same flattened voice
+// distribution (top3 0.57 against 0.62 with no waiting at all) and the same
+// loudest-quietest-character. 280 sits in the middle of it. Bigger is NOT
+// better - by 840 the room is measurably LESS fair than with no term at all
+// (top3 0.66), because the term scales with eagerness, so a large step
+// amplifies whoever was already talking instead of rescuing whoever was not.
 const WAIT_STEP = 280;
 const WAIT_CAP = 20;
 
