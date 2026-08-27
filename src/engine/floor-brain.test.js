@@ -437,7 +437,11 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
       const other = pickAt(o, 'ask', o.entityId === 'man-01' ? 'brother-01' : 'man-01');
       const shout = pickAt(o, 'call_across', 'shopkeeper-01');
       if (!here || !other || !shout) { floors.decline(o.entityId); continue; }
+      const hereWho = o.entityId === 'grandma-01' ? 'brother-01' : 'grandma-01';
+      const otherWho = o.entityId === 'man-01' ? 'brother-01' : 'man-01';
       tried = {
+        speaker: o.entityId,
+        targets: [otherWho, hereWho],
         volumes: floors.commit(o.entityId, { picks: [here, shout], text: 'x' }).refused,
         // Three acts that are otherwise entirely legal - same volume, three
         // different targets - so only the limit itself can refuse them.
@@ -458,7 +462,10 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
         smuggled: floors.commit(o.entityId, {
           picks: [here, 'order:coffee'], text: 'x'
         }).refused,
-        both: floors.commit(o.entityId, { picks: [here, other], text: 'ねえ、それでね' }).refused
+        // Deliberately naming the second target first, so the assertions below
+        // are about e.to[1] rather than e.to[0]: a rule that only ever reads the
+        // head of the list would otherwise look correct.
+        both: floors.commit(o.entityId, { picks: [other, here], text: 'ねえ、それでね' }).refused
       };
     }
   }
@@ -466,9 +473,50 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   check(tried?.volumes, 'a quiet remark was welded to a shout across the room');
   check(tried?.three, 'three acts came out of one breath');
   check(tried?.questions, 'two questions were asked in one breath');
-  check(tried?.invented, 'an invented ref rode in as the second act');
-  check(tried?.smuggled, 'an invented act rode in as the second act');
+  // By reason, not merely refused: an invented choice that happens to be caught
+  // downstream by the stale-ref or volume check would leave the menu gate itself
+  // untested, and the menu gate is the one that says a Brain cannot make things up.
+  check(tried?.invented === 'not a choice this offer supplied',
+    `an invented ref was refused as "${tried?.invented}" rather than by the menu`);
+  check(tried?.smuggled === 'not a choice this offer supplied',
+    `an invented act was refused as "${tried?.smuggled}" rather than by the menu`);
   check(tried && !tried.both, `two ordinary acts at two people were refused: ${tried?.both}`);
+
+  // BOTH people were spoken to, so both are owed a turn and both heard it as
+  // addressed to them - not just whoever the speaker happened to name first.
+  const addressed = new Set();
+  const heardIt = new Set();
+  const toldSo = new Set();
+  let ownRecord = 0;
+  for (let i = 0; i < 14; i += 1) {
+    for (const o of step(loop, floors)) {
+      const fm = o.context.forModel;
+      if (o.why === 'addressed') addressed.add(o.entityId);
+      if (fm.recentPerceivedEvents.some((e) => e.kind === 'direct_address')) {
+        heardIt.add(o.entityId);
+      }
+      if (fm.conversation?.some((u) => u.said === 'ねえ、それでね' && u.to?.includes('you'))) {
+        toldSo.add(o.entityId);
+      }
+      if (o.entityId === tried.speaker) {
+        ownRecord = Math.max(ownRecord,
+          fm.recentPerceivedEvents.filter((e) => e.kind === 'own_speech_directed').length);
+      }
+      floors.decline(o.entityId);
+    }
+  }
+  check(ownRecord === 2,
+    `the speaker recorded ${ownRecord} of the two people they had just addressed`);
+  for (const who of tried.targets) {
+    check(addressed.has(who), `${who} was spoken to and was never offered an answer`);
+    check(toldSo.has(who), `${who} read the line as though it were not aimed at them`);
+  }
+  // The person named SECOND heard it as a direct address, not as somebody
+  // else's conversation. (The one named first is often offered the floor in the
+  // same tick the line is said, before perception has seen it - their copy
+  // arrives through the transcript instead, which the check above covers.)
+  check(heardIt.has(tried.targets[1]),
+    'only the first person named heard it as addressed to them');
 }
 
 console.log('');
