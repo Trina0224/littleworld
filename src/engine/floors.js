@@ -2,10 +2,10 @@
  * One offered conversational floor per zone.
  *
  * Implements docs/specs/engine/phase-3e-implementation-structure.md with
- * phase-3e-floor-clarifications.md and phase-3e-pre-floor-corrections.md, which
- * win over it. The engine offers the floor to one character at a time and asks
- * whether they want to speak; "no" is an answer, and a round with no taker is
- * what silence means.
+ * phase-3e-floor-clarifications.md, phase-3e-pre-floor-corrections.md, and
+ * phase-3e-owner-latency-correction.md. The owner correction wins on offer
+ * sequencing and latency: one Brain is asked at a time, and elapsed simulation
+ * ticks never turn a pending Brain request into a decline.
  */
 import { SOCIAL_FACTS } from './events.js';
 import { SEAT } from './resources.js';
@@ -27,9 +27,6 @@ export const ACTS = {
 export const DEFAULTS = {
   transcriptWindow: 12,
   speechLimit: 240,
-  addressExpiry: 200,
-  offerExpiry: 400,
-  batch: 3,
   quietLimit: 1
 };
 
@@ -90,17 +87,25 @@ export function createFloors(world, zones, perception, {
     return pendingAddress.has(mine[0]);
   }
 
+  /**
+   * One optional invitation to notice/join an active neighboring conversation.
+   *
+   * The old implementation looked only at the last committed utterance's
+   * historical heardBy list. That meant somebody who walked into earshot after
+   * that line was spoken was invisible until another line happened. Social
+   * opportunity is about current geometry, while transcript/perception remains
+   * historical: moving close may create the nudge, but never grants words the
+   * observer did not actually hear.
+   */
   function nudgeSource(entityId) {
     const mine = zoneOf(entityId);
     if (!mine || qualifiesPhysically(mine)) return null;
     for (const zoneId of zones.ids) {
       if (zoneId === mine) continue;
       const f = floors.get(zoneId);
-      if (!f || f.state === 'dormant' || f.lastSpeechTick === null) continue;
+      if (!f || f.state === 'dormant' || f.lastSpeechTick === null || !f.lastSpeaker) continue;
       if (spent.has(`${entityId}|${zoneId}|${f.socialSpell}`)) continue;
-      const audible = (spoken.get(zoneId) ?? []).slice(-1)
-        .some((i) => world.log.facts[i].heardBy.includes(entityId));
-      if (audible) return zoneId;
+      if (world.hearing.canHear(entityId, f.lastSpeaker, 'normal')) return zoneId;
     }
     return null;
   }
@@ -158,7 +163,7 @@ export function createFloors(world, zones, perception, {
 
   function registerAddress(e) {
     if (!e.to || !e.heardBy.includes(e.to) || !llm.has(e.to)) return;
-    pendingAddress.set(e.to, { tick: e.t, from: e.agent, zone: e.zone ?? null });
+    pendingAddress.set(e.to, { tick: e.t, from: e.agent, zone: e.zone ?? null, scope: e.scope });
   }
 
   function record(e, index) {
@@ -198,9 +203,6 @@ export function createFloors(world, zones, perception, {
     if (f.openQuestion?.asker === entityId) return ASKED;
     if (nudgeSource(entityId)) return OVERHEARD;
 
-    // 3E owns floor ranking, so it must supply the real structural situation to
-    // the injected social policy. Private relationship knowledge stays outside
-    // this module: participants are ids for the adapter, not model-visible data.
     const situation = {
       zone: f.zone,
       participants: heads(f.zone).filter((id) => id !== entityId),
@@ -231,32 +233,35 @@ export function createFloors(world, zones, perception, {
     }
   }
 
+  /**
+   * Ask exactly one Brain. Simulation is allowed to take real wall-clock time;
+   * there is no reason to pre-generate counterfactual replies just to hide
+   * provider latency. If this character declines, the next tick offers the next
+   * ranked eligible character in the same round.
+   */
   function offer(f) {
     const candidates = ranked(f).filter((id) => !f.asked.has(id));
     if (!candidates.length) { endRound(f); return; }
-    const addressee = candidates[0];
-    const k = rankOf(f, addressee) === ADDRESSED ? 1 : cfg.batch;
-    f.offeredTo = candidates.slice(0, k);
-    f.offeredAt = world.tick;
+    const id = candidates[0];
+    f.offeredTo = [id];
+    f.offeredAt = world.tick; // audit/debug metadata only; never an expiry clock
     f.state = 'offered';
-    for (const id of f.offeredTo) {
-      f.asked.add(id);
-      const source = nudgeSource(id);
-      const why = rankOf(f, id) === ADDRESSED ? 'addressed'
-        : source ? 'overheard' : 'open_floor';
-      if (why === 'overheard') spent.add(`${id}|${source}|${floors.get(source).socialSpell}`);
-      const ctx = makeContext ? makeContext(id) : perception.contextFor(id);
-      const menu = menuOf(id, ctx);
-      f.epochs.set(id, ctx.epochId);
-      f.why.set(id, why);
-      f.menus.set(id, menu);
-      ctx.forModel.choices = menu;
-      opened.push({
-        entityId: id, zone: f.zone, round: f.round, why,
-        epochId: ctx.epochId, context: ctx, menu
-      });
-      world.log.note(world.tick, 'floor_offered', { zone: f.zone, agent: id, why });
-    }
+    f.asked.add(id);
+    const source = nudgeSource(id);
+    const why = rankOf(f, id) === ADDRESSED ? 'addressed'
+      : source ? 'overheard' : 'open_floor';
+    if (why === 'overheard') spent.add(`${id}|${source}|${floors.get(source).socialSpell}`);
+    const ctx = makeContext ? makeContext(id) : perception.contextFor(id);
+    const menu = menuOf(id, ctx);
+    f.epochs.set(id, ctx.epochId);
+    f.why.set(id, why);
+    f.menus.set(id, menu);
+    ctx.forModel.choices = menu;
+    opened.push({
+      entityId: id, zone: f.zone, round: f.round, why,
+      epochId: ctx.epochId, context: ctx, menu
+    });
+    world.log.note(world.tick, 'floor_offered', { zone: f.zone, agent: id, why });
   }
 
   function menuOf(entityId, ctx) {
@@ -288,44 +293,37 @@ export function createFloors(world, zones, perception, {
   }
 
   function resolve(f) {
-    const answered = (id) => f.claims.has(id) || f.declines.has(id);
-    const expired = world.tick - f.offeredAt > cfg.offerExpiry;
-    if (!f.offeredTo.every(answered) && !expired) return;
+    const id = f.offeredTo[0];
+    if (!id) return;
+    const answered = f.claims.has(id) || f.declines.has(id);
 
-    for (const id of f.offeredTo) {
-      if (answered(id)) continue;
-      if (f.why.get(id) === 'addressed') pendingAddress.delete(id);
-      f.declines.add(id);
-    }
+    // No simulation-tick timeout here. A Brain that is still thinking has not
+    // declined. 3F-B may later make an explicit infrastructure drop/cancel
+    // decision, but provider wall-clock latency never authors social silence.
+    if (!answered) return;
 
-    const takers = f.offeredTo.filter((id) => f.claims.has(id));
-    const winner = takers[0] ?? null;
-    const said = winner ? f.claims.get(winner) : null;
-    for (const id of f.offeredTo) {
-      const lost = takers.includes(id) && id !== winner;
-      if (lost) world.log.note(world.tick, 'floor_lost', { zone: f.zone, agent: id });
-      settleQuietly(id, f.epochs.get(id), !lost);
-      f.epochs.delete(id);
-    }
+    const said = f.claims.get(id) ?? null;
+    settleQuietly(id, f.epochs.get(id), true);
+    f.epochs.delete(id);
     f.offeredTo = [];
     f.claims.clear();
     f.declines.clear();
     f.menus.clear();
     f.state = 'open';
 
-    if (!winner) return;
-    pendingAddress.delete(winner);
+    if (!said) return;
+    pendingAddress.delete(id);
 
-    world.say(winner, said.speak, { scope: said.scope, to: said.target ?? null });
+    world.say(id, said.speak, { scope: said.scope, to: said.target ?? null });
     const i = world.log.facts.length - 1;
     const committed = world.log.facts[i];
-    if (said.animal) animals.respond(winner, said.target, said.act, { scope: said.scope });
+    if (said.animal) animals.respond(id, said.target, said.act, { scope: said.scope });
 
     if (said.asks && said.target && committed.heardBy.includes(said.target)) {
-      f.openQuestion = { asker: winner, asked: said.target, sinceTick: world.tick };
+      f.openQuestion = { asker: id, asked: said.target, sinceTick: world.tick };
     } else if (said.act === 'reply') {
       for (const other of floors.values()) {
-        if (other.openQuestion?.asked === winner
+        if (other.openQuestion?.asked === id
             && other.openQuestion.asker === said.target) other.openQuestion = null;
       }
     }
@@ -341,8 +339,11 @@ export function createFloors(world, zones, perception, {
     config: cfg,
 
     tick() {
+      // A direct-address opportunity is not aged out by simulation ticks. It is
+      // cleared only when its physical participants cease to exist in this
+      // scene; an outstanding Floor offer itself is protected by requalify().
       for (const [id, a] of [...pendingAddress.entries()].sort()) {
-        if (world.tick - a.tick > cfg.addressExpiry) pendingAddress.delete(id);
+        if (!world.present(id) || !world.present(a.from)) pendingAddress.delete(id);
       }
       for (const f of floors.values()) {
         const q = f.openQuestion;
