@@ -167,3 +167,39 @@ if (problems.length) {
   console.log('    becoming a driver; hesitation bites harder with a stranger');
 }
 process.exitCode = problems.length ? 1 : 0;
+
+// --- waiting is what breaks a two-person lock ------------------------------
+// The first real Brain run had a man sit through six rounds at the same table
+// without being asked once, because an addressee always ranks first and every
+// utterance restarts the round. Waiting has to be able to overtake that - and
+// how fast is the character's own business, not the engine's.
+{
+  const eager = {
+    initiative: 0.90, conversationDrive: 0.95, socialInhibition: 0.05,
+    talkativeness: 0.90, persistence: 0.90
+  };
+  const withdrawn = {
+    initiative: 0.10, conversationDrive: 0.15, socialInhibition: 0.90,
+    talkativeness: 0.15, persistence: 0.20
+  };
+  const gap = 2000;      // ORDINARY 1000 -> ADDRESSED 3000, floors.js
+
+  const at = (traits, rounds) => socialWeight(traits, { roundsWaited: rounds });
+  check(at(eager, 0) < gap, 'somebody outranked a direct addressee on turn one');
+
+  let rounds = 0;
+  while (rounds < 40 && at(eager, rounds) < gap) rounds += 1;
+  check(rounds > 3 && rounds < 15,
+    `an eager character cut into an exchange after ${rounds} rounds`);
+
+  check(at(withdrawn, 40) < gap,
+    'waiting alone dragged the most withdrawn character to the front of the room');
+
+  // And it is monotone: sitting there longer never makes you less eligible.
+  for (let r = 1; r < 12; r += 1) {
+    if (at(eager, r) < at(eager, r - 1)) {
+      problems.push(`waiting ${r} rounds ranked below waiting ${r - 1}`);
+      break;
+    }
+  }
+}

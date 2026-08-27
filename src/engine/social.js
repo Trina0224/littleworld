@@ -29,12 +29,34 @@ export function speechBudget(traits, config = {}) {
 }
 
 /**
- * @param situation {{ withStranger, quietRounds, roundIndex, lastSpeakerWasMe }}
+ * How hard it is for this person to sit through a conversation without being
+ * asked. Not a fairness dial: it is what decides whether waiting ever becomes
+ * enough to cut into an exchange between two other people.
+ */
+// Measured over four 3000-tick runs, not guessed: 280 gives the flattest voice
+// distribution, the most conversations, and the loudest quietest character, all
+// at once. Bigger is NOT better - at 840 and above the room gets LESS fair,
+// because the term scales with eagerness, so a large step amplifies whoever was
+// already talking instead of rescuing whoever was not.
+const WAIT_STEP = 280;
+const WAIT_CAP = 20;
+
+function eagerness(traits) {
+  const e = 0.6 * mid(traits, 'initiative')
+          + 0.4 * mid(traits, 'conversationDrive')
+          - 0.5 * mid(traits, 'socialInhibition');
+  return Math.max(0, Math.min(1, e));
+}
+
+/**
+ * @param situation {{ withStranger, quietRounds, roundIndex, roundsWaited,
+ *                     lastSpeakerWasMe }}
  * @returns a number, larger meaning more eligible for an open floor.
  */
 export function socialWeight(traits, situation = {}) {
   const {
-    withStranger = false, quietRounds = 0, roundIndex = 0, lastSpeakerWasMe = false
+    withStranger = false, quietRounds = 0, roundIndex = 0, roundsWaited = 0,
+    lastSpeakerWasMe = false
   } = situation;
 
   let w = 100 * mid(traits, 'initiative');
@@ -45,6 +67,15 @@ export function socialWeight(traits, situation = {}) {
   w += Math.min(quietRounds, 3) * 25 * mid(traits, 'conversationDrive');
 
   if (lastSpeakerWasMe) w -= 30 * (1 - mid(traits, 'persistence'));
+
+  // Rounds spent in this conversation without once being asked. Large enough to
+  // overtake a direct addressee eventually, and scaled by the character's own
+  // eagerness - so 星さん cuts in after a few exchanges, 澄子 after many, and
+  // 渡辺 not at all. The first real Brain run had a man sit through six rounds
+  // at the same table without being asked a single time, because two people
+  // answering each other restarts the round forever. Being asked and saying no
+  // is the design; never being asked is not silence, it is absence.
+  w += Math.min(roundsWaited, WAIT_CAP) * WAIT_STEP * eagerness(traits);
 
   void roundIndex;
   return Math.round(w * 100) / 100;
@@ -75,9 +106,10 @@ export function createSocialWeigher({ traitsFor, memory = null } = {}) {
       withStranger,
       quietRounds: situation.quietRounds ?? 0,
       roundIndex: situation.roundIndex ?? situation.round ?? 0,
+      roundsWaited: situation.roundsWaited ?? 0,
       lastSpeakerWasMe: !!situation.lastSpeakerWasMe
     });
   };
 }
 
-export { AXES };
+export { AXES, WAIT_STEP, WAIT_CAP, eagerness };

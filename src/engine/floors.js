@@ -151,7 +151,8 @@ export function createFloors(world, zones, perception, {
       lastSpeechTick: null, lastSpeaker: null, addressed: null, openQuestion: null,
       nudgedFor: new Map(),
       offeredTo: [], offeredAt: null, why: new Map(), menus: new Map(),
-      asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map()
+      asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map(),
+      lastOffered: new Map()   // entityId -> the round it was last offered in
     });
     world.log.note(world.tick, 'floor_opened', { zone: zoneId, spell });
   }
@@ -173,6 +174,7 @@ export function createFloors(world, zones, perception, {
     f.state = 'open';
     f.quietRounds = 0;
     f.asked.clear();
+    f.lastOffered.clear();   // a new spell: nobody has been waiting IN it yet
     world.log.note(world.tick, 'floor_rearmed', { zone: f.zone, spell });
   }
 
@@ -262,19 +264,30 @@ export function createFloors(world, zones, perception, {
     return z ? [z] : [];
   }
 
-  function rankOf(f, entityId) {
+  function classOf(f, entityId) {
     if (pendingAddress.has(entityId) || f.addressed === entityId) return ADDRESSED;
     if (f.openQuestion?.asker === entityId) return ASKED;
     if (f.nudgedFor.has(entityId)) return OVERHEARD;
+    return ORDINARY;
+  }
 
+  /**
+   * The class decides who comes first; personality decides everything within it
+   * AND, through the waiting term, whether somebody who has never been asked
+   * eventually overtakes a pair answering each other. Personality is added to
+   * every class rather than only to the ordinary one, because otherwise the
+   * addressee's privilege is absolute and the round restarts forever.
+   */
+  function rankOf(f, entityId) {
     const situation = {
       zone: f.zone,
       participants: heads(f.zone).filter((id) => id !== entityId),
       quietRounds: f.quietRounds,
       roundIndex: f.round,
+      roundsWaited: f.round - (f.lastOffered.get(entityId) ?? 0),
       lastSpeakerWasMe: f.lastSpeaker === entityId
     };
-    return ORDINARY + (weigh ? weigh(entityId, situation) : 0);
+    return classOf(f, entityId) + (weigh ? weigh(entityId, situation) : 0);
   }
 
   function ranked(f) {
@@ -312,8 +325,9 @@ export function createFloors(world, zones, perception, {
     f.offeredAt = world.tick; // audit/debug metadata only; never an expiry clock
     f.state = 'offered';
     f.asked.add(id);
-    const why = rankOf(f, id) === ADDRESSED ? 'addressed'
+    const why = classOf(f, id) === ADDRESSED ? 'addressed'
       : f.nudgedFor.has(id) ? 'overheard' : 'open_floor';
+    f.lastOffered.set(id, f.round);
     const ctx = makeContext ? makeContext(id) : perception.contextFor(id);
     const menu = menuOf(id, ctx);
     f.epochs.set(id, ctx.epochId);
