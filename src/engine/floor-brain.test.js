@@ -420,6 +420,43 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   check(spoke > 3, `the zone managed ${spoke} turns after one person walked off mid-request`);
 }
 
+// --- the three rules a two-person room cannot exercise ---------------------
+// One breath has one volume, one open question, and at most `actLimit` acts.
+// Each needs three distinct people to test at all, which is why they live here
+// rather than beside the dog.
+{
+  const { world, floors, loop } = setup();
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('brother-01', NEAR_TABLE[1]);
+  world.spawn('man-01', [222, 240]);
+  world.spawn('shopkeeper-01', COUNTER);      // another zone, reachable by shouting
+  let tried = null;
+  for (let i = 0; i < 30 && !tried; i += 1) {
+    for (const o of step(loop, floors)) {
+      const here = pickAt(o, 'greet', o.entityId === 'grandma-01' ? 'brother-01' : 'grandma-01');
+      const other = pickAt(o, 'ask', o.entityId === 'man-01' ? 'brother-01' : 'man-01');
+      const shout = pickAt(o, 'call_across', 'shopkeeper-01');
+      if (!here || !other || !shout) { floors.decline(o.entityId); continue; }
+      tried = {
+        volumes: floors.commit(o.entityId, { picks: [here, shout], text: 'x' }).refused,
+        three: floors.commit(o.entityId, { picks: [here, other, shout], text: 'x' }).refused,
+        questions: floors.commit(o.entityId, {
+          picks: [pickAt(o, 'ask', o.entityId === 'grandma-01' ? 'brother-01' : 'grandma-01'), other],
+          text: 'x'
+        }).refused,
+        // ...and the pair that IS legal, on the same live offer, so a refusal
+        // above cannot be the offer having gone stale.
+        both: floors.commit(o.entityId, { picks: [here, other], text: 'ねえ、それでね' }).refused
+      };
+    }
+  }
+  check(tried, 'the test premise is wrong: nobody was offered all three kinds of act');
+  check(tried?.volumes, 'a quiet remark was welded to a shout across the room');
+  check(tried?.three, 'three acts came out of one breath');
+  check(tried?.questions, 'two questions were asked in one breath');
+  check(tried && !tried.both, `two ordinary acts at two people were refused: ${tried?.both}`);
+}
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
@@ -429,6 +466,8 @@ if (problems.length) {
   console.log('    the act; refusals reach audit and change nothing; a transcript');
   console.log('    is the observer\'s own, carries no name or id, and an overheard');
   console.log('    conversation stays out of it; a question is a debt only if it');
-  console.log('    was heard, and it is settled by being answered');
+  console.log('    was heard, and it is settled by being answered; a line is as');
+  console.log('    long as the person and is cut at a full stop; and one breath');
+  console.log('    has one volume, one question, and at most two acts');
 }
 process.exitCode = problems.length ? 1 : 0;
