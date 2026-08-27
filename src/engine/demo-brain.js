@@ -151,16 +151,17 @@ for (let t = 0; t < TICKS && calls < MAX_CALLS; t += 1) {
     if (calls >= MAX_CALLS) { floors.decline(offer.entityId); continue; }
     calls += 1;
     const answer = ask(offer);
-    if (!answer.pick || answer.pick === 'nothing') {
+    const picks = answer.picks ?? (answer.pick ? [answer.pick] : []);
+    if (!picks.length || (picks.length === 1 && picks[0] === 'nothing')) {
       floors.decline(offer.entityId);
       say(`  *（${offer.entityId} 沒有說話）*`);
       continue;
     }
-    const result = floors.commit(offer.entityId, { pick: answer.pick, text: answer.text ?? null });
+    const result = floors.commit(offer.entityId, { picks, text: answer.text ?? null });
     if (result.refused) {
       // Not swept under the carpet: a refusal here is an interface defect, and
       // finding those is what the demo is for.
-      say(`  **拒絕：${result.refused}** — pick=\`${answer.pick}\``);
+      say(`  **拒絕：${result.refused}** — \`${picks.join(' + ')}\``);
       floors.decline(offer.entityId);
       continue;
     }
@@ -169,7 +170,7 @@ for (let t = 0; t < TICKS && calls < MAX_CALLS; t += 1) {
     // inside somebody else's transcript.
     const took = trimSpeech(answer.text, Math.min(
       speechBudget(traits.get(offer.entityId)), floors.config.speechLimit));
-    say(`  **${offer.entityId}**（${answer.pick}）：${took}`
+    say(`  **${offer.entityId}**（${picks.join(' + ')}）：${took}`
       + (took === answer.text ? '' : `\n  *（引擎切掉了後面 ${answer.text.length - took.length} 個字）*`));
   }
 }
