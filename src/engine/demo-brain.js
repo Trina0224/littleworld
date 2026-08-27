@@ -175,6 +175,13 @@ for (let t = 0; t < TICKS && calls < MAX_CALLS; t += 1) {
   }
 }
 
+// The last answer is only committed on the NEXT tick, so a run that stops the
+// moment the call budget is spent throws away the line it just paid for.
+for (let t = 0; t < 4; t += 1) {
+  loop.step();
+  for (const offer of floors.offers()) floors.decline(offer.entityId);
+}
+
 say(`\n---\n\n${calls} 次 Brain 呼叫，${world.tick} ticks，`
   + `${world.log.facts.filter((e) => e.type === 'speech_said').length} 句話。`);
 writeFileSync(join(DIR, 'facts.json'), JSON.stringify(world.log.facts, null, 2));
