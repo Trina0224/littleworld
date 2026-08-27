@@ -435,6 +435,69 @@ function drive(loop, floors, n, policy = () => 'decline') {
     'a third person at the table was never asked once in sixty rounds');
 }
 
+// --- waiting is counted from the start of THIS conversation ----------------
+// A floor that has slept and woken must not treat everybody as having waited
+// since round zero: that hands the whole room the maximum bonus at once, and a
+// bonus that large makes a direct address ignorable. Which is the failure this
+// scenario watches for - it is not a spare assertion about a counter.
+{
+  const { world, zones, nav, floors, loop } = setup({ weigh: true });
+  const walkable = (zone, n) => {
+    const out = [];
+    for (let y = 60; y < 330 && out.length < n; y += 2) {
+      for (let x = 20; x < 620 && out.length < n; x += 2) {
+        if (zones.at(x, y) === zone && nav.walkableAt(x, y)) out.push([x, y]);
+      }
+    }
+    return out;
+  };
+  const table = walkable('near-table', 3);
+  const park = walkable('park-open', 1);
+  check(table.length === 3 && park.length === 1, 'the test premise is wrong: no walkable cells');
+  world.spawn('grandma-01', table[0]);
+  world.spawn('brother-01', table[1]);
+  world.spawn('man-01', park[0]);            // outside, and the quietest of the cast
+
+  // A long exchange, so the round counter climbs well past the waiting cap.
+  for (let i = 0; i < 80; i += 1) {
+    for (const o of step(loop, floors)) {
+      const pair = o.entityId === 'grandma-01' ? 'brother-01' : 'grandma-01';
+      const pick = o.menu.find(
+        (m) => m.startsWith('reply:') && o.context.refs.get(m.split(':')[1]) === pair);
+      if (!pick || floors.commit(o.entityId, { pick, text: 'そうねえ' }).refused) {
+        floors.decline(o.entityId);
+      }
+    }
+  }
+  check(floors.floor('near-table')?.round > 20,
+    `the test premise is wrong: only ${floors.floor('near-table')?.round} rounds ran`);
+
+  // They fall silent; the table goes to sleep.
+  drive(loop, floors, 12);
+  check(floors.floor('near-table')?.state === 'dormant',
+    'the test premise is wrong: the table never went quiet');
+
+  // Somebody walks over, which wakes it into a NEW conversation.
+  check(world.moveTo('man-01', table[2]), 'the test premise is wrong: he could not set off');
+  let woke = null;
+  for (let i = 0; i < 300 && !woke; i += 1) {
+    for (const o of step(loop, floors)) {
+      if (o.zone === 'near-table' && !woke) woke = o; else floors.decline(o.entityId);
+    }
+  }
+  check(woke, 'the test premise is wrong: the table never woke');
+
+  // Whoever got the first word says it to the newcomer. He must be next.
+  const to = woke.menu.find(
+    (m) => m.startsWith('greet:') && woke.context.refs.get(m.split(':')[1]) === 'man-01');
+  check(to, 'the test premise is wrong: the newcomer was not addressable');
+  check(!floors.commit(woke.entityId, { pick: to, text: 'あら' }).refused, 'the greeting was refused');
+  let next = [];
+  for (let i = 0; i < 10 && !next.length; i += 1) next = step(loop, floors);
+  check(next[0]?.entityId === 'man-01' && next[0]?.why === 'addressed',
+    `the man who had just been spoken to was passed over for ${next[0]?.entityId}`);
+}
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);

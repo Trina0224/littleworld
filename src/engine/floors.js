@@ -152,6 +152,12 @@ export function createFloors(world, zones, perception, {
       nudgedFor: new Map(),
       offeredTo: [], offeredAt: null, why: new Map(), menus: new Map(),
       asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map(),
+      // Waiting is counted from the start of THIS conversation. Both halves
+      // matter: without the map nobody accumulates at all, and without the
+      // start round a re-armed floor counts everybody as having waited since
+      // round zero and hands the whole room the maximum bonus at once - which
+      // makes a direct address ignorable.
+      spellStartRound: 0,
       lastOffered: new Map()   // entityId -> the round it was last offered in
     });
     world.log.note(world.tick, 'floor_opened', { zone: zoneId, spell });
@@ -174,7 +180,8 @@ export function createFloors(world, zones, perception, {
     f.state = 'open';
     f.quietRounds = 0;
     f.asked.clear();
-    f.lastOffered.clear();   // a new spell: nobody has been waiting IN it yet
+    f.lastOffered.clear();          // a new spell: nobody has waited IN it yet
+    f.spellStartRound = f.round;    // ...and nobody has waited SINCE before it
     world.log.note(world.tick, 'floor_rearmed', { zone: f.zone, spell });
   }
 
@@ -284,7 +291,7 @@ export function createFloors(world, zones, perception, {
       participants: heads(f.zone).filter((id) => id !== entityId),
       quietRounds: f.quietRounds,
       roundIndex: f.round,
-      roundsWaited: f.round - (f.lastOffered.get(entityId) ?? 0),
+      roundsWaited: f.round - (f.lastOffered.get(entityId) ?? f.spellStartRound),
       lastSpeakerWasMe: f.lastSpeaker === entityId
     };
     return classOf(f, entityId) + (weigh ? weigh(entityId, situation) : 0);
