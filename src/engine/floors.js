@@ -259,11 +259,12 @@ export function createFloors(world, zones, perception, {
   function rearmedBy(e) {
     if (!SOCIAL_FACTS.has(e.type)) return [];
     if (e.type === 'speech_said') {
+      // No separate pass over e.to. It cannot reach a room these two do not:
+      // menuOf only offers a normal-scope act toward somebody in the speaker's
+      // own zone, and a cross-zone act is call_across, which is broadcast. If
+      // the menu ever offers a quiet act across a zone boundary, this is the
+      // line that has to come back.
       const out = new Set();
-      for (const target of e.to) {
-        if (!e.heardBy.includes(target)) continue;
-        const z = zoneOf(target); if (z) out.add(z);
-      }
       if (e.scope === 'broadcast') for (const id of e.heardBy) { const z = zoneOf(id); if (z) out.add(z); }
       if (e.zone) out.add(e.zone);
       return [...out].sort();
