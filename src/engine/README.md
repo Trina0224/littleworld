@@ -163,9 +163,13 @@ takes that observer's queued events *provisionally*; `settle(epochId, {delivered
 either drops them or puts them back in `seq` order. Answered and failed both
 count as delivered — nobody is told the same old sentence again on a retry — and
 only a context that was never used gives its events back. That exists because a
-floor may be offered to three characters at once and only the highest-ranked
-speaks: without it the two losers would have had their queues drained for a turn
-they never took, and a sentence addressed to one of them would simply vanish.
+context can be built and then never spoken from: the person walks out of the zone
+before answering, or the floor is revoked under them. Without it their queue
+would have been drained for a turn they never took, and a sentence addressed to
+them would simply vanish. (The first draft justified it by a batch of three
+offers where only the highest-ranked speaks; the owner's latency correction
+replaced batching with one offer at a time, and the mechanism survived the change
+because cancellation needs it just as much as losing does.)
 
 `settle` is deliberately **not** `releaseEpoch`. Refs are a transport cache that
 may be dropped at any moment or never; the queued events are what an agent is
@@ -178,7 +182,11 @@ Unreachable forever: the exact failure this step exists to prevent, inside the
 check meant to detect it. A refused `contextFor` is now a true no-op, and
 `perception-held-limit.test.js` asserts it by name — and `perception.test.js` asserts
 `heldCount()` is zero at the end, which is what makes the contract enforceable
-rather than merely stated. 3D needed no change at all: memory reads the queue
+rather than merely stated. The limit itself is now measured rather than picked:
+four contexts, one per open floor, was the most ever outstanding across three
+full-cast runs, so eight is headroom that still catches a leak within a few
+offers. `queueLimit` came down from forty to sixteen by the same measurement —
+see *Tuning the constants* under 3E. 3D needed no change at all: memory reads the queue
 with a cursor and never drains it, so a restored event cannot be ingested twice.
 
 **A queue, because perception and delivery run at different speeds.** Sensory
@@ -426,10 +434,17 @@ coming survives into a recording.
 
 ### What the tests prove
 
-Sixty-three mutations, all biting — the two most recent covering the sequential offer
-rule the owner's latency correction restored: a floor that gives up on a Brain
-that is still thinking, and a pending request that outlives the person it was
-waiting for.
+Sixty-five mutations, all biting — the two most recent covering the rule the
+tuning run turned up (below): arriving in a room is not social, and setting off
+wakes the room you left. The second of those first caught nothing, and for an
+instructive reason: it was written against `rearmedBy`, which never sees
+`move_started` at all because `SOCIAL_FACTS` gates it first. Mutating the branch
+proved nothing about a branch that is unreachable. Mutating the whitelist —
+which is the real gate — bites on four assertions at once.
+
+Two before them, covering the sequential offer rule the owner's latency
+correction restored: a floor that gives up on a Brain that is still thinking, and
+a pending request that outlives the person it was waiting for.
 
 Fifty-eight before them. The store: dropping step 8 from the loop, not
 stamping the zone, letting an unheard address qualify a zone, letting a pending
@@ -486,6 +501,36 @@ The station one first caught nothing: the test fired a made-up resource id, so
 the `resource()` lookup already refused it and the `kind` check was doing no
 work. It now reserves and occupies the real `cafe-counter` station and the real
 `counter-stool-1` beside it, and asserts the two behave differently.
+
+### Tuning the constants
+
+Every number in `floors.js` and `perception.js` had been chosen by argument.
+`docs/specs/engine/phase-3e-tuning.md` replaces the argument with three
+3,000-tick runs of the full cast, whose scripted brains take the floor with a
+probability computed from each character's own `social` vector and aim their
+lines at people rather than at the room.
+
+What moved: `transcriptWindow` 12 → 8 (the bottom of the spec's own 8–12 band, a
+third off the transcript), `queueLimit` 40 → 16 (median 2–3 events delivered per
+offer, p95 13; forty only ever appeared as a four-minute backlog), `heldLimit`
+16 → 8 (four was the most ever outstanding, one per open floor). `quietLimit`
+stayed at 1 and the measurement is unusually clean: at 2 the world never falls
+silent and a conversation becomes a 504-line smear; at 1 there are twenty-nine
+conversations of about twenty lines with real quiet between them.
+
+`visibleLimit` stayed at 8, and *why* it stayed is the part worth reading. The
+sweep shows no behavioural difference between 4 and 8, which is exactly the kind
+of absence this project does not accept as evidence: the scripted brains never
+read the list, so the sweep measured cost and nothing else. A knob that changes
+what a Brain *sees* cannot be tuned by a brain that does not look.
+
+The run also found two bugs, which is the honest reason to do this at all. A
+measured world came out 99% silent because `move_completed` was not social —
+`agent_arrived` is only for entering the scene, so nobody walking over to a
+sleeping table could wake it. And a sixty-line conversation spent twenty-nine
+overheard nudges, because the nudge was spent when the offer was *built*, by
+which point the floor had been woken for that very nudge and no longer looked
+dormant.
 
 ## Memory (3D)
 

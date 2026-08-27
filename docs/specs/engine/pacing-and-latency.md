@@ -179,11 +179,18 @@ Estimated once properly rather than asserted, because it had been invoked
 repeatedly without arithmetic.
 
 Measured inputs: a self sheet averages 1,943 characters; a model-visible
-perception package in a seven-person scene is 840 characters of JSON. At Opus 5
+package is **a median of ~2,900 characters of JSON, p95 ~4,000** — about
+1,200–1,400 input tokens at 18% CJK. (The 840 characters this section first
+recorded was a 3C measurement, taken before conversation, choices and memory
+existed; see `phase-3e-tuning.md` §5 for the re-measurement.) At Opus 5
 rates ($5/M in, $25/M out, cache reads 0.1×), one decision costs roughly
-**$0.025 at low effort and $0.06 at default effort**, and latency itself caps
+**$0.03 at low effort and $0.065 at default effort**, and latency itself caps
 throughput — eleven agents at 15 s per call cannot exceed ~2,640 calls an hour.
-That gives **$10–50 an hour realistically and about $165 flat out**.
+That gives **$10–50 an hour realistically and about $180 flat out**.
+
+Add to that the cost of asking: a measured 3E run spends **1.15–1.22 Brain calls
+per line actually spoken**. Offering the floor and being told "no" costs about
+one call in six, which is what "no is an answer" is worth paying.
 
 Two things this corrected:
 
@@ -191,7 +198,10 @@ Two things this corrected:
 Cache reads are 0.1×, so a stable prefix is about 8% of input cost. **The dynamic
 suffix and the output are the cost** — which is why `visibleLimit` and a small
 perception package matter, and why they are worth keeping for reasons beyond
-tidiness.
+tidiness. The suffix has grown from roughly 2% of a decision's input cost to
+roughly 8% since 3C; over half of it is `appearance` prose for people the
+observer already knows by name, which `phase-3e-tuning.md` §5 flags as the one
+worthwhile saving left.
 
 **`effort` is the largest single lever and had never been mentioned.** Thinking
 tokens bill as output at $25/M, and at default effort they can be several times

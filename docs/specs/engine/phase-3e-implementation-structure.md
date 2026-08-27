@@ -736,14 +736,22 @@ the asymmetry test out of the store.
 
 ## 16. Open
 
-1. **`quietLimit`, `K`, `speechLimit`.** Proposed 1, 1-or-3, and 240 characters.
-   All configuration, all wanting one scripted run to look at.
+1. ~~**`quietLimit`, `K`, `speechLimit`.**~~ **SETTLED** — measured over three
+   3,000-tick runs of the full cast, recorded in `phase-3e-tuning.md`.
+   `quietLimit: 1` (at 2 the world never falls silent and a conversation becomes
+   a 500-line smear), `K = 1` by the owner latency correction, `speechLimit: 240`
+   never bound. The same run also settled `transcriptWindow: 8`,
+   `queueLimit: 16` and `heldLimit: 8`, and left `visibleLimit` at 8 on the
+   explicit grounds that a scripted brain cannot judge a knob that changes what a
+   Brain *sees*.
 2. **The animal repertoire.** `call_over` / `praise` / `shoo` is enough to prove
    the path. What else ハナ can be asked belongs with whoever owns deterministic
    actors, and does not need deciding now.
 3. **Whether a dormant zone should ever re-arm on a long timer** as well as on
    events — an hour of world time with nobody speaking might reasonably produce
-   one attempt. Currently: no. Events only.
+   one attempt. Currently: no. Events only, and the tuning run supports that:
+   once `move_completed` was recognised as social, ordinary comings and goings
+   wake a room often enough that a timer has nothing left to cover.
 
 ---
 
