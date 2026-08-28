@@ -5,33 +5,29 @@
  * this is the bounded, auditable middle that a mock, the manual harness, or a
  * later adapter all sit behind.
  *
- * The rule that shapes the whole file:
+ * PROVIDER WALL-CLOCK LATENCY IS NOT FICTIONAL TIME.
  *
- *   PROVIDER WALL-CLOCK LATENCY IS NOT FICTIONAL TIME.
+ * There is deliberately no tick budget here. A request stays outstanding for
+ * as many simulation ticks as it takes. Infrastructure may explicitly drop or
+ * cancel a request, but that decision comes from outside the fiction and is
+ * recorded in audit; elapsed simulation ticks never fabricate social silence.
  *
- * So there is no tick budget anywhere in here. A request stays outstanding for
- * as many simulation ticks as it takes, and nothing in this file will ever turn
- * one into a decline because a counter moved. Infrastructure MAY give up - that
- * is what `drop` and `cancel` are - but only because something outside the
- * fiction said so, and every one of those writes an audit line naming
- * infrastructure as the author. A character choosing `nothing` and a dropped
- * request are indistinguishable in the fact stream; the audit is where they
- * stop being the same thing.
+ * Phase 3F also deliberately does NOT implement automatic load shedding. Earlier
+ * code exposed an `essential` classification that was never used. That false
+ * policy surface is removed. Until real provider limits are known in Phase 3G,
+ * every valid opportunity queues when global concurrency is full. If a future
+ * provider needs pressure-based dropping, it must be an explicit, tested policy
+ * with an auditable reason rather than a dormant config knob.
  */
 
 export const DEFAULTS = {
   // How many Brains may be thinking at once, across every floor. The Floor
   // already asks one at a time per zone; this bounds the whole scene.
-  maxInFlight: 4,
-  // Opportunities worth queueing when everything is busy. An `addressed` turn
-  // is somebody owed an answer and is never dropped for load; an `open_floor`
-  // or `interject` turn is one the world can do without.
-  essential: ['addressed', 'overheard']
+  maxInFlight: 4
 };
 
 export function createBrainRuntime(world, floors, { config = {} } = {}) {
   const cfg = { ...DEFAULTS, ...config };
-  const essential = new Set(cfg.essential);
   const inFlight = new Map();     // entityId -> offer
   const waiting = [];             // offers admitted later, in arrival order
 
@@ -54,7 +50,8 @@ export function createBrainRuntime(world, floors, { config = {} } = {}) {
 
     /**
      * Take this tick's offers and decide which may be asked now.
-     * @returns the offers to send onward, in the order the Floor produced them.
+     * When concurrency is full the offer is queued; Phase 3F performs no
+     * automatic priority/drop policy.
      */
     admit(offers) {
       const out = [];
@@ -85,8 +82,7 @@ export function createBrainRuntime(world, floors, { config = {} } = {}) {
 
     /**
      * Infrastructure gives up on a request: a provider timed out, a budget ran
-     * out, an operator cancelled it. NEVER called from a tick - the caller is
-     * whatever is outside the fiction, and the reason is theirs to give.
+     * out, or an operator cancelled it. NEVER called from a simulation tick.
      */
     drop(entityId, reason) {
       const offer = inFlight.get(entityId);
@@ -97,12 +93,12 @@ export function createBrainRuntime(world, floors, { config = {} } = {}) {
       return true;
     },
 
-    /** The same thing, said the other way: the world invalidated the proposal. */
+    /** The world/provider invalidated a proposal explicitly. */
     cancel(entityId, reason) {
       return this.drop(entityId, reason);
     },
 
-    /** Everything outstanding, given up at once. For a shutdown, not a tick. */
+    /** Everything outstanding, given up at once. For shutdown, not a tick. */
     drain(reason) {
       for (const id of [...inFlight.keys()]) this.drop(id, reason);
       while (waiting.length) {
