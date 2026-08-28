@@ -33,6 +33,8 @@ import { createFloors, trimSpeech } from './floors.js';
 import { createAnimals } from './animals.js';
 import { createSocialWeigher, speechBudget, interjectPatience } from './social.js';
 import { createGrounding } from './grounding.js';
+import { createAmbient } from './ambient.js';
+import { createCafe } from './cafe.js';
 import { createActivityRuntime } from './activity.js';
 import { createLoop } from './loop.js';
 import { buildPrefix } from './prompt.js';
@@ -61,7 +63,7 @@ const say = (line) => { appendFileSync(TRANSCRIPT, line + '\n'); console.log(lin
 
 // --- the world, built exactly as run-3e.js builds it -------------------------
 const entities = new Map(), seeds = new Map(), minds = new Set(), traits = new Map(), beasts = new Map();
-const prefixes = new Map();
+const cards = new Map(), prefixes = new Map();
 for (const id of CAST) {
   const c = read(ROOT, 'characters', id, 'character.json');
   const deterministic = c.brain === 'deterministic';
@@ -71,7 +73,7 @@ for (const id of CAST) {
     minds.add(id);
     traits.set(id, c.social);
     // self.md by name, never bible.md, and read once so the loop cannot drift.
-    prefixes.set(id, buildPrefix(c, readFileSync(join(ROOT, 'characters', id, 'self.md'), 'utf8')));
+    cards.set(id, c);
   }
   if (Array.isArray(c.knows) && c.knows.length) seeds.set(id, c.knows);
 }
@@ -84,19 +86,42 @@ const perception = createPerception(world, zones, {
   entities, attentionHint: (o, e) => memory.attentionHint(o, e)
 });
 const animals = createAnimals(world, { table: beasts, nearRange: perception.config.nearRange });
+const ambient = createAmbient(world);
+const cafe = createCafe(world, zones, {
+  menu: read(SPEC, 'cafe-menu.json'),
+  attendant: 'shopkeeper-01',
+  config: { graceTicks: Number(args.get('grace') ?? 400) }
+});
 let floors;
 floors = createFloors(world, zones, perception, {
   minds, animals,
+  cafe,
   weigh: createSocialWeigher({ traitsFor: traits, memory }),
   budgetFor: (id) => speechBudget(traits.get(id)),
   patienceFor: (id) => interjectPatience(traits.get(id)),
-  ground: createGrounding(world, zones),
+  ground: createGrounding(world, zones, { ambient: ambient.state, cafe }),
   makeContext: (id) => buildContext(perception, memory, id, floors)
 });
-const loop = createLoop({ world, runtime: createActivityRuntime(world), perception, memory, floors });
+const loop = createLoop({
+  world, runtime: createActivityRuntime(world), perception, memory, floors, venue: cafe
+});
 
 world.start();
+ambient.record();
 for (const id of CAST) world.spawn(id, SPOTS[id]);
+
+// The once-per-session bootstrap. A production session would hold it in a cached
+// prefix and never resend it; this harness deliberately has no session at all,
+// so it goes in every isolated request. That is a property of the instrument,
+// not a redefinition of the contract (phase-3f 4).
+for (const id of minds) {
+  prefixes.set(id, buildPrefix(cards.get(id),
+    readFileSync(join(ROOT, 'characters', id, 'self.md'), 'utf8'), {
+      ambient: ambient.state,
+      catalogue: cafe.catalogue(),
+      venueName: cafe.menu.venueName
+    }));
+}
 
 // --- transport ---------------------------------------------------------------
 /** Block the world - not the clock's idea of time, the process - until a file lands. */
