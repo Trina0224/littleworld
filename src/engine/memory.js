@@ -249,10 +249,21 @@ export function buildContext(perception, memory, observerId, floors = null) {
     if (p.encounters > 0) v.timesMet = p.encounters;
     if (p.spokenWith > 0) v.timesSpoken = p.spokenWith;
   }
+  // An episode a Brain cannot attach to a person is worse than no episode: the
+  // first real run showed two identical `met for the first time` lines with
+  // nothing naming who. The subject is rendered by the same observer-safe
+  // fallback as a transcript line, and an episode whose subject cannot be
+  // represented at all is dropped rather than shown as an anonymous one
+  // (phase-3e-brain-grounding-and-interject.md 4).
   ctx.forModel.memory = memory.episodesFor(observerId)
     .slice(-8)
-    .map((e) => ({ kind: e.kind, gist: e.gist }))
-    .filter((e) => e.gist);
+    .filter((e) => e.gist)
+    .map((e) => {
+      if (!e.entityId) return { kind: e.kind, gist: e.gist };
+      const who = name(e.entityId);
+      return who === 'somebody' ? null : { kind: e.kind, who, gist: e.gist };
+    })
+    .filter(Boolean);
   if (floors) {
     ctx.forModel.conversation = floors.utterancesFor(observerId)
       .map((u) => ({

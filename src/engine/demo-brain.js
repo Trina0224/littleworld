@@ -32,6 +32,7 @@ import { createMemory, buildContext } from './memory.js';
 import { createFloors, trimSpeech } from './floors.js';
 import { createAnimals } from './animals.js';
 import { createSocialWeigher, speechBudget, interjectPatience } from './social.js';
+import { createGrounding } from './grounding.js';
 import { createActivityRuntime } from './activity.js';
 import { createLoop } from './loop.js';
 import { buildPrefix } from './prompt.js';
@@ -87,6 +88,9 @@ let floors;
 floors = createFloors(world, zones, perception, {
   minds, animals,
   weigh: createSocialWeigher({ traitsFor: traits, memory }),
+  budgetFor: (id) => speechBudget(traits.get(id)),
+  patienceFor: (id) => interjectPatience(traits.get(id)),
+  ground: createGrounding(world, zones),
   makeContext: (id) => buildContext(perception, memory, id, floors)
 });
 const loop = createLoop({ world, runtime: createActivityRuntime(world), perception, memory, floors });
@@ -95,12 +99,6 @@ world.start();
 for (const id of CAST) world.spawn(id, SPOTS[id]);
 
 // --- transport ---------------------------------------------------------------
-const WHY = {
-  addressed: '有人剛剛直接對你說話。',
-  overheard: '你聽見旁邊有人在講話，你可以選擇加入，也可以不要。',
-  open_floor: '這裡現在沒有人在說話。你可以開口，也可以不開口。'
-};
-
 /** Block the world - not the clock's idea of time, the process - until a file lands. */
 function waitFor(path) {
   const idle = new Int32Array(new SharedArrayBuffer(4));
@@ -118,8 +116,6 @@ function ask(offer) {
     '---',
     '',
     '## 現在',
-    '',
-    WHY[offer.why] ?? WHY.open_floor,
     '',
     '```json',
     JSON.stringify(offer.context.forModel, null, 2),

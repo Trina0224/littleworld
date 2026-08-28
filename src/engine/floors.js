@@ -77,7 +77,7 @@ const ORDINARY = 1000;
 
 export function createFloors(world, zones, perception, {
   minds, config = {}, weigh = null, makeContext = null, animals = null,
-  budgetFor = null, patienceFor = null
+  budgetFor = null, patienceFor = null, ground = null
 } = {}) {
   if (minds === undefined) {
     throw new Error('createFloors needs an explicit `minds` set: who can hold a floor');
@@ -400,6 +400,19 @@ export function createFloors(world, zones, perception, {
     f.epochs.set(id, ctx.epochId);
     f.why.set(id, why);
     f.menus.set(id, menu);
+    // Where I am, what my body is doing, roughly when it is, and why I am being
+    // asked. The Floor supplies it because the Floor is the only thing that
+    // knows the last of those. phase-3e-brain-grounding-and-interject.md 3.
+    if (ground) {
+      const self = ground.self(id, { why });
+      // First in the package, and in place of the raw tick: where I am and when
+      // it is are what a person reads before looking round the room, and a bare
+      // integer tick is implementation leakage a Brain can only misread (§3.3).
+      if (self) {
+        const { tick, ...rest } = ctx.forModel;
+        ctx.forModel = { self, ...rest };
+      }
+    }
     ctx.forModel.choices = menu;
     opened.push({
       entityId: id, zone: f.zone, round: f.round, why,
