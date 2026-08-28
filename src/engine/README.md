@@ -434,7 +434,7 @@ coming survives into a recording.
 
 ### What the tests prove
 
-One hundred and eighteen mutations, all biting. The fifteen most recent come from the first real
+One hundred and twenty-three mutations, all biting. The fifteen most recent come from the first real
 Brain run and the three changes it forced: the budget that is the character's
 own rather than the cast's, the sentence-boundary cut, a second act silently
 dropped, a second act that skips the menu, a second person named who is not owed
@@ -578,7 +578,7 @@ against a turn that carries grounding, an ordinary order that needs nobody's
 judgement, five hundred ticks that fabricate no decline, and one seed that is one
 afternoon with nothing left held.
 
-Twenty-five mutations, all biting, and three of them found real bugs rather than
+Thirty mutations, all biting, and three of them found real bugs rather than
 confirming a rule. A busy shopkeeper whose customers' grace ran out anyway. An
 order that only cleared when its customer left, so an order placed by somebody
 who stays all afternoon never cleared at all - unbounded growth wearing the
