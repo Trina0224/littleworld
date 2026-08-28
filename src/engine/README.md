@@ -1,4 +1,4 @@
-# World Engine — Phases 3A, 3C, 3D, 3E and 3F
+# World Engine — Phases 3A, 3C, 3D, 3E, 3F, and Replay
 
 Plain ES modules, no dependencies, no build step. They run under Node today and
 in the browser later without change; only the scenario runner touches a host
@@ -63,6 +63,81 @@ node src/engine/run-3e.js          # a scripted afternoon, and the fifteen 3E ac
 | `social.test.js` | that the cast stays asymmetric and nothing repairs a low trait |
 | `run-3c.js` | the 3C acceptance scenario, printed |
 | `run-3e.js` | a scripted afternoon: the 3E acceptance list, printed |
+
+## Replay: the same recording, on a different clock
+
+> `docs/specs/engine/replay-presentation.md`. Simulation says what happened and
+> in what order; presentation says when somebody watches it. **They are never the
+> same number**, and `presentation.js` is the only place allowed to convert.
+
+`view.js` was already an exact replay and stays one, untouched: facts in, one
+snapshot per simulation tick, byte-stable, which is what regressions are checked
+against. What it is not is a thing anybody would watch - it follows every tick,
+gives a speech bubble a fixed tick lifetime, and has never heard of a cafe.
+
+The audience path is four small files:
+
+```text
+recording.js     the saved envelope - facts, plus the seed, weather and menu
+                 that explain them, plus opaque display metadata
+story.js         a recording read as a story: spans joined, provenance kept
+presentation.js  beats placed on the audience clock
+script.js        checking an editor's script against the facts
+```
+
+**The envelope exists because `{ facts }` is not enough to explain a run.** A
+character mentions the weather and orders from a menu; the file holding those
+sentences has to say what the weather and the menu were, or Replay is guessing at
+its own source. Audit is off by default and the file says on its face whether it
+carries any - a public Replay must not leak an interior because an editor once
+had access to one.
+
+**The story extractor joins spans and never reads prose.** `order_placed` through
+`order_cleared` is one thing that happened to one person, and a montage cannot be
+built from six events that do not know they belong together. It captions the
+order from the fact, because the sentence that placed it may never have named the
+item - which is exactly what the real cafe run produced.
+
+**The timeline is one idea.** Build a **monotone piecewise-linear map** from tick
+to millisecond, then place everything through it.
+
+- *Monotone* means retiming cannot reorder anything. Serving cannot overtake its
+  own preparation and a walk cannot arrive before it set off, so the causal rules
+  are a property of the map rather than a checklist run afterwards.
+- *Piecewise-linear* means a walk stays continuous through a compression instead
+  of teleporting: both ends are marks on the same map and everything between is
+  interpolated.
+
+What varies is only what a stretch of ticks is *worth*. A dead gap is a readable
+beat however long the real wait was. A walk is scaled but still followable. Making
+a cup of tea is a montage - compressed, never to nothing, because a cup appearing
+out of the air breaks causality even with the event order untouched.
+
+Ninety seconds of world came out as nineteen seconds of presentation.
+
+**An editor's script is checked, not trusted.** The spec's own instruction is the
+design: *prefer provenance and validation over a giant prompt saying "be
+faithful"*. A line may be cleaned, a dull stretch cut, the whole thing retimed.
+It may not be put in somebody else's mouth, cited to a fact that does not exist,
+reordered past the entry above it, or marked editorial while still claiming
+committed facts. No model is called anywhere in this path.
+
+### The player
+
+`docs/replay.html` reuses `ShowaLittleWorld` rather than reimplementing it -
+background, occlusion, camera and the debug overlay are the same scene the static
+page runs, and only the cast differs, coming from a timeline instead of fixed
+placements. The occlusion cut was split out of `buildCast` so a moving character
+can be recut when the row it stands on actually changes: the same rule, applied
+more than once instead of copied.
+
+It reruns nothing and fetches two JSON files off its own origin, which is what
+makes it a GitHub Pages page rather than an application.
+
+Twenty-six mutations, all biting. One bug only a browser could find: both scripts
+are classic scripts sharing one global scope, so destructuring `WORLD_W` out of
+the namespace in the second one redeclared a `const` the first had already
+declared, and the page did not load at all.
 
 ## The tick
 

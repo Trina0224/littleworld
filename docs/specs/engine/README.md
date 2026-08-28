@@ -1,8 +1,8 @@
 # LittleWorld Engine Specs — Current Source of Truth
 
 **Updated:** 2026-08-28 (`America/Los_Angeles`)  
-**Current implementation state:** Simulation through unified Phase 3F is implemented.  
-**Current product priority:** Replay / Presentation.  
+**Current implementation state:** Simulation through unified Phase 3F is implemented, and the first Replay/Presentation player is implemented.  
+**Current product priority:** Replay quality — an editorial pass, scene selection, camera and character art.  
 **Parked:** Phase 3G real provider adapters.
 
 This file is the navigation/index for engine architecture. Older documents are intentionally kept because they record decisions and why previous designs failed, but later binding corrections win when they conflict.
@@ -25,7 +25,7 @@ REPLAY / PRESENTATION
 
 The Simulation may take a long wall-clock time. Provider latency is generation cost, not fictional pause. Conversation asks one Brain at a time and waits for that decision while deterministic world work may continue.
 
-Replay is allowed to have a different presentation clock and is the next active workstream. Real provider adapters are not required in order to build Replay because existing scripted/manual recordings are sufficient input.
+Replay has a different presentation clock and now has one. Real provider adapters were not required to build it: the demo Replay on `docs/replay.html` plays a scripted Phase 3F recording with no provider connection at all.
 
 ## Binding precedence
 
@@ -36,7 +36,7 @@ Read these in this order when implementing new work:
 3. `phase-3e-post-brain-corrections.md` — speech budget, multi-act utterances, first real-Brain corrections.
 4. `phase-3e-brain-grounding-and-interject.md` — direct-address causality, interjection boundary, grounding, memory subject safety.
 5. `phase-3f.md` — unified implemented world/cafe/bootstrap/Brain runtime contract; supersedes the old 3F-A/3F-B split.
-6. `replay-presentation.md` — **latest binding Replay contract and current next work.** It also supersedes older Replay wording where explicitly stated.
+6. `replay-presentation.md` — **latest binding Replay contract, implemented.** It also supersedes older Replay wording where explicitly stated. §13 records what the first implementation left.
 
 Earlier 3C/3D/3E design documents remain binding only where no later correction supersedes them.
 
@@ -58,6 +58,18 @@ The current 3F runtime source includes:
 - `src/engine/grounding.js`
 - `src/engine/floors.js`
 - `docs/specs/world/cafe-menu.json`
+
+The Replay source is:
+
+```text
+src/engine/recording.js      the saved envelope: facts plus what explains them
+src/engine/story.js          recording -> beats with provenance
+src/engine/presentation.js   beats -> a timeline on the audience clock
+src/engine/script.js         checking an editor's script against the facts
+src/engine/view.js           exact/debug replay, unchanged
+docs/replay.html/.js/.css    the player, on the static page's own scene
+docs/runs/3f-cafe*.json      a recording and the timeline built from it
+```
 
 `docs/specs/world/cafe-menu.json` is the authoritative current runtime availability. `cafe-menu-1960.md` is design/history and must not override runtime availability when the two differ.
 

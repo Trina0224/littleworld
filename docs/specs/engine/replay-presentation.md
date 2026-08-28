@@ -1,6 +1,10 @@
 # LittleWorld Replay / Presentation — Binding Implementation Contract
 
-**Status:** binding — **NEXT ACTIVE WORKSTREAM**  
+**Status:** binding — **IMPLEMENTED 2026-08-28**  
+**Result:** §11's twelve cases are `src/engine/run-replay.js`. New engine files:
+`recording.js`, `story.js`, `presentation.js`, `script.js`. Player: `docs/replay.html`
++ `docs/replay.js`, on the same Phaser scene the static page uses. Demo recording and
+timeline: `docs/runs/3f-cafe.json`, `docs/runs/3f-cafe.timeline.json`.  
 **Created:** 2026-08-28 (`America/Los_Angeles`)  
 **Consumes:** `simulation-replay-architecture.md`, the committed Simulation fact stream, Phase 3F venue/ambient facts.  
 **3G status:** parked; real provider adapters are not required to build Replay.
@@ -294,8 +298,41 @@ Replay is not considered implemented until all of these work:
 
 ```text
 Simulation through Phase 3F    COMPLETE
-Replay / Presentation          NOW
+Replay / Presentation          COMPLETE (first player; see §13)
 Phase 3G provider adapters     PARKED
 ```
 
 Do not resume 3G merely because it is numerically next. The owner has explicitly chosen Replay as the next product block.
+
+
+---
+
+## 13. What the first implementation left
+
+Written after building it, so the next person starts from what is true.
+
+**The editorial LLM pass is a validator without a caller.** `script.js` checks a
+script against provenance and causal order, and `run-replay.js` proves it accepts
+a lightly cleaned script and rejects six kinds of wrong one. Nothing yet *asks* a
+model for that script, because §2's pipeline works without one: the normalizer's
+own output is already a valid presentation script. The seam is `validateScript`,
+and it is the only thing an editorial pass has to satisfy.
+
+**One sprite per character.** `docs/assets/characters/` holds a single pose each,
+mostly seated, so somebody crossing the park is drawn in a sitting sprite. The
+player reuses `placements.json` for the sprite box and foot offset rather than
+inventing metrics, which is the honest reuse; what is missing is art, not code.
+
+**Camera is fixed.** §9 permits this ("a fixed full-scene camera plus optional
+character focus is acceptable"). Every presentation event already carries `focus`,
+so a camera has something to follow the day somebody writes one.
+
+**Scene selection is not implemented.** §4 allows the editorial pass to choose an
+interesting span of a longer run; the normalizer currently takes the whole
+recording. The timeline is built from a beat list, so a span filter is a filter on
+that list rather than a change to the builder.
+
+**The audience/exact comparison is a report, not a gate.** `compareModes` names
+what differs between the two modes and proves nothing was invented; it does not
+decide whether an omission was a good edit. That is a judgement, and §4 gives it
+to the editor.
