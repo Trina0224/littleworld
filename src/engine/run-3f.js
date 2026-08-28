@@ -303,6 +303,38 @@ function read2(id) {
     `two orders took ${span} ticks, which is the sum rather than the critical path`);
 }
 
+// --- what is off the menu today is off the choices too ---------------------
+// Seasonal availability is the reason the menu carries a flag rather than a
+// fixed list: 雪 in summer is not a rejection to learn from, it is an item that
+// is not there. It has to vanish from the choices AND be refused if asked for
+// directly, because those are two different callers.
+{
+  const { world, cafe, floors, loop, menu } = build();
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('shopkeeper-01', COUNTER);
+  world.spawn('man-01', NEAR_TABLE[1]);
+  menu.items.find((i) => i.id === 'nerikiri_yuki').available = false;
+
+  let mine = null;
+  for (let i = 0; i < 40 && !mine; i += 1) {
+    loop.step();
+    for (const o of floors.offers()) {
+      if (o.entityId === 'grandma-01') mine = o; else floors.decline(o.entityId);
+    }
+  }
+  check(mine, 'the test premise is wrong: she was never offered the floor');
+  check(!mine.menu.includes('order:nerikiri_yuki'),
+    'something the shop is not serving today was still offered');
+  check(mine.menu.includes('order:nerikiri_ume'),
+    'the test premise is wrong: nothing at all was orderable');
+  check(!cafe.catalogue().some((i) => i.id === 'nerikiri_yuki'),
+    'the session bootstrap still lists it');
+  check(cafe.order('grandma-01', 'nerikiri_yuki').refused === 'not on the menu today',
+    'it was accepted anyway when asked for directly');
+  check(!world.log.facts.some((e) => e.type === 'order_placed' && e.item === 'nerikiri_yuki'),
+    'an unavailable item reached the fact stream');
+}
+
 // --- 12, 13. latency is not fictional time --------------------------------
 {
   const { world, floors, loop, brains } = build();
