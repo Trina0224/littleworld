@@ -75,6 +75,14 @@ check(buildPrefix(grandma.character, grandma.self)
   const prefix = buildPrefix(grandma.character, grandma.self);
   check(prefix.includes('"pick"') && prefix.includes('nothing'),
     'the prefix never tells the Brain how to answer');
+  // The guard against inventing physical detail (phase-3e-brain-grounding-and-
+  // interject.md 3.2). It is a guardrail rather than a substitute for grounding,
+  // and it has to name the thing it forbids: 星さん invented a frayed sleeve and
+  // a walk from the park, and both committed as public speech.
+  check(prefix.includes('就當作你不知道'),
+    'nothing tells the Brain that a detail it was not given is unknown');
+  check(prefix.includes('`self`'),
+    'the prefix never mentions the grounding the Brain is supposed to trust');
 }
 
 console.log('');
