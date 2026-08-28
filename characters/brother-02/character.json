@@ -4,6 +4,7 @@
   "appearance": "瘦瘦的小男孩，白色圓領上衣配深綠短褲，頭髮蓬蓬的",
   "sprite": "brother-02",
   "knows": [
+    { "who": "grandma-01", "as": "おばあちゃん" },
     { "who": "brother-01", "as": "タツ" },
     { "who": "dog-01", "as": "ハナ" }
   ],

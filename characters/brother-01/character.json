@@ -4,6 +4,7 @@
   "appearance": "圓滾滾的小男孩，白色圓領上衣配深綠短褲，戴著一頂米色鴨舌帽，背著深藍色背包",
   "sprite": "brother-01",
   "knows": [
+    { "who": "grandma-01", "as": "おばあちゃん" },
     { "who": "brother-02", "as": "タタ" },
     { "who": "dog-01", "as": "ハナ" }
   ],
