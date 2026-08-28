@@ -29,7 +29,7 @@ const anchors = read(SPEC, 'anchors.json');
 const grid = read(SPEC, 'navgrid.json');
 const zoneSpec = read(SPEC, 'zones.json');
 
-const NEAR_TABLE = [[227, 235], [232, 238], [222, 240]];
+const NEAR_TABLE = [[227, 235], [232, 238], [222, 240], [218, 232]];
 
 /** A, B and C at one table. `patience` overrides let a case name its own C. */
 function setup({ cast, patience = null, config = {} } = {}) {
@@ -194,6 +194,52 @@ function exchange({ cast, patience, ticks = 200, answer = () => null }) {
     `渡辺 was asked ${his.length} times and 森牧師 ${pastor.length}: the cast is not asymmetric`);
 }
 
+// --- one breath naming two people owes two answers -------------------------
+// The boundary is not "an addressee answered", it is "nobody on this floor is
+// still owed one". A line naming two people creates two response
+// opportunities, and an eager third party must wait out BOTH.
+{
+  const cast = ['grandma-01', 'brother-01', 'shopkeeper-01', 'pastor-01'];
+  const { world, floors, loop } = setup({ cast, patience: { 'pastor-01': 1 } });
+  const seen = [];
+  let named = false;
+  let namedAt = -1;
+  for (let i = 0; i < 80; i += 1) {
+    for (const o of step(loop, floors)) {
+      seen.push({ who: o.entityId, why: o.why });
+      if (!named && o.entityId === 'grandma-01') {
+        const a = at(o, 'greet', 'brother-01');
+        const b = at(o, 'greet', 'shopkeeper-01');
+        if (a && b) {
+          named = !floors.commit(o.entityId, { picks: [a, b], text: 'ふたりとも、こんにちは' }).refused;
+          if (named) { namedAt = seen.length - 1; continue; }
+        }
+      }
+      floors.decline(o.entityId);
+    }
+  }
+  check(named, 'the test premise is wrong: she never named two people at once');
+  const said = world.log.facts.find((e) => e.type === 'speech_said' && e.to.length === 2);
+  check(said, 'the test premise is wrong: the line did not name two people');
+
+  // From the utterance onward: both people named are asked before the eager
+  // third party is offered anything.
+  const after = seen.slice(namedAt + 1);
+  const owed = new Set(said?.to ?? []);
+  let answered = 0;
+  let cutIn = -1;
+  for (let i = 0; i < after.length; i += 1) {
+    if (after[i].why === 'addressed' && owed.has(after[i].who)) {
+      answered += 1;
+      owed.delete(after[i].who);
+    }
+    if (after[i].who === 'pastor-01' && cutIn === -1) cutIn = answered;
+  }
+  check(answered === 2, `only ${answered} of the two people she named were asked`);
+  check(cutIn === 2 || cutIn === -1,
+    `the third party came in after ${cutIn} of the two people she named had answered`);
+}
+
 console.log('');
 if (problems.length) {
   console.log(`FAILED\n  ${problems.join('\n  ')}`);
@@ -203,4 +249,6 @@ console.log('OK  a direct addressee is asked before anybody else however long');
 console.log('    they have waited; an interjection happens only at an exchange');
 console.log('    boundary, after the answer is committed or waved away; a long');
 console.log('    exchange does not make a third person invisible; and the most');
-console.log('    withdrawn character is asked without being made to speak');
+console.log('    withdrawn character is asked without being made to speak; and');
+console.log('    one breath naming two people owes two answers before anybody');
+console.log('    else is asked at all');
