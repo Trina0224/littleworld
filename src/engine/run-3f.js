@@ -491,10 +491,33 @@ function read2(id) {
   }
   check(runtime.inFlight().length <= 1,
     `${runtime.inFlight().length} Brains were thinking at once against a limit of one`);
-  check(queued > 0 || runtime.waiting().length > 0,
-    'the test premise is wrong: the limit never bound');
+  check(queued > 0, 'the test premise is wrong: the limit never bound');
   check(world.log.audit.some((e) => e.type === 'brain_queued'),
     'a queued opportunity left no audit line');
+  // Queued is not dropped. Somebody passed over because the scene was busy has to
+  // come back when a slot frees, or bounded concurrency is a way of silently
+  // losing turns - and a lost turn looks exactly like a character with nothing
+  // to say. Drain the queue and account for every one of them.
+  const held = runtime.waiting().length;
+  check(held > 0, 'the test premise is wrong: nothing was left waiting to drain');
+  for (let i = 0; i < 40 && runtime.waiting().length; i += 1) {
+    for (const id of runtime.inFlight().map((o) => o.entityId)) {
+      floors.decline(id);
+      for (const next of runtime.answered(id)) floors.decline(next.entityId);
+    }
+    loop.step();
+    runtime.admit(floors.offers());
+  }
+  check(runtime.waiting().length === 0,
+    `${runtime.waiting().length} opportunities never left the queue`);
+  const accounted = new Set([
+    ...world.log.audit.filter((e) => e.type === 'brain_dispatched').map((e) => e.agent),
+    ...world.log.audit.filter((e) => e.type === 'brain_stale').map((e) => e.agent)
+  ]);
+  for (const e of world.log.audit.filter((e2) => e2.type === 'brain_queued')) {
+    check(accounted.has(e.agent),
+      `${e.agent} was queued and neither sent nor recorded as stale`);
+  }
 }
 
 // --- 10, 11. the 3E contracts are unchanged, and speech is not duplicated ---
