@@ -197,8 +197,11 @@ for (let t = 0; t < TICKS && calls < MAX_CALLS; t += 1) {
 }
 
 // The last answer is only committed on the NEXT tick, so a run that stops the
-// moment the call budget is spent throws away the line it just paid for.
-for (let t = 0; t < 4; t += 1) {
+// moment the call budget is spent throws away the line it just paid for. And the
+// world does not need a Brain to finish what it started: a cup that was ordered
+// still has to steep, be carried over and be collected, which is the point of
+// routine commerce being engine-owned. `--settle` is how long to let it.
+for (let t = 0; t < Number(args.get('settle') ?? 4); t += 1) {
   loop.step();
   for (const offer of floors.offers()) floors.decline(offer.entityId);
 }
