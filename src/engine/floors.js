@@ -284,6 +284,13 @@ export function createFloors(world, zones, perception, {
       const z = zones.at(e.at[0], e.at[1]);
       return z ? [z] : [];
     }
+    // An obligation coming due is the moment somebody should be asked. Without
+    // this it fires into a sleeping room and is never mentioned to anybody - the
+    // same shape as arriving in a room not being social, and found the same way.
+    if (e.type === 'venue_obligation') {
+      const z = zoneOf(e.customer);
+      return z ? [z] : [];
+    }
     if (e.type === 'resource_occupied' || e.type === 'resource_released') {
       const r = world.resource(e.resource);
       if (!r || r.kind !== SEAT) return [];

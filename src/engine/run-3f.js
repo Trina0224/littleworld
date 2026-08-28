@@ -135,12 +135,13 @@ const pick = (o, prefix) => o.menu.find((m) => m.startsWith(prefix)) ?? null;
   check(told.daylight === true, 'an authored day turned the lights off');
 }
 
-// --- the obligation becomes due, and the character is told in words ---------
+// --- the obligation becomes due, in words, into a room that wakes for it ----
 // Etiquette rather than a game mechanic: it must fire, it must reach the
 // character as something they notice, and it must not fire on somebody who has
-// only just sat down.
+// only just sat down. The grace is long enough here that the table has gone
+// quiet first, so the only thing that can wake it is the obligation itself.
 {
-  const { world, zones, ambient, cafe, floors, loop } = build({ config: { graceTicks: 30 } });
+  const { world, zones, ambient, cafe, floors, loop } = build({ config: { graceTicks: 200 } });
   world.spawn('grandma-01', NEAR_TABLE[0]);
   world.spawn('shopkeeper-01', COUNTER);
   world.spawn('man-01', NEAR_TABLE[1]);
@@ -150,21 +151,39 @@ const pick = (o, prefix) => o.menu.find((m) => m.startsWith(prefix)) ?? null;
     'somebody who had just sat down already owed an order');
   check(!cafe.obligationFor('grandma-01'), 'she was told to order on arrival');
 
-  for (let i = 0; i < 200; i += 1) {
+  // Everybody declines until the table is asleep, and nothing is owed yet.
+  let asleep = false;
+  for (let i = 0; i < 120 && !asleep; i += 1) {
     loop.step();
     for (const o of floors.offers()) floors.decline(o.entityId);
+    asleep = floors.floor('near-table')?.state === 'dormant';
   }
-  check(world.log.facts.some((e) => e.type === 'venue_obligation' && e.state === 'order_due'
-    && e.customer === 'grandma-01'), 'the obligation never came due');
-  // Asserted on grounding rather than on a package, because whether the Floor
-  // happens to be awake when it comes due is a different question: what has to
-  // be true is that the next time she IS asked, she is told in words.
+  check(asleep, 'the test premise is wrong: the table never went quiet');
+  check(!world.log.facts.some((e) => e.type === 'venue_obligation'),
+    'the test premise is wrong: the obligation came due before the table slept');
+
+  // Now the only social fact left in this room is the obligation.
+  let due = null;
+  const after = [];
+  for (let i = 0; i < 400; i += 1) {
+    loop.step();
+    for (const o of floors.offers()) {
+      if (due) after.push(o);
+      floors.decline(o.entityId);
+    }
+    due = due ?? world.log.facts.find((e) => e.type === 'venue_obligation'
+      && e.state === 'order_due' && e.customer === 'grandma-01');
+  }
+  check(due, 'the obligation never came due');
+  check(after.length > 0, 'the obligation came due into a sleeping room and woke nobody');
+  check(after.some((o) => o.zone === 'near-table'),
+    `it woke ${[...new Set(after.map((o) => o.zone))]} instead of the table it came due at`);
+
   const ground = createGrounding(world, zones, { ambient: ambient.state, cafe });
   check(ground.self('grandma-01').noticing,
     'she was never told, in words, that she had been sitting a while');
   check(!ground.self('shopkeeper-01').noticing,
     'the woman running the shop was told to buy something from herself');
-  // The two boys and the dog are not customers (venue-interactions 1).
   check(world.log.facts.some((e) => e.type === 'venue_obligation'
     && e.customer === 'man-01'), 'the test premise is wrong: the other adult was exempt too');
   check(!world.log.facts.some((e) => e.type === 'venue_obligation'

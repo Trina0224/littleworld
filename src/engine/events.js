@@ -65,5 +65,6 @@ export const SOCIAL_FACTS = new Set([
   'move_completed',         // somebody walked into this room
   'resource_occupied',      // seats only, not stations
   'resource_released',
-  'animal_responded'        // 3E-9
+  'animal_responded',       // 3E-9
+  'venue_obligation'        // sitting a while is a social situation, phase-3f 7
 ]);
