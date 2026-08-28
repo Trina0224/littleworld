@@ -158,6 +158,19 @@ check(rec.cast?.length === 12, `the recording carries ${rec.cast?.length} displa
 check(rec.private === false, 'a saved recording defaulted to carrying the private stream');
 check(rec.audit === undefined, 'the private stream was written out anyway');
 {
+  // A file this build cannot honestly play is refused rather than half-read.
+  const wrongFormat = () => loadRecording({ ...file, format: 99 });
+  let refused = false;
+  try { wrongFormat(); } catch { refused = true; }
+  check(refused, 'a recording written by another format was loaded anyway');
+  // And a recording whose facts are out of order would make every source index
+  // Replay hands out a lie, so it is not a recording.
+  let outOfOrder = false;
+  try {
+    loadRecording({ ...file, facts: [{ t: 5, type: 'x' }, { t: 1, type: 'x' }] });
+  } catch { outOfOrder = true; }
+  check(outOfOrder, 'a recording with its facts shuffled was accepted');
+
   const withAudit = saveRecording(world, { ambient: ambient.state, menu, audit: true });
   check(withAudit.private === true && Array.isArray(withAudit.audit),
     'asking for audit did not produce any');
