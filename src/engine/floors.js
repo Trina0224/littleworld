@@ -691,12 +691,20 @@ export function createFloors(world, zones, perception, {
       return f?.menus.get(entityId)?.slice() ?? null;
     },
 
-    decline(entityId) {
+    /**
+     * `by` is the whole of phase-3f.md §8's audit rule. A character choosing
+     * `nothing` and infrastructure giving up on a request look identical in the
+     * fact stream - both are a turn with no words - so the audit has to say
+     * which one happened. A drop is not fictional silence.
+     */
+    decline(entityId, { by = 'character', reason = null } = {}) {
       const f = floors.get(zoneOf(entityId));
       if (!f || !f.offeredTo.includes(entityId)) return false;
       if (f.why.get(entityId) === 'addressed') pendingAddress.delete(entityId);
       f.declines.add(entityId);
-      world.log.note(world.tick, 'floor_declined', { zone: f.zone, agent: entityId });
+      world.log.note(world.tick, 'floor_declined', {
+        zone: f.zone, agent: entityId, by, ...(reason ? { reason } : {})
+      });
       return true;
     },
 

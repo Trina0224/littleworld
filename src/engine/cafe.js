@@ -55,7 +55,7 @@ export function createCafe(world, zones, { menu, attendant, config = {} } = {}) 
   let nextOrder = 0;
 
   const zoneOf = (id) => {
-    const at = world.positionOf(id);
+    const at = world.agents.get(id)?.at;
     return at ? zones.at(at[0], at[1]) : null;
   };
   const inCafe = (id) => CAFE_ZONES.has(zoneOf(id));

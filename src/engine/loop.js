@@ -9,7 +9,7 @@
  *
  *     1  advance the integer world clock
  *     2  advance deterministic movement
- *     3  advance deterministic activities
+ *     3  advance deterministic activities, including the venue's routine work
  *     4  update reservations / occupancy / presence
  *     5  commit the resulting world facts
  *     6  refresh perception for each present agent
@@ -31,6 +31,11 @@
  * perception queue when it builds a context - memory reads that queue without
  * draining it, and reading it first is what makes "remembered exactly once" true
  * no matter how rarely a Brain is woken.
+ *
+ * The venue rides in step 3 because that is what it is: deterministic work
+ * nobody has to be asked about. A cup steeping and a sweet being shaped are
+ * activities, and they run before perception so that what she did this tick is
+ * visible this tick.
  *
  * Steps 4 and 5 are not separate calls. Reservations move because an activity
  * step moved them, presence moves because the day rolled over, and facts commit
@@ -57,7 +62,8 @@
  */
 
 export function createLoop({
-  world, runtime, perception = null, memory = null, floors = null, onWakeup = null
+  world, runtime, perception = null, memory = null, floors = null, venue = null,
+  onWakeup = null
 }) {
   if (memory && !perception) {
     // Memory accumulates from perception and from nothing else. A loop given one
@@ -81,6 +87,7 @@ export function createLoop({
     step({ onFrame } = {}) {
       world.stepMovement();                       // 2
       runtime.tick();                             // 3, and 4 and 5 as it goes
+      if (venue) venue.tick();                    // 3, the venue's own routine work
       if (perception) perception.tick();          // 6
       if (memory) memory.tick(perception);        // 7
       if (floors) floors.tick();                  // 8

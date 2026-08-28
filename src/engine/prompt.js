@@ -145,10 +145,54 @@ const CONTRACT = `## 你會收到什麼
   超過的話，世界只會收下前面講完的那幾句，後面就沒有人聽到了。`;
 
 /**
+ * The mundane things a person standing there would simply know, and that the
+ * mechanics cannot be expected to teach a model. phase-3f.md §3.
+ *
+ * The bar for a line being here is that omitting it has already made a model
+ * invent world state, or plainly will: the first two runs produced a walk from
+ * the park, a frayed sleeve, a hot afternoon and a curry the cafe does not sell.
+ * It is not an etiquette manual and not a commonsense encyclopedia - it exists
+ * to bridge simulation-shaped holes, and it is said ONCE, at the start of the
+ * session, not on every turn (§4).
+ */
+const COMMON_SENSE = `## 這個世界
+
+- 你在一個半開放的喫茶店和小公園之間。天是亮的。
+- 一般說話只傳到旁邊；要讓另一頭的人聽見，得提高聲音喊過去。
+- 椅子是拿來坐的，桌子是放東西的。你的世界裡沒有編號的傢俱。
+- **店裡賣什麼，以你看到的菜單為準。** 沒列出來的東西就是沒有——不要點，也不要
+  假設它存在。
+- 紀錄裡沒有的實體細節就是你不知道，不是留給你發揮的空白。`;
+
+/** The kind of day this run is (§2). Background, never a memory. */
+function ambientLines(ambient) {
+  if (!ambient) return [];
+  const bits = [`天氣是${ambient.weatherType}`];
+  if (typeof ambient.ambientTempC === 'number') bits.push(`氣溫${ambient.ambientTempC}度`);
+  if (ambient.feltCondition) bits.push(ambient.feltCondition);
+  if (ambient.surfaceCondition) bits.push(ambient.surfaceCondition);
+  return ['', '## 今天', '', `${ambient.daypart}。${bits.join('，')}。`];
+}
+
+/** What the venue sells today (§6). Engine-authored, stated once. */
+function menuLines(catalogue, venueName) {
+  if (!catalogue?.length) return [];
+  return ['', `## ${venueName ?? '店'}今天有的東西`, '',
+    catalogue.map((i) => `${i.name}（${i.price}円）`).join('、') + '。',
+    '', '這就是全部。要點的時候從 `choices` 裡挑 `order:` 開頭的那些。'];
+}
+
+/**
  * The whole prefix. `selfText` is the character's own self.md, passed in rather
  * than read, so this function has no way to open bible.md by mistake.
+ *
+ * `ambient` and `catalogue` are the once-per-session bootstrap. In production
+ * they belong to a cached session prefix; the manual harness has no session
+ * continuity and resends them, which is a property of the test instrument and
+ * not a redefinition of the contract (§4).
  */
-export function buildPrefix(character, selfText) {
+export function buildPrefix(character, selfText, { ambient = null, catalogue = null,
+                                                   venueName = null } = {}) {
   const parts = [strip(selfText), '', '## 我說話的樣子', ''];
   const budget = speechBudget(character.social);
   parts.push(...personality(character.social).map((s) => `- ${s}`));
@@ -157,6 +201,9 @@ export function buildPrefix(character, selfText) {
       character.interests.join('、') + '。這些是你自然會留意、也聊得起來的東西，'
       + '不是每次都要講到的題目。');
   }
+  parts.push('', COMMON_SENSE);
+  parts.push(...ambientLines(ambient));
+  parts.push(...menuLines(catalogue, venueName));
   parts.push('', CONTRACT.replace('%BUDGET%', String(budget)));
   return parts.join('\n');
 }
