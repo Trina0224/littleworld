@@ -114,6 +114,60 @@ const pick = (o, prefix) => o.menu.find((m) => m.startsWith(prefix)) ?? null;
   void ground;
 }
 
+// --- one seed is one afternoon --------------------------------------------
+// The weather is in the fact stream, so a redrawn one is a different history.
+// Asserted directly rather than left to the determinism run to notice, because
+// four weathers means a coin flip agrees a quarter of the time.
+{
+  const a = createAmbient({ seed: 3060, tick: 0, log: { fact() {} } }).state;
+  const b = createAmbient({ seed: 3060, tick: 0, log: { fact() {} } }).state;
+  check(JSON.stringify(a) === JSON.stringify(b),
+    `one seed gave two afternoons: ${JSON.stringify(a)} / ${JSON.stringify(b)}`);
+  const others = [7, 19, 101, 404, 808, 1234]
+    .map((seed) => JSON.stringify(createAmbient({ seed, tick: 0, log: { fact() {} } }).state));
+  check(new Set(others).size > 1, 'every seed is the same weather');
+  // A director may simply say what kind of day it is.
+  const told = createAmbient({ seed: 1, tick: 0, log: { fact() {} } }, {
+    config: { weather: { weatherType: '小雨', ambientTempC: 15, feltCondition: '肌寒い' } }
+  }).state;
+  check(told.weatherType === '小雨' && told.ambientTempC === 15,
+    'an authored day was overruled by the seed');
+  check(told.daylight === true, 'an authored day turned the lights off');
+}
+
+// --- the obligation becomes due, and the character is told in words ---------
+// Etiquette rather than a game mechanic: it must fire, it must reach the
+// character as something they notice, and it must not fire on somebody who has
+// only just sat down.
+{
+  const { world, zones, ambient, cafe, floors, loop } = build({ config: { graceTicks: 30 } });
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('shopkeeper-01', COUNTER);
+  world.spawn('man-01', NEAR_TABLE[1]);
+  loop.step();
+  check(cafe.visitOf('grandma-01')?.state === 'settling',
+    'somebody who had just sat down already owed an order');
+  check(!cafe.obligationFor('grandma-01'), 'she was told to order on arrival');
+
+  for (let i = 0; i < 200; i += 1) {
+    loop.step();
+    for (const o of floors.offers()) floors.decline(o.entityId);
+  }
+  check(world.log.facts.some((e) => e.type === 'venue_obligation' && e.state === 'order_due'
+    && e.customer === 'grandma-01'), 'the obligation never came due');
+  // Asserted on grounding rather than on a package, because whether the Floor
+  // happens to be awake when it comes due is a different question: what has to
+  // be true is that the next time she IS asked, she is told in words.
+  const ground = createGrounding(world, zones, { ambient: ambient.state, cafe });
+  check(ground.self('grandma-01').noticing,
+    'she was never told, in words, that she had been sitting a while');
+  check(!ground.self('shopkeeper-01').noticing,
+    'the woman running the shop was told to buy something from herself');
+  // The two boys and the dog are not customers (venue-interactions 1).
+  check(!world.log.facts.some((e) => e.type === 'venue_obligation'
+    && cafe.config.exempt.includes(e.customer)), 'a child was asked to buy something');
+}
+
 // --- 3, 4. the bootstrap is session-level; the turn carries grounding ------
 {
   const { world, ambient, cafe, floors, loop, memory } = build();
