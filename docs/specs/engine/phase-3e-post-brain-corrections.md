@@ -70,7 +70,23 @@ is one thing said. Each named person gets the cross-zone handoff of
 Cafe acts (`order`, `ask_shopkeeper:…`) remain 3F-A. What this settles is the
 shape an utterance may have, not the vocabulary.
 
-## 3. The floor yields to waiting
+## 3. ~~The floor yields to waiting~~ — SUPERSEDED
+
+> **Superseded by `phase-3e-brain-grounding-and-interject.md` §1 and §2.** The
+> lock this section fixed is real, and it was fixed in the wrong place: a
+> waiting score that can grow until it outranks a direct addressee turns
+> "somebody spoke to me" into a number other numbers may beat, and that is
+> conversational causality rather than a ranking term.
+>
+> What replaced it: ranking is lexicographic, so no score crosses a class
+> boundary at all; and the lock is broken at an **exchange boundary** instead —
+> when a direct-response opportunity has resolved and nobody on the floor is
+> still owed one, one person who was not addressed may be offered a way in, with
+> `why = interject`. Eligibility is how long they have sat there against how long
+> they can sit still, which is still theirs. The measurement below (the plateau,
+> and bigger being worse) described a mechanism that no longer exists.
+
+### The superseded text
 
 An addressee ranks first and every utterance restarts the round, so two people
 answering each other never yield. The first real run had 渡辺 sit through six
@@ -100,6 +116,8 @@ amplifies whoever was already talking instead of rescuing whoever was not.
 
 This supersedes `phase-3e-tuning.md` §4 only where that file records
 `speechLimit` as never binding. It never bound *for a scripted brain*.
+
+(§1 and §2 of this file stand unchanged. Only §3 above was replaced.)
 
 ---
 

@@ -434,7 +434,7 @@ coming survives into a recording.
 
 ### What the tests prove
 
-Eighty mutations, all biting. The fifteen most recent come from the first real
+Ninety-three mutations, all biting. The fifteen most recent come from the first real
 Brain run and the three changes it forced: the budget that is the character's
 own rather than the cast's, the sentence-boundary cut, a second act silently
 dropped, a second act that skips the menu, a second person named who is not owed
@@ -513,6 +513,62 @@ The station one first caught nothing: the test fired a made-up resource id, so
 the `resource()` lookup already refused it and the `kind` check was doing no
 work. It now reserves and occupies the real `cafe-counter` station and the real
 `counter-stool-1` beside it, and asserts the two behave differently.
+
+### What the second real Brain run changed
+
+`docs/specs/engine/phase-3e-brain-grounding-and-interject.md` is the binding
+correction; `docs/notes/pre-3f-brain-findings-2.md` is what the run that
+followed it found.
+
+**Being spoken to is not a score.** The waiting term added after the first run
+could grow until it outranked a direct addressee, which turns "somebody spoke to
+me" into a number other numbers may beat. It is conversational causality, so
+ranking is now **lexicographic**: class first, personality only within a class,
+and nothing `socialWeight` returns can cross a boundary. The waiting term is
+gone from it entirely.
+
+**The lock it was solving is broken at an exchange boundary instead.** When a
+direct-response opportunity resolves - answered or waved away - and nobody on
+this floor is still owed one, that is a boundary, and one person who was not
+addressed may be offered a way in with `why = interject`. Eligibility is how long
+they have sat there against how long they can sit still: 星さん five rounds, 澄子
+twenty, 渡辺 thirty. The floor of two rounds is deliberate - being quiet has to
+be the character's decision, not the infrastructure's.
+
+The boundary is read **before** the new utterance registers its own addressees,
+because the answer somebody has just given is not the address they are still
+owed. A line naming two people owes two answers, and the boundary does not open
+until both have had their turn.
+
+**A Brain knows where it is.** `grounding.js` supplies the `self` section: the
+zone by its human name, the posture the world actually holds (standing, sitting,
+walking), the current activity when there is one, a daypart, and the Floor's own
+reason for asking. It replaces the raw tick at the head of the package - an
+integer tick is arithmetic a Brain can only misread as a clock. Observer truth
+and no omniscience; the near table rather than a chair number.
+
+It worked on the sentence that produced the finding. The first run had 星さん
+assert that 辰's sleeve was frayed - a visible condition nothing had given her.
+The second run turned the same instinct into an offer grounded in her own sheet:
+「袖のほつれでも何でもね、わたし縫いますから」.
+
+**A memory says who it is about.** Episodes carry their subject through the same
+observer-safe fallback as a transcript line - a learned label, else a current ref
+and appearance, else the episode is dropped. Shown as nobody was the defect, so
+it is not the fix.
+
+**Two children know the neighbour who feeds them.** A cast-wide audit of every
+`self.md` against `knows` found exactly two clear contradictions, both the same
+one. `knows-audit.test.js` keeps it standing rather than a one-off reading: each
+required edge carries the sentence that requires it, so rewriting the prose fails
+the test instead of quietly making the table a lie. 渡辺's empty `knows` is
+recorded as deliberate, and the kinship distinction - 辰 is not her grandson - is
+held as data.
+
+Thirteen mutations, all biting, including two that found real bugs: the boundary
+opening while a second person named in the same breath was still owed an answer,
+and an episode-rendering case that was passing vacuously because the observer was
+alone and never asked again.
 
 ### What the first real Brain changed
 

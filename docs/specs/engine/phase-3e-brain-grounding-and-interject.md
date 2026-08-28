@@ -1,6 +1,9 @@
 # Phase 3E — Brain grounding and interject correction
 
-**Status: binding correction before Phase 3F**  
+**Status: binding correction before Phase 3F — IMPLEMENTED 2026-08-27**  
+**Result:** `docs/notes/pre-3f-brain-findings-2.md` (§7's second run),
+`docs/notes/second-real-brain-run.md` (the transcript). §6's ten cases live in
+`src/engine/interject.test.js`, `grounding.test.js` and `knows-audit.test.js`.  
 **Created:** 2026-08-27 (`America/Los_Angeles`)  
 **Applies after:** `phase-3e-owner-latency-correction.md`, `phase-3e-post-brain-corrections.md`  
 **Wins where it conflicts with:** any waiting/ranking rule that allows an unrelated waiting participant to displace a directly addressed listener's immediate response opportunity.
