@@ -1,5 +1,7 @@
 # Phase 3E — Brain grounding and interject correction
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status: binding correction before Phase 3F — IMPLEMENTED 2026-08-27**  
 **Result:** `docs/notes/pre-3f-brain-findings-2.md` (§7's second run),
 `docs/notes/second-real-brain-run.md` (the transcript). §6's ten cases live in

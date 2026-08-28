@@ -1,5 +1,7 @@
 # Phase 3E — Conversation Sessions and Speech Transport
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status:** implementation contract / design baseline  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
 **Updated:** 2026-08-26 — tick position (§2.1), transcript source (§9.0), the 3D
@@ -824,7 +826,7 @@ Do not connect a real provider merely to make the conversation look alive during
 
 ## 20. Handoff gate
 
-When Phase 3E passes its acceptance tests, the next required implementation milestone is still **3F-A Cafe / Venue Runtime** before any real provider integration.
+When Phase 3E passes its acceptance tests, the next required implementation milestone is **Phase 3F** before any real provider integration. It is done: `phase-3f.md`.
 
 The sequence remains:
 
@@ -834,8 +836,7 @@ The sequence remains:
 3C  perception                           complete
 3D  private memory                       complete
 3E  conversation + speech transport      CURRENT
-3F-A cafe / venue runtime                required next
-3F-B scheduler + mock Brain integration
+3F   unified world runtime               DONE, phase-3f.md
 3G  real provider integration
 ```
 

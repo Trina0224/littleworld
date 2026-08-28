@@ -1,5 +1,7 @@
 # Cafe Menu — circa 1960 Fukushima
 
+**Implemented 2026-08-28** as `docs/specs/world/cafe-menu.json` (the data) and `src/engine/cafe.js` (the runtime), under `phase-3f.md`. Prep ticks in the JSON are already at `serviceTimeScale` 0.1, and the nerikiri shaping steps are the deterministic work §3 asks for rather than a shelf.
+
 **Status:** menu/runtime design baseline  
 **Created:** 2026-08-24 (`America/Los_Angeles`)  
 **Updated:** 2026-08-25 — simulation/replay timing boundary clarified  

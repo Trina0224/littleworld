@@ -1,5 +1,7 @@
 # Phase 3E — Completion Record
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status: COMPLETE, with owner latency correction applied 2026-08-26**
 
 Phase 3E is the conversation/social-runtime slice of the world engine. This file is the final completion note; binding behavior is defined by `phase-3e-conversation.md`, `phase-3e-implementation-structure.md`, `phase-3e-floor-clarifications.md`, `phase-3e-pre-floor-corrections.md`, and the later owner correction `phase-3e-owner-latency-correction.md`.
@@ -122,8 +124,8 @@ World / Perception / Memory
           ↓
 optional pre-3F manual Brain demo    interface validation only
           ↓
-3F-A Cafe / Venue Runtime            NEXT DOMAIN RUNTIME
-3F-B Brain Scheduler                 NEXT ORCHESTRATION LAYER
+3F   Unified world runtime            DONE          phase-3f.md
+     (cafe + ambient + Brain runtime, one phase, no A/B)
           ↓
 3G Real LLM providers
 ```

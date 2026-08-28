@@ -1,5 +1,7 @@
 # Phase 3E — Offered-Floor Clarifications
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status:** binding clarification / implementation gate  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
 **Applies to:** `phase-3e-conversation.md`, `phase-3e-implementation-structure.md`, `social-personality.md`  

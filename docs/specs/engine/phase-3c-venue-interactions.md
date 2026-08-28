@@ -1,5 +1,7 @@
 # Phase 3C Companion — Venue Interaction Rules
 
+**Superseded on sequencing and ownership by `phase-3f.md`** (2026-08-28), which merges what this file calls 3F-A and 3F-B into one Phase 3F. The venue rules below are still binding; only the phase labels changed.
+
 **Status:** design notes / implementation contract supplement  
 **Created:** 2026-08-23 22:58 PT (`America/Los_Angeles`)  
 **Updated:** 2026-08-24 00:12 PT (`America/Los_Angeles`) — cafe runtime promoted to mandatory pre-provider milestone  
@@ -373,7 +375,7 @@ Required order:
      ↓
 3E   conversation sessions + speech transport
      ↓
-3F-A CAFE / VENUE RUNTIME — REQUIRED, DO NOT SKIP
+3F   UNIFIED WORLD RUNTIME — one phase, see phase-3f.md
      - venue obligation / grace / refresh_due
      - structured social_action schema
      - deterministic semantic router
@@ -384,14 +386,15 @@ Required order:
      - deterministic preparation / serving / clearing
      - deterministic routine shopkeeper movement
      ↓
-3F-B scheduler + mock Brain integration
+     (what this file called 3F-B is part of the same 3F)
      ↓
 3G   REAL LLM PROVIDER INTEGRATION
 ```
 
 ### 8.1 Gate
 
-**3G is blocked until 3F-A has an automated scripted/mock acceptance test.**
+**3G is blocked until 3F has an automated scripted/mock acceptance test.**
+That test is `src/engine/run-3f.js` and it passes; the gate below is met.
 
 The minimum Cafe Runtime acceptance test must demonstrate, without any real LLM:
 
@@ -409,7 +412,11 @@ customer enters/uses cafe seating
 
 A second path must demonstrate that an open-ended action such as `ask_shopkeeper:recommendation` is **routed for a future shopkeeper Brain wakeup rather than treated as deterministic commerce**.
 
-Anyone resuming this project — project owner, ChatGPT, Claude, or another implementation agent — should treat this section as the handoff reminder. If 3E is complete and the next proposed task is direct real-provider integration, **stop and implement 3F-A first**.
+Anyone resuming this project — project owner, ChatGPT, Claude, or another implementation agent — should treat this section as the handoff reminder. If 3E is complete and the next proposed task is direct real-provider integration, **stop and implement 3F first**.
+
+> **The A/B split is retired.** `phase-3f.md` supersedes it: there is one Phase
+> 3F, and it is implemented. Do not reintroduce `3F-A`, `3F-B` or further
+> alphabetic sub-phases.
 
 ## 9. Future structured-action examples
 

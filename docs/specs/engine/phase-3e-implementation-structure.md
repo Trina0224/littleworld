@@ -1,5 +1,7 @@
 # Phase 3E — Implementation Structure
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Further corrected by `phase-3e-post-brain-corrections.md`** (2026-08-27), which wins on speech length, how many acts one utterance may carry, and whether a direct addressee's priority ever yields.
 
 **Status:** binding supplement before implementation

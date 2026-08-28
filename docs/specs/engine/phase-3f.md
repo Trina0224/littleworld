@@ -1,6 +1,9 @@
 # Phase 3F — Unified World Runtime, Brain Runtime, and Ambient Bootstrap
 
-**Status:** binding implementation contract  
+**Status:** binding implementation contract — **IMPLEMENTED 2026-08-28**  
+**Result:** `src/engine/run-3f.js` is §12 cases 1-14; case 15 is
+`docs/notes/third-real-brain-run.md`. New engine files: `ambient.js`, `cafe.js`,
+`brain-runtime.js`, and the menu as data in `docs/specs/world/cafe-menu.json`.  
 **Created:** 2026-08-27 (`America/Los_Angeles`)  
 **Supersedes:** the project-level split between `3F-A` and `3F-B`. From this point forward there is one Phase 3F. Historical documents may still use the old labels; this file wins on sequencing and ownership.  
 **Consumes:** `phase-3c-venue-interactions.md`, `cafe-menu-1960.md`, all binding Phase 3E corrections, `simulation-replay-architecture.md`.

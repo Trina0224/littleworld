@@ -1,5 +1,7 @@
 # LittleWorld — Simulation and Replay Architecture
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status:** binding project architecture decision  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
 **Supersedes for pacing/presentation:** the earlier assumption that LIVE simulation is the primary audience-facing experience in `world-engine-2.5.md` §8/§16 and the unresolved day-length discussion in `pacing-and-latency.md`.
@@ -285,8 +287,7 @@ This architectural split **does not change the Simulation phase order**:
 3C   perception                    complete
 3D   private memory                next
 3E   conversation + speech
-3F-A cafe / venue runtime          required before real provider integration
-3F-B scheduler + mock Brain
+3F   unified world runtime         DONE, phase-3f.md
 3G   real provider integration
 ```
 

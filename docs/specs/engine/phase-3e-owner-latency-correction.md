@@ -1,5 +1,7 @@
 # Phase 3E — Owner correction: latency, sequential offers, and overheard entry
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status:** binding correction  
 **Created:** 2026-08-26 (`America/Los_Angeles`)  
 **Supersedes:** the parallel K>1 offer/`floor_lost` latency optimization and simulation-tick offer expiry in `phase-3e-implementation-structure.md` §3.2/§3.4, the matching parts of `phase-3e-floor-clarifications.md` §3/§5/§7.6/§8.2/§8.4, and any test or README text that treats provider latency as a reason for a conversational offer to expire.

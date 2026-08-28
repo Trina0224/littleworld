@@ -1,5 +1,7 @@
 # Social Personality Vector — conversational behavior
 
+**Phase labels superseded by `phase-3f.md`** (2026-08-28): what this file calls `3F-A` and `3F-B` are one implemented Phase 3F. Ownership statements below are still accurate; only the phase names changed, and nothing after 3E is 'next' any more.
+
 **Status:** implementation contract / character-data baseline  
 **Created:** 2026-08-25 (`America/Los_Angeles`)  
 **Updated:** 2026-08-25 — offered-floor ranking ownership clarified  
