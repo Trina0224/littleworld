@@ -265,12 +265,22 @@ export function buildContext(perception, memory, observerId, floors = null) {
     })
     .filter(Boolean);
   if (floors) {
-    ctx.forModel.conversation = floors.utterancesFor(observerId)
-      .map((u) => ({
-        said: u.text,
-        speaker: name(u.speaker),
-        ...(u.addressed.length ? { to: u.addressed.map(name) } : {})
-      }));
+    const said = floors.utterancesFor(observerId);
+    ctx.forModel.conversation = said.map((u) => ({
+      said: u.text,
+      speaker: name(u.speaker),
+      ...(u.addressed.length ? { to: u.addressed.map(name) } : {})
+    }));
+    // A line in the observer's own conversation does not need to be handed to
+    // them a second time as something they heard. The second real Brain run gave
+    // one boy six utterances in `recentPerceivedEvents` and the same six in
+    // `conversation` - the largest duplication in the package, and nothing a
+    // reader gains from. Speech from another room is NOT the observer's
+    // conversation, so it stays where it is (phase-3f 10.1), and non-speech
+    // events stay regardless.
+    const mine = new Set(said.map((u) => u.text));
+    ctx.forModel.recentPerceivedEvents = ctx.forModel.recentPerceivedEvents
+      .filter((e) => !(e.said !== undefined && mine.has(e.said)));
   }
   return ctx;
 

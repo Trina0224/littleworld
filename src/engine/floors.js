@@ -21,6 +21,11 @@ export const ACTS = {
   call_over: { target: true, scope: 'normal', animal: true },
   praise: { target: true, scope: 'normal', animal: true },
   shoo: { target: true, scope: 'normal', animal: true },
+  // Ordering is speech that also does something. The item id rides in the ref
+  // slot and is resolved against the venue rather than against perception, and
+  // the utterance is aimed at whoever is behind the counter - so she hears it as
+  // a direct address and the transcript reads like somebody ordering.
+  order: { target: false, scope: 'normal', venue: true },
   nothing: { target: false, scope: null, silent: true }
 };
 
@@ -77,7 +82,7 @@ const ORDINARY = 1000;
 
 export function createFloors(world, zones, perception, {
   minds, config = {}, weigh = null, makeContext = null, animals = null,
-  budgetFor = null, patienceFor = null, ground = null
+  budgetFor = null, patienceFor = null, ground = null, cafe = null
 } = {}) {
   if (minds === undefined) {
     throw new Error('createFloors needs an explicit `minds` set: who can hold a floor');
@@ -441,6 +446,10 @@ export function createFloors(world, zones, perception, {
       }
     }
     if (anyHere) menu.push('address_group');
+    // Engine-authored, and only what the venue actually sells today. An item
+    // that is not on the menu has nowhere to enter, which is why a Brain cannot
+    // order a curry and then learn the menu from the rejection (phase-3f 6).
+    if (cafe) menu.push(...cafe.ordersFor(entityId));
     return menu;
   }
 
@@ -504,6 +513,16 @@ export function createFloors(world, zones, perception, {
     const committed = world.log.facts[i];
 
     for (const a of said.acts) {
+      // The order is placed AFTER the words are committed, because the words are
+      // what she heard. If the venue refuses it, the sentence still happened -
+      // a refusal is an answer she gives, not a line nobody said.
+      if (a.item && cafe) {
+        const placed = cafe.order(id, a.item);
+        if (placed.refused) {
+          world.log.note(world.tick, 'order_refused',
+            { agent: id, item: a.item, reason: placed.refused });
+        }
+      }
       if (a.animal) animals.respond(id, a.target, a.act, { scope: said.scope });
       if (a.asks && a.target && committed.heardBy.includes(a.target)) {
         f.openQuestion = { asker: id, asked: a.target, sinceTick: world.tick };
@@ -630,6 +649,13 @@ export function createFloors(world, zones, perception, {
       }
 
       for (const a of parsed) {
+        if (a.venue) {
+          // The ref is a menu id. It was on the menu when the offer was built;
+          // whether it still is, is the venue's answer and not a guess.
+          a.item = a.ref;
+          a.target = cafe?.attendant ?? null;
+          continue;
+        }
         a.target = a.ref ? perception.resolve(f.epochs.get(entityId), a.ref) : null;
         if (a.target === undefined) a.target = null;
         if (ACTS[a.name].target && !a.target) return refuse(entityId, 'a stale ref', shown);
@@ -651,7 +677,8 @@ export function createFloors(world, zones, perception, {
       }
       f.claims.set(entityId, {
         acts: parsed.map((a) => ({
-          act: a.name, target: a.target, asks: !!a.asks, animal: !!a.animal
+          act: a.name, target: a.target, asks: !!a.asks, animal: !!a.animal,
+          ...(a.venue ? { item: a.item } : {})
         })),
         scope: parsed[0].scope,   // all equal: the volume check above saw to it
         speak

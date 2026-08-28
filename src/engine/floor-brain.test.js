@@ -425,7 +425,7 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
 // Each needs three distinct people to test at all, which is why they live here
 // rather than beside the dog.
 {
-  const { world, floors, loop } = setup();
+  const { world, memory, floors, loop } = setup();
   world.spawn('grandma-01', NEAR_TABLE[0]);
   world.spawn('brother-01', NEAR_TABLE[1]);
   world.spawn('man-01', [222, 240]);
@@ -485,38 +485,32 @@ const pickFor = (o, act) => o?.menu.find((m) => m.startsWith(`${act}:`)) ?? null
   // BOTH people were spoken to, so both are owed a turn and both heard it as
   // addressed to them - not just whoever the speaker happened to name first.
   const addressed = new Set();
-  const heardIt = new Set();
   const toldSo = new Set();
-  let ownRecord = 0;
   for (let i = 0; i < 14; i += 1) {
     for (const o of step(loop, floors)) {
       const fm = o.context.forModel;
       if (o.why === 'addressed') addressed.add(o.entityId);
-      if (fm.recentPerceivedEvents.some((e) => e.kind === 'direct_address')) {
-        heardIt.add(o.entityId);
-      }
       if (fm.conversation?.some((u) => u.said === 'ねえ、それでね' && u.to?.includes('you'))) {
         toldSo.add(o.entityId);
-      }
-      if (o.entityId === tried.speaker) {
-        ownRecord = Math.max(ownRecord,
-          fm.recentPerceivedEvents.filter((e) => e.kind === 'own_speech_directed').length);
       }
       floors.decline(o.entityId);
     }
   }
-  check(ownRecord === 2,
-    `the speaker recorded ${ownRecord} of the two people they had just addressed`);
   for (const who of tried.targets) {
     check(addressed.has(who), `${who} was spoken to and was never offered an answer`);
     check(toldSo.has(who), `${who} read the line as though it were not aimed at them`);
   }
-  // The person named SECOND heard it as a direct address, not as somebody
-  // else's conversation. (The one named first is often offered the floor in the
-  // same tick the line is said, before perception has seen it - their copy
-  // arrives through the transcript instead, which the check above covers.)
-  check(heardIt.has(tried.targets[1]),
-    'only the first person named heard it as addressed to them');
+  // Both halves of "we have spoken" landed, for BOTH people named - the
+  // speaker's own record and each listener's. This used to be asserted on the
+  // perceived events themselves; phase-3f 10.1 stops handing an observer their
+  // own conversation twice, so the check moved to what those events feed, which
+  // is the stronger property anyway.
+  for (const who of tried.targets) {
+    check(memory.recall(tried.speaker, who)?.spokenWith > 0,
+      `the speaker did not record having spoken to ${who}`);
+    check(memory.recall(who, tried.speaker)?.spokenWith > 0,
+      `${who} did not record having been spoken to`);
+  }
 }
 
 // --- two shouts in one breath, into two different rooms --------------------

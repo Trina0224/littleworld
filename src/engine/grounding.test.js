@@ -117,15 +117,28 @@ const flat = (o) => JSON.stringify(o.context.forModel);
     `she got up and the package left her sitting: ${postures}`);
 }
 
-// --- a daypart, when the world counts days ----------------------------------
+// --- the daypart is authored, and no amount of running changes it -----------
+// LittleWorld has no day/night cycle (phase-3f.md 1). A daypart computed from
+// tick fraction is a clock the world does not have, and a long run would tell a
+// character that darkness had arrived.
 {
   const { world, ground } = setup({ ticksPerDay: 100 });
   world.spawn('grandma-01', NEAR_TABLE[0]);
   const seen = new Set();
-  for (let i = 0; i < 100; i += 1) { world.advance(); seen.add(ground.self('grandma-01').time); }
-  check(seen.size > 1, `a whole day passed and it was always ${[...seen]}`);
+  for (let i = 0; i < 500; i += 1) { world.advance(); seen.add(ground.self('grandma-01').time); }
+  check(seen.size === 1, `five days passed and the daypart moved: ${[...seen]}`);
   check([...seen].every((t) => !/\d/.test(String(t))),
     `a daypart came out as arithmetic: ${[...seen]}`);
+  check(world.day > 1, `the test premise is wrong: ${world.day} days ran`);
+}
+
+// --- and the run's own ambient state is where it comes from -----------------
+{
+  const { world, zones } = setup();
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  const ground = createGrounding(world, zones, { ambient: { daypart: '傍晚前' } });
+  check(ground.self('grandma-01').time === '傍晚前',
+    `the authored daypart was ignored: ${ground.self('grandma-01').time}`);
 }
 
 // --- 7. grounding leaks no id and no unlearned name -------------------------

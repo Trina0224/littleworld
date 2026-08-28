@@ -26,25 +26,21 @@ export const REASONS = {
   open_floor: '這裡現在沒有人在說話。你可以開口，也可以不開口。'
 };
 
-// A day the world does not count is still an afternoon: the scene is authored
-// as one. Configuration rather than invention - the alternative is a Brain that
-// does not know whether it is morning, which is exactly the hole §3 is about.
-export const DEFAULTS = {
-  daypart: '下午',
-  dayparts: ['清晨', '上午', '下午', '傍晚', '夜裡']
-};
+// The daypart is AUTHORED, never computed. LittleWorld has no day/night cycle
+// in the MVP: `ticksPerDay` is attendance bookkeeping, not the sun, so deriving
+// morning/evening/night from tick fraction would be a clock the world does not
+// have - and a long run would tell a character darkness had arrived.
+// phase-3f.md §1 and §5.
+export const DEFAULTS = { daypart: '午後' };
 
-export function createGrounding(world, zones, { config = {} } = {}) {
+/**
+ * @param ambient the run's ambient state (ambient.js), whose authored daypart
+ *                wins over the local default. Optional so the low-level tests
+ *                can build grounding without a whole world bootstrap.
+ */
+export function createGrounding(world, zones, { config = {}, ambient = null, cafe = null } = {}) {
   const cfg = { ...DEFAULTS, ...config };
-
-  /** Morning or afternoon, never a clock time built out of a tick. */
-  function daypart() {
-    const per = world.clock?.ticksPerDay ?? 0;
-    if (!per) return cfg.daypart;
-    const through = (world.tick % per) / per;
-    const i = Math.min(cfg.dayparts.length - 1, Math.floor(through * cfg.dayparts.length));
-    return cfg.dayparts[i];
-  }
+  const daypart = () => ambient?.daypart ?? cfg.daypart;
 
   function seatUnder(agent) {
     if (!agent.holding) return null;
@@ -84,6 +80,11 @@ export function createGrounding(world, zones, { config = {} } = {}) {
       // already the posture.
       if (held && held.kind !== SEAT) self.at = zones.label(zones.at(held.at[0], held.at[1]));
       if (activity) self.doing = activity;
+      // Cafe etiquette as something the character notices, not as a rule fired
+      // at them: 「you have been sitting a while」 is a fact about this body in
+      // this room, which is what grounding is for.
+      const owes = cafe?.obligationFor(entityId);
+      if (owes) self.noticing = owes;
       if (why) self.askedBecause = REASONS[why] ?? why;
       return self;
     }

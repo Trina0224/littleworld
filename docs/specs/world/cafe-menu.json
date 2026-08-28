@@ -1,0 +1,304 @@
+{
+  "source": "docs/specs/engine/cafe-menu-1960.md",
+  "venue": "cafe-counter",
+  "venueName": "喫茶ひだまり",
+  "serviceTimeScale": 0.1,
+  "_note": "prepTicks are already at serviceTimeScale 0.1. The scale is carried so a run can be sped up or slowed down without rewriting the menu.",
+  "items": [
+    {
+      "id": "coffee_house",
+      "name": "珈琲（ハウスブレンド）",
+      "price": 50,
+      "category": "coffee",
+      "prepTicks": 120
+    },
+    {
+      "id": "coffee_mocha",
+      "name": "モカ",
+      "price": 55,
+      "category": "coffee",
+      "prepTicks": 120
+    },
+    {
+      "id": "coffee_kilimanjaro",
+      "name": "キリマンジャロ",
+      "price": 60,
+      "category": "coffee",
+      "prepTicks": 120
+    },
+    {
+      "id": "coffee_blue_mountain",
+      "name": "ブルーマウンテン",
+      "price": 70,
+      "category": "coffee",
+      "prepTicks": 120
+    },
+    {
+      "id": "coffee_milk",
+      "name": "ミルク珈琲",
+      "price": 55,
+      "category": "coffee",
+      "prepTicks": 150
+    },
+    {
+      "id": "tea_ceylon",
+      "name": "セイロン紅茶",
+      "price": 40,
+      "category": "black_tea",
+      "prepTicks": 180
+    },
+    {
+      "id": "tea_darjeeling",
+      "name": "ダージリン",
+      "price": 45,
+      "category": "black_tea",
+      "prepTicks": 180
+    },
+    {
+      "id": "tea_assam",
+      "name": "アッサム",
+      "price": 45,
+      "category": "black_tea",
+      "prepTicks": 210
+    },
+    {
+      "id": "tea_milk",
+      "name": "ミルク紅茶",
+      "price": 45,
+      "category": "black_tea",
+      "prepTicks": 210
+    },
+    {
+      "id": "tea_lemon",
+      "name": "レモン紅茶",
+      "price": 45,
+      "category": "black_tea",
+      "prepTicks": 180
+    },
+    {
+      "id": "tea_sencha",
+      "name": "煎茶",
+      "price": 25,
+      "category": "japanese_tea",
+      "prepTicks": 90
+    },
+    {
+      "id": "tea_hojicha",
+      "name": "ほうじ茶",
+      "price": 20,
+      "category": "japanese_tea",
+      "prepTicks": 90
+    },
+    {
+      "id": "tea_matcha",
+      "name": "抹茶",
+      "price": 40,
+      "category": "japanese_tea",
+      "prepTicks": 90
+    },
+    {
+      "id": "wagashi_usukawa_manju",
+      "name": "薄皮饅頭",
+      "price": 20,
+      "category": "wagashi",
+      "prepTicks": 30
+    },
+    {
+      "id": "wagashi_yubeshi",
+      "name": "家伝ゆべし",
+      "price": 25,
+      "category": "wagashi",
+      "prepTicks": 30
+    },
+    {
+      "id": "wagashi_awa_manju",
+      "name": "あわ饅頭",
+      "price": 20,
+      "category": "wagashi",
+      "prepTicks": 30
+    },
+    {
+      "id": "wagashi_yokan",
+      "name": "羊羹",
+      "price": 25,
+      "category": "wagashi",
+      "prepTicks": 45
+    },
+    {
+      "id": "wagashi_monaka",
+      "name": "最中",
+      "price": 20,
+      "category": "wagashi",
+      "prepTicks": 30
+    },
+    {
+      "id": "wagashi_dorayaki",
+      "name": "どら焼",
+      "price": 25,
+      "category": "wagashi",
+      "prepTicks": 30
+    },
+    {
+      "id": "nerikiri_ume",
+      "name": "練切・梅",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 150,
+      "complexity": "simple",
+      "steps": [
+        "生地を取る",
+        "餡を包む",
+        "形を作る",
+        "へらで仕上げる",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "nerikiri_kiku",
+      "name": "練切・菊",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 150,
+      "complexity": "simple",
+      "steps": [
+        "生地を取る",
+        "餡を包む",
+        "形を作る",
+        "へらで仕上げる",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "nerikiri_sakura",
+      "name": "練切・桜",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 210,
+      "complexity": "medium",
+      "steps": [
+        "生地を取る",
+        "色を合わせる",
+        "餡を包む",
+        "形を作る",
+        "三角べらで筋を入れる",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "nerikiri_asagao",
+      "name": "練切・朝顔",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 210,
+      "complexity": "medium",
+      "steps": [
+        "生地を取る",
+        "色を合わせる",
+        "餡を包む",
+        "形を作る",
+        "三角べらで筋を入れる",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "nerikiri_ajisai",
+      "name": "練切・紫陽花",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 270,
+      "complexity": "complex",
+      "steps": [
+        "生地を取る",
+        "色を合わせる",
+        "餡を包む",
+        "形を作る",
+        "細工べらで細部を作る",
+        "仕上げを整える",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "nerikiri_momiji",
+      "name": "練切・紅葉",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 270,
+      "complexity": "complex",
+      "steps": [
+        "生地を取る",
+        "色を合わせる",
+        "餡を包む",
+        "形を作る",
+        "細工べらで細部を作る",
+        "仕上げを整える",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "nerikiri_yuki",
+      "name": "練切・雪",
+      "price": 30,
+      "category": "nerikiri",
+      "prepTicks": 270,
+      "complexity": "complex",
+      "steps": [
+        "生地を取る",
+        "色を合わせる",
+        "餡を包む",
+        "形を作る",
+        "細工べらで細部を作る",
+        "仕上げを整える",
+        "盛りつける"
+      ]
+    },
+    {
+      "id": "western_castella",
+      "name": "カステラ",
+      "price": 30,
+      "category": "western",
+      "prepTicks": 30
+    },
+    {
+      "id": "western_shortcake",
+      "name": "ショートケーキ",
+      "price": 40,
+      "category": "western",
+      "prepTicks": 45
+    },
+    {
+      "id": "western_choux",
+      "name": "シュークリーム",
+      "price": 35,
+      "category": "western",
+      "prepTicks": 30
+    },
+    {
+      "id": "food_toast",
+      "name": "トースト",
+      "price": 35,
+      "category": "food",
+      "prepTicks": 180
+    },
+    {
+      "id": "drink_milk",
+      "name": "牛乳",
+      "price": 25,
+      "category": "cold_drink",
+      "prepTicks": 20
+    },
+    {
+      "id": "drink_calpis",
+      "name": "カルピス",
+      "price": 30,
+      "category": "cold_drink",
+      "prepTicks": 45
+    },
+    {
+      "id": "drink_cider",
+      "name": "サイダー",
+      "price": 35,
+      "category": "cold_drink",
+      "prepTicks": 20
+    }
+  ]
+}
