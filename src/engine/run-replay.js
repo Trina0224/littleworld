@@ -190,8 +190,37 @@ check(rec.audit === undefined, 'the private stream was written out anyway');
   var exactFrames = frames;
 }
 
-// --- 3. the audience clock is not the tick counter -------------------------
+// --- every beat says where it came from -------------------------------------
+// Provenance is what lets §5 be checked instead of asked for. A beat with no
+// source is a beat an editor could claim anything about.
 const story = extractStory(rec);
+for (const b of story.beats) {
+  check(Array.isArray(b.source) && b.source.length,
+    `a ${b.kind} beat cites no fact`);
+  for (const i of b.source ?? []) {
+    check(Number.isInteger(i) && rec.facts[i], `a ${b.kind} beat cites fact ${i}`);
+  }
+}
+{
+  // One walk, not a start and an end: the beat has to know it arrived, where,
+  // and cite both halves.
+  const walk = story.beats.find((b) => b.kind === 'movement');
+  check(walk?.arrived === true, 'a walk beat never learned that it arrived');
+  check(walk.source.length === 2, `a walk cites ${walk.source.length} facts`);
+  check(rec.facts[walk.source[0]].type === 'move_started'
+     && rec.facts[walk.source[1]].type === 'move_completed',
+    'a walk cites something other than its own two facts');
+  check(walk.to && walk.to[0] === rec.facts[walk.source[1]].at[0],
+    'the walk beat does not end where the fact says it ended');
+  // Same for the order: one span, citing every fact it is made of.
+  const order = story.beats.find((b) => b.kind === 'order');
+  check(order.source.length >= 5,
+    `an order span cites ${order.source.length} facts of its own lifecycle`);
+  check(order.servedT != null && order.clearedT != null,
+    'the order span never joined up to its serving and clearing');
+}
+
+// --- 3. the audience clock is not the tick counter -------------------------
 const timeline = buildTimeline(story);
 check(timeline.durationMs > 0, 'the timeline has no duration');
 check(timeline.durationMs !== rec.lastTick * rec.tickDurationMs,
@@ -265,6 +294,14 @@ check(timeline.durationMs < rec.lastTick * rec.tickDurationMs,
   check(shownMs > 0, 'the whole order happened in an instant');
   check(order.readyMs <= order.servedMs, 'it was served before it was ready');
   check(order.startedMs <= order.readyMs, 'it was ready before anyone started making it');
+  // The making itself has to take time on screen. Compressing it to nothing is
+  // how a cup of tea appears out of the air, which §3 says breaks causality
+  // even though the order of events is untouched.
+  const madeMs = order.readyMs - order.startedMs;
+  const madeTicks = ready.t - rec.facts.find((f) => f.type === 'preparation_started').t;
+  check(madeMs > 0, 'the tea was made in no time at all');
+  check(madeMs < madeTicks * rec.tickDurationMs,
+    `${madeMs}ms shown for ${madeTicks * rec.tickDurationMs}ms of steeping`);
 }
 
 // --- 8. subtitles get reading time, not tick lifetimes ---------------------
@@ -274,6 +311,13 @@ check(timeline.durationMs < rec.lastTick * rec.tickDurationMs,
     check(line.durationMs === readingMs(line.text),
       `a ${[...line.text].length}-character line got ${line.durationMs}ms`);
     check(line.durationMs >= 1200, `a line was on screen for ${line.durationMs}ms`);
+  }
+  // ...and a line waits for the one before it to be readable. Simulation can
+  // produce two utterances a tick apart; an audience cannot read them that way.
+  for (let i = 1; i < lines.length; i += 1) {
+    const gap = lines[i].startMs - lines[i - 1].startMs;
+    check(gap >= lines[i - 1].durationMs * 0.5,
+      `a line landed ${gap}ms after a ${lines[i - 1].durationMs}ms one`);
   }
   const long = lines.reduce((a, b) => ([...a.text].length > [...b.text].length ? a : b));
   const short = lines.reduce((a, b) => ([...a.text].length < [...b.text].length ? a : b));
