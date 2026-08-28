@@ -32,6 +32,11 @@ export const DEFAULTS = {
   capacity: 2,
   handlingTicks: 20,        // taking the order, plating, setting it down
   serveTicks: 40,           // carrying it over
+  // How long a cup sits before she comes and takes it away. Not decoration: an
+  // order that only clears when its customer leaves is an order that never
+  // clears for somebody who stays all afternoon, which a soak found as
+  // unbounded growth rather than as a wrong number.
+  clearTicks: 600,
   // Who is exempt. The two boys and the dog are not customers.
   exempt: ['brother-01', 'brother-02', 'dog-01']
 };
@@ -241,12 +246,18 @@ export function createCafe(world, zones, { menu, attendant, config = {} } = {}) 
       }
 
       // --- clearing up ------------------------------------------------------
+      // She collects the empty cup whether or not its customer is still sitting
+      // there. Somebody who leaves early is cleared at once; everyone else when
+      // they are plainly finished.
       for (const [id, o] of [...orders]) {
-        if (o.servedAt && world.tick >= o.servedAt + cfg.handlingTicks
-            && !world.present(o.customer)) {
-          orders.delete(id);
-          world.log.fact(world.tick, 'order_cleared', { order: id, item: o.item });
-        }
+        if (!o.servedAt) continue;
+        const gone = !world.present(o.customer);
+        const done = world.tick >= o.servedAt + (gone ? cfg.handlingTicks : cfg.clearTicks);
+        if (!done) continue;
+        orders.delete(id);
+        world.log.fact(world.tick, 'order_cleared', {
+          order: id, item: o.item, customer: o.customer, ...(gone ? { reason: 'left' } : {})
+        });
       }
     }
   };

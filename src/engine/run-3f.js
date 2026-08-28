@@ -540,6 +540,30 @@ function read2(id) {
   check(twice[0].stream === twice[1].stream, 'two runs of one seed diverged');
   check(twice[0].held === 0, `${twice[0].held} perception contexts were left held`);
   check(twice[0].stream.includes('order_served'), 'the test premise is wrong: nothing was served');
+  check(twice[0].orders === 0,
+    `${twice[0].orders} finished orders were still on the books at the end`);
+}
+
+// --- the cup is collected even from somebody who stays all afternoon -------
+// Found by a soak rather than by reading: clearing only when the customer left
+// meant an order placed by somebody who stays never cleared at all, which is
+// unbounded growth wearing the clothes of a plausible rule.
+{
+  const { world, cafe, loop } = build({ config: { clearTicks: 60 } });
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('shopkeeper-01', COUNTER);
+  world.spawn('man-01', NEAR_TABLE[1]);
+  loop.step();
+  cafe.order('grandma-01', 'tea_hojicha');
+  for (let i = 0; i < 400; i += 1) loop.step();
+  check(world.log.facts.some((e) => e.type === 'order_served'),
+    'the test premise is wrong: it was never served');
+  check(world.present('grandma-01'), 'the test premise is wrong: she left');
+  const cleared = world.log.facts.find((e) => e.type === 'order_cleared');
+  check(cleared, 'the cup was never collected from somebody who stayed');
+  check(cleared?.reason === undefined,
+    'it was recorded as having been cleared because she left');
+  check(cafe.orders().length === 0, 'the order is still on the books');
 }
 
 console.log('');
