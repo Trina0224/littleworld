@@ -29,21 +29,15 @@ export function speechBudget(traits, config = {}) {
 }
 
 /**
- * How hard it is for this person to sit through a conversation without being
- * asked. Not a fairness dial: it is what decides whether waiting ever becomes
- * enough to cut into an exchange between two other people.
+ * How hard it is for this person to sit through an exchange they are not part
+ * of. Not a fairness dial and NOT a ranking term: it decides only how long
+ * somebody waits before the Floor offers them a chance to come in at an
+ * exchange boundary. See phase-3e-brain-grounding-and-interject.md 2.
  */
-// Measured over five 3000-tick runs of the full cast. The sweep shows a plateau
-// rather than a peak: anywhere from 140 to 420 gives the same flattened voice
-// distribution (top3 0.57 against 0.62 with no waiting at all) and the same
-// loudest-quietest-character. 280 sits in the middle of it. Bigger is NOT
-// better - by 840 the room is measurably LESS fair than with no term at all
-// (top3 0.66), because the term scales with eagerness, so a large step
-// amplifies whoever was already talking instead of rescuing whoever was not.
-const WAIT_STEP = 280;
-const WAIT_CAP = 20;
+const PATIENCE_MIN = 2;
+const PATIENCE_SPAN = 28;
 
-function eagerness(traits) {
+export function eagerness(traits) {
   const e = 0.6 * mid(traits, 'initiative')
           + 0.4 * mid(traits, 'conversationDrive')
           - 0.5 * mid(traits, 'socialInhibition');
@@ -51,14 +45,23 @@ function eagerness(traits) {
 }
 
 /**
- * @param situation {{ withStranger, quietRounds, roundIndex, roundsWaited,
- *                     lastSpeakerWasMe }}
+ * Rounds this person can sit through an exchange before they would want in.
+ * 星さん 5, 澄子 20, 渡辺 30 - the asymmetry the cast is written for. The floor
+ * of 2 is deliberate: 2.2 says being quiet must be the character's decision,
+ * so even the most withdrawn character is eventually ASKED. What they do with
+ * the chance is theirs.
+ */
+export function interjectPatience(traits) {
+  return Math.round(PATIENCE_MIN + PATIENCE_SPAN * (1 - eagerness(traits)));
+}
+
+/**
+ * @param situation {{ withStranger, quietRounds, roundIndex, lastSpeakerWasMe }}
  * @returns a number, larger meaning more eligible for an open floor.
  */
 export function socialWeight(traits, situation = {}) {
   const {
-    withStranger = false, quietRounds = 0, roundIndex = 0, roundsWaited = 0,
-    lastSpeakerWasMe = false
+    withStranger = false, quietRounds = 0, roundIndex = 0, lastSpeakerWasMe = false
   } = situation;
 
   let w = 100 * mid(traits, 'initiative');
@@ -70,15 +73,11 @@ export function socialWeight(traits, situation = {}) {
 
   if (lastSpeakerWasMe) w -= 30 * (1 - mid(traits, 'persistence'));
 
-  // Rounds spent in this conversation without once being asked. Large enough to
-  // overtake a direct addressee eventually, and scaled by the character's own
-  // eagerness - so 星さん cuts in after a few exchanges, 澄子 after many, and
-  // 渡辺 not at all. The first real Brain run had a man sit through six rounds
-  // at the same table without being asked a single time, because two people
-  // answering each other restarts the round forever. Being asked and saying no
-  // is the design; never being asked is not silence, it is absence.
-  w += Math.min(roundsWaited, WAIT_CAP) * WAIT_STEP * eagerness(traits);
-
+  // No waiting term. It used to live here and was able to overtake a direct
+  // addressee, which is conversational causality rather than a score - see
+  // phase-3e-brain-grounding-and-interject.md 1.2. Waiting is now an
+  // eligibility signal for interjection at an exchange boundary, and nothing
+  // this function returns can move somebody across a class boundary.
   void roundIndex;
   return Math.round(w * 100) / 100;
 }
@@ -108,10 +107,9 @@ export function createSocialWeigher({ traitsFor, memory = null } = {}) {
       withStranger,
       quietRounds: situation.quietRounds ?? 0,
       roundIndex: situation.roundIndex ?? situation.round ?? 0,
-      roundsWaited: situation.roundsWaited ?? 0,
       lastSpeakerWasMe: !!situation.lastSpeakerWasMe
     });
   };
 }
 
-export { AXES, WAIT_STEP, WAIT_CAP, eagerness };
+export { AXES };

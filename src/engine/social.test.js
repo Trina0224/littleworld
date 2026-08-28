@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { socialWeight, createSocialWeigher, AXES } from './social.js';
+import { socialWeight, createSocialWeigher, interjectPatience, AXES } from './social.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -157,11 +157,11 @@ for (const id of CAST) {
     'traitsFor as a function gave a different answer than as a map');
 }
 
-// --- waiting is what breaks a two-person lock ------------------------------
-// The first real Brain run had a man sit through six rounds at the same table
-// without being asked once, because an addressee always ranks first and every
-// utterance restarts the round. Waiting has to be able to overtake that - and
-// how fast is the character's own business, not the engine's.
+// --- waiting decides patience, and cannot decide rank -----------------------
+// It used to be a term inside socialWeight, large enough to overtake a direct
+// addressee. That is conversational causality, not a score
+// (phase-3e-brain-grounding-and-interject.md 1.2), so waiting now only decides
+// how long somebody sits before the Floor offers them a way in.
 {
   const eager = {
     initiative: 0.90, conversationDrive: 0.95, socialInhibition: 0.05,
@@ -171,28 +171,43 @@ for (const id of CAST) {
     initiative: 0.10, conversationDrive: 0.15, socialInhibition: 0.90,
     talkativeness: 0.15, persistence: 0.20
   };
-  const gap = 2000;      // ORDINARY 1000 -> ADDRESSED 3000, floors.js
+  const gap = 500;      // the smallest distance between two classes in floors.js
 
-  const at = (traits, rounds) => socialWeight(traits, { roundsWaited: rounds });
-  check(at(eager, 0) < gap, 'somebody outranked a direct addressee on turn one');
-
-  let rounds = 0;
-  while (rounds < 40 && at(eager, rounds) < gap) rounds += 1;
-  check(rounds > 3 && rounds < 15,
-    `an eager character cut into an exchange after ${rounds} rounds`);
-
-  check(at(withdrawn, 40) < gap,
-    'waiting alone dragged the most withdrawn character to the front of the room');
-
-  // And it is monotone: sitting there longer never makes you less eligible.
-  for (let r = 1; r < 12; r += 1) {
-    if (at(eager, r) < at(eager, r - 1)) {
-      problems.push(`waiting ${r} rounds ranked below waiting ${r - 1}`);
-      break;
+  // Nothing this function returns may move anybody across a class boundary, in
+  // any situation, for any character in the cast.
+  for (const id of CAST) {
+    const traits = read(id).social;
+    if (!traits) continue;
+    for (const withStranger of [false, true]) {
+      for (const quietRounds of [0, 1, 3, 20]) {
+        for (const lastSpeakerWasMe of [false, true]) {
+          const w = socialWeight(traits, { withStranger, quietRounds, lastSpeakerWasMe });
+          if (Math.abs(w) >= gap) {
+            problems.push(`${id} scored ${w}, which can cross a class boundary`);
+          }
+        }
+      }
     }
   }
-}
+  // And the old term is gone rather than merely small: a situation carrying it
+  // must change nothing.
+  check(socialWeight(eager, { roundsWaited: 0 }) === socialWeight(eager, { roundsWaited: 40 }),
+    'waiting still moves the ranking score');
 
+  // Patience is the asymmetry instead. Ordered by eagerness, and finite for
+  // everybody: being quiet is the character's decision, being unaskable is not.
+  check(interjectPatience(eager) < interjectPatience(withdrawn),
+    'the most eager character waits as long as the most withdrawn one');
+  for (const id of CAST) {
+    const traits = read(id).social;
+    if (!traits) continue;
+    const p = interjectPatience(traits);
+    check(Number.isFinite(p) && p >= 1 && p <= 40,
+      `${id} waits ${p} rounds, which is not a number of rounds anybody waits`);
+  }
+  check(interjectPatience(eager) >= 2,
+    'the most eager character interjects on the very next boundary');
+}
 
 console.log('');
 if (problems.length) {
@@ -200,8 +215,10 @@ if (problems.length) {
 } else {
   console.log('OK  the vector is complete and in range; the weight is pure; 星さん');
   console.log('    outranks 渡辺 in every otherwise-equal situation and he stays');
-  console.log('    last however long the silence runs, though waiting alone can');
-  console.log('    lift an eager character over a direct addressee; 草野 is curious');
-  console.log('    without becoming a driver; hesitation bites harder with a stranger');
+  console.log('    last however long the silence runs; no score it returns can');
+  console.log('    cross a class boundary, and waiting only sets how long');
+  console.log('    somebody sits before the Floor offers a way in; 草野 is');
+  console.log('    curious without becoming a driver; hesitation bites harder');
+  console.log('    with a stranger');
 }
 process.exitCode = problems.length ? 1 : 0;

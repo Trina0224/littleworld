@@ -15,7 +15,7 @@ import { createNav } from './nav.js';
 import { createZones } from './zones.js';
 import { createPerception } from './perception.js';
 import { createFloors } from './floors.js';
-import { createSocialWeigher } from './social.js';
+import { createSocialWeigher, interjectPatience } from './social.js';
 import { createActivityRuntime } from './activity.js';
 import { createLoop } from './loop.js';
 
@@ -47,7 +47,9 @@ function setup({ weigh = null, ...config } = {}) {
   const world = createWorld({ anchors, nav, zones, seed: 20260826 });
   const perception = createPerception(world, zones, { entities });
   const floors = createFloors(world, zones, perception, {
-    minds, config, weigh: weigh === true ? createSocialWeigher({ traitsFor: traits }) : weigh
+    minds, config,
+    weigh: weigh === true ? createSocialWeigher({ traitsFor: traits }) : weigh,
+    patienceFor: weigh === true ? (id) => interjectPatience(traits.get(id)) : null
   });
   const loop = createLoop({
     world, runtime: createActivityRuntime(world), perception, floors
@@ -402,38 +404,10 @@ function drive(loop, floors, n, policy = () => 'decline') {
   check(woke.length > 0, 'a table stayed asleep while somebody walked up to it');
 }
 
-// --- two people answering each other do not own the room forever -----------
-// The first real Brain run had 渡辺 sit through six rounds at the same table
-// without being asked once: an addressee ranks first, and every utterance
-// restarts the round, so the pair never yields. Waiting has to be able to
-// overtake that.
-{
-  const { world, floors, loop } = setup({ weigh: true });
-  world.spawn('grandma-01', NEAR_TABLE[0]);
-  world.spawn('brother-01', NEAR_TABLE[1]);
-  world.spawn('pastor-01', [222, 240]);         // present, and never addressed
-
-  // The two of them talk only to each other, always answering the last line.
-  const asked = new Set();
-  let mine = null;
-  for (let i = 0; i < 60; i += 1) {
-    for (const o of step(loop, floors)) {
-      asked.add(o.entityId);
-      const pair = o.entityId === 'grandma-01' ? 'brother-01'
-        : o.entityId === 'brother-01' ? 'grandma-01' : null;
-      const pick = pair && o.menu.find(
-        (m) => m.startsWith('reply:') && o.context.refs.get(m.split(':')[1]) === pair);
-      if (!pick) { floors.decline(o.entityId); continue; }
-      mine = mine ?? o;
-      const r = floors.commit(o.entityId, { pick, text: 'そうねえ' });
-      if (r.refused) floors.decline(o.entityId);
-    }
-  }
-  check(asked.has('grandma-01') && asked.has('brother-01'),
-    'the test premise is wrong: the pair never got the floor');
-  check(asked.has('pastor-01'),
-    'a third person at the table was never asked once in sixty rounds');
-}
+// The old "two people answering each other own the room forever" scenario moved
+// to interject.test.js when the fix moved: waiting is no longer a ranking term
+// that can outgrow a direct addressee, it is how long somebody sits before the
+// Floor offers them a boundary to come in at.
 
 // --- waiting is counted from the start of THIS conversation ----------------
 // A floor that has slept and woken must not treat everybody as having waited

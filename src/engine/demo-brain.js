@@ -31,7 +31,7 @@ import { createPerception } from './perception.js';
 import { createMemory, buildContext } from './memory.js';
 import { createFloors, trimSpeech } from './floors.js';
 import { createAnimals } from './animals.js';
-import { createSocialWeigher, speechBudget } from './social.js';
+import { createSocialWeigher, speechBudget, interjectPatience } from './social.js';
 import { createActivityRuntime } from './activity.js';
 import { createLoop } from './loop.js';
 import { buildPrefix } from './prompt.js';

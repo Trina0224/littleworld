@@ -77,7 +77,7 @@ const ORDINARY = 1000;
 
 export function createFloors(world, zones, perception, {
   minds, config = {}, weigh = null, makeContext = null, animals = null,
-  budgetFor = null
+  budgetFor = null, patienceFor = null
 } = {}) {
   if (minds === undefined) {
     throw new Error('createFloors needs an explicit `minds` set: who can hold a floor');
@@ -154,6 +154,7 @@ export function createFloors(world, zones, perception, {
       zone: zoneId, socialSpell: spell, state: 'open',
       round: 0, quietRounds: 0,
       lastSpeechTick: null, lastSpeaker: null, addressed: [], openQuestion: null,
+      boundary: false,          // a direct-response opportunity has just resolved
       nudgedFor: new Map(),
       offeredTo: [], offeredAt: null, why: new Map(), menus: new Map(),
       asked: new Set(), claims: new Map(), declines: new Set(), epochs: new Map(),
@@ -295,33 +296,65 @@ export function createFloors(world, zones, perception, {
     return ORDINARY;
   }
 
+  /** Rounds of this conversation this person has sat through without being asked. */
+  function waited(f, entityId) {
+    return f.round - (f.lastOffered.get(entityId) ?? f.spellStartRound);
+  }
+
   /**
-   * The class decides who comes first; personality decides everything within it
-   * AND, through the waiting term, whether somebody who has never been asked
-   * eventually overtakes a pair answering each other. Personality is added to
-   * every class rather than only to the ordinary one, because otherwise the
-   * addressee's privilege is absolute and the round restarts forever.
+   * Personality, within a class and never across one. The class is
+   * conversational causality - somebody spoke to me - and no score may buy a way
+   * past it (phase-3e-brain-grounding-and-interject.md 1). Ranking is therefore
+   * lexicographic rather than additive: an earlier version summed the two and a
+   * waiting term grew until it outranked a direct addressee.
    */
-  function rankOf(f, entityId) {
-    const situation = {
+  function weightOf(f, entityId) {
+    if (!weigh) return 0;
+    return weigh(entityId, {
       zone: f.zone,
       participants: heads(f.zone).filter((id) => id !== entityId),
       quietRounds: f.quietRounds,
       roundIndex: f.round,
-      roundsWaited: f.round - (f.lastOffered.get(entityId) ?? f.spellStartRound),
       lastSpeakerWasMe: f.lastSpeaker === entityId
-    };
-    return classOf(f, entityId) + (weigh ? weigh(entityId, situation) : 0);
+    });
   }
 
   function ranked(f) {
     return heads(f.zone)
-      .map((id) => ({ id, r: rankOf(f, id) }))
-      .sort((a, b) => (b.r - a.r)
+      .map((id) => ({ id, c: classOf(f, id), w: weightOf(f, id) }))
+      .sort((a, b) => (b.c - a.c)
+        || (b.w - a.w)
         || (hash01(`${world.seed}:${f.zone}:${f.round}:${a.id}`)
             - hash01(`${world.seed}:${f.zone}:${f.round}:${b.id}`))
         || (a.id < b.id ? -1 : 1))
       .map((x) => x.id);
+  }
+
+  /**
+   * Who, if anybody, may come in at an exchange boundary.
+   *
+   * An interject opportunity is not a response opportunity and is not a ranking
+   * term: it exists so that two people answering each other cannot make a third
+   * person at the same table structurally unaskable. Eligibility is how long
+   * they have sat there against how long they can sit still, which is theirs -
+   * 星さん after five rounds, 澄子 after twenty, 渡辺 after thirty. Whether they
+   * then say anything is theirs too.
+   */
+  function interjector(f) {
+    if (!patienceFor) return null;
+    const ready = heads(f.zone)
+      .filter((id) => llm.has(id)
+        && classOf(f, id) === ORDINARY          // nobody owed an answer, nobody nudged
+        && !f.asked.has(id)
+        && id !== f.lastSpeaker
+        && waited(f, id) >= Math.max(1, patienceFor(id)))
+      .map((id) => ({ id, over: waited(f, id) - patienceFor(id), w: weightOf(f, id) }))
+      .sort((a, b) => (b.over - a.over)
+        || (b.w - a.w)
+        || (hash01(`${world.seed}:${f.zone}:${f.round}:${a.id}`)
+            - hash01(`${world.seed}:${f.zone}:${f.round}:${b.id}`))
+        || (a.id < b.id ? -1 : 1));
+    return ready.length ? ready[0].id : null;
   }
 
   function endRound(f) {
@@ -342,15 +375,25 @@ export function createFloors(world, zones, perception, {
    * ranked eligible character in the same round.
    */
   function offer(f) {
+    // An exchange boundary: the last direct-response opportunity has been used
+    // or waved away, and nobody else is owed an answer yet. This is the only
+    // moment somebody who was not spoken to may come in, and it happens BEFORE
+    // ordinary ranking rather than through it.
+    let cutIn = null;
+    if (f.boundary) {
+      f.boundary = false;
+      cutIn = interjector(f);
+    }
     const candidates = ranked(f).filter((id) => !f.asked.has(id));
-    if (!candidates.length) { endRound(f); return; }
-    const id = candidates[0];
+    if (!cutIn && !candidates.length) { endRound(f); return; }
+    const id = cutIn ?? candidates[0];
     f.offeredTo = [id];
     f.offeredAt = world.tick; // audit/debug metadata only; never an expiry clock
     f.state = 'offered';
     f.asked.add(id);
-    const why = classOf(f, id) === ADDRESSED ? 'addressed'
-      : f.nudgedFor.has(id) ? 'overheard' : 'open_floor';
+    const why = cutIn ? 'interject'
+      : classOf(f, id) === ADDRESSED ? 'addressed'
+        : f.nudgedFor.has(id) ? 'overheard' : 'open_floor';
     f.lastOffered.set(id, f.round);
     const ctx = makeContext ? makeContext(id) : perception.contextFor(id);
     const menu = menuOf(id, ctx);
@@ -421,6 +464,11 @@ export function createFloors(world, zones, perception, {
     if (!answered) return;
 
     const said = f.claims.get(id) ?? null;
+    // An exchange boundary is the moment a direct-response opportunity is spent
+    // - answered or waved away - with nobody else on this floor still owed one.
+    // Read BEFORE the new utterance registers its own addressees, because the
+    // answer somebody has just given is not the address they are still owed.
+    const wasAddressed = f.why.get(id) === 'addressed';
     settleQuietly(id, f.epochs.get(id), true);
     f.epochs.delete(id);
     f.offeredTo = [];
@@ -428,9 +476,13 @@ export function createFloors(world, zones, perception, {
     f.declines.clear();
     f.menus.clear();
     f.state = 'open';
+    pendingAddress.delete(id);
+    if (wasAddressed
+        && !heads(f.zone).some((x) => x !== id && classOf(f, x) === ADDRESSED)) {
+      f.boundary = true;
+    }
 
     if (!said) return;
-    pendingAddress.delete(id);
 
     world.say(id, said.speak, {
       scope: said.scope, to: said.acts.map((a) => a.target).filter(Boolean)
