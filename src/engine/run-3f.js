@@ -173,7 +173,13 @@ function read2(id) {
   check(!orders.some((m) => /curry|カレー/i.test(m)), 'the cafe sells curry');
   check(orders.every((m) => cafe.item(m.split(':')[1])),
     'a choice was offered for something the menu does not have');
-  check(cafe.order('grandma-01', 'curry').refused, 'an invented item was accepted');
+  // By reason, not merely refused: an invented item that happens to be caught by
+  // the "not somewhere you can order" gate would leave the menu itself untested,
+  // and the menu is the thing that says a curry does not exist here.
+  check(cafe.order('grandma-01', 'curry').refused === 'not on the menu today',
+    `an invented item was refused as "${cafe.order('grandma-01', 'curry').refused}"`);
+  check(!world.log.facts.some((e) => e.type === 'order_placed' && e.item === 'curry'),
+    'an invented item reached the fact stream');
 
   // 6. A fixed-menu order goes through without waking her Brain to approve it.
   const tea = 'order:tea_sencha';
