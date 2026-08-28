@@ -28,10 +28,10 @@ const grid = read(SPEC, 'navgrid.json');
 const zoneSpec = read(SPEC, 'zones.json');
 
 const CAST = ['grandma-01', 'pastor-01', 'shopkeeper-01'];
-const NEAR_TABLE = [[227, 235], [232, 238]];
+const NEAR_TABLE = [[227, 235], [232, 238], [222, 240]];
 const COUNTER = [222, 178];
 
-function setup({ seeded = true, ticksPerDay = 0 } = {}) {
+function setup({ seeded = true, ticksPerDay = 0, config = {} } = {}) {
   const entities = new Map();
   const seeds = new Map();
   const minds = new Set();
@@ -49,7 +49,8 @@ function setup({ seeded = true, ticksPerDay = 0 } = {}) {
   const ground = createGrounding(world, zones);
   let floors;
   floors = createFloors(world, zones, perception, {
-    minds, ground, makeContext: (id) => buildContext(perception, memory, id, floors)
+    minds, ground, config,
+    makeContext: (id) => buildContext(perception, memory, id, floors)
   });
   const runtime = createActivityRuntime(world);
   const loop = createLoop({ world, runtime, perception, memory, floors });
@@ -204,10 +205,16 @@ const flat = (o) => JSON.stringify(o.context.forModel);
 }
 
 // --- an unplaceable episode is dropped, not shown as nobody -----------------
+// Shown as nobody IS the defect: two identical 「met somebody for the first
+// time」 lines is what the first real Brain run was handed. A third person keeps
+// the floor alive so she is still asked after he leaves.
 {
-  const { world, memory, floors, loop } = setup({ seeded: false });
+  // The floor is held open on purpose: what is under test is what her package
+  // says about a man who has left, not when a quiet table goes to sleep.
+  const { world, memory, floors, loop } = setup({ seeded: false, config: { quietLimit: 99 } });
   world.spawn('grandma-01', NEAR_TABLE[0]);
   world.spawn('pastor-01', NEAR_TABLE[1]);
+  world.spawn('shopkeeper-01', NEAR_TABLE[2]);
   for (let i = 0; i < 12; i += 1) {
     for (const o of step(loop, floors)) floors.decline(o.entityId);
   }
@@ -215,7 +222,7 @@ const flat = (o) => JSON.stringify(o.context.forModel);
   // longer point at him: no label, no ref.
   world.depart('pastor-01');
   let mine = null;
-  for (let i = 0; i < 20 && !mine; i += 1) {
+  for (let i = 0; i < 30; i += 1) {
     for (const o of step(loop, floors)) {
       if (o.entityId === 'grandma-01') mine = o.context.forModel;
       floors.decline(o.entityId);
@@ -223,9 +230,14 @@ const flat = (o) => JSON.stringify(o.context.forModel);
   }
   check(memory.episodesFor('grandma-01').some((e) => e.entityId === 'pastor-01'),
     'the test premise is wrong: she never recorded meeting him');
+  check(mine, 'the test premise is wrong: she was never asked again after he left');
   const shown = mine?.memory ?? [];
+  check(shown.length > 0,
+    'the test premise is wrong: her package carried no episodes at all');
   check(!shown.some((e) => e.who === 'somebody' || e.who === undefined),
     `an episode she cannot place was shown anyway: ${JSON.stringify(shown)}`);
+  check(!shown.some((e) => JSON.stringify(e).includes('pastor')),
+    'the man who left was named by id');
 }
 
 // --- 9. a ref never becomes storage -----------------------------------------
