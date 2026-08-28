@@ -26,7 +26,7 @@ import { createLoop } from './loop.js';
 import { replay } from './view.js';
 import { saveRecording, loadRecording, publicOnly } from './recording.js';
 import { extractStory } from './story.js';
-import { buildTimeline, readingMs } from './presentation.js';
+import { buildTimeline, readingMs, DEFAULTS as PRESENT } from './presentation.js';
 import { validateScript, compareModes } from './script.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -297,11 +297,24 @@ check(timeline.durationMs < rec.lastTick * rec.tickDurationMs,
   // The making itself has to take time on screen. Compressing it to nothing is
   // how a cup of tea appears out of the air, which §3 says breaks causality
   // even though the order of events is untouched.
+  const startedT = rec.facts.find((f) => f.type === 'preparation_started').t;
   const madeMs = order.readyMs - order.startedMs;
-  const madeTicks = ready.t - rec.facts.find((f) => f.type === 'preparation_started').t;
-  check(madeMs > 0, 'the tea was made in no time at all');
+  const madeTicks = ready.t - startedT;
   check(madeMs < madeTicks * rec.tickDurationMs,
     `${madeMs}ms shown for ${madeTicks * rec.tickDurationMs}ms of steeping`);
+  // Measured on the map itself, over a stretch of the steeping with nothing
+  // else in it - a line landing mid-preparation would otherwise supply the time
+  // and hide a montage compressed to nothing.
+  let quiet = { ticks: 0, ms: 0 };
+  for (let i = 1; i < timeline.marks.length; i += 1) {
+    const a = timeline.marks[i - 1], b = timeline.marks[i];
+    if (a.t < startedT || b.t > ready.t) continue;
+    if (b.t - a.t > quiet.ticks) quiet = { ticks: b.t - a.t, ms: b.ms - a.ms };
+  }
+  check(quiet.ticks > 20, `the test premise is wrong: ${quiet.ticks} quiet ticks of steeping`);
+  check(quiet.ms >= PRESENT.prepMs[0],
+    `${quiet.ticks} ticks of making tea were shown in ${quiet.ms}ms, which is not a montage`);
+  check(quiet.ms <= PRESENT.prepMs[1], `a montage ran ${quiet.ms}ms`);
 }
 
 // --- 8. subtitles get reading time, not tick lifetimes ---------------------
@@ -375,6 +388,14 @@ check(timeline.durationMs < rec.lastTick * rec.tickDurationMs,
   check(diff.exactTicks !== diff.audienceMs,
     'the two modes are the same length, so one of them is not doing its job');
   check(diff.linesInAudience > 0, 'the audience mode has no dialogue at all');
+  // And the comparison has to be able to see a line nobody said, or it is not a
+  // comparison. §11.12 asks for the differences to be presentation choices; the
+  // way to know they are is that this reports one when it is not.
+  const forged = { ...timeline, events: [...timeline.events,
+    { source: [], kind: 'dialogue', speaker: 'grandma-01', text: 'カレーをひとつ', startMs: 0, durationMs: 1000 }] };
+  const caught = compareModes(exactFrames, forged);
+  check(caught.invented.length === 1 && caught.invented[0].includes('カレー'),
+    'a line nobody said was not reported as invented');
 }
 
 // The saved timeline, so the browser player has something to load.
