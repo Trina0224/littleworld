@@ -41,8 +41,8 @@ function setStatus(message) {
 }
 
 class ShowaLittleWorld extends Phaser.Scene {
-  constructor() {
-    super('ShowaLittleWorld');
+  constructor(config) {
+    super(config ?? 'ShowaLittleWorld');
     this.dragging = false;
     this.lastPointer = null;
     this.lastPinchDistance = 0;
@@ -95,13 +95,57 @@ class ShowaLittleWorld extends Phaser.Scene {
         });
     });
 
-    this.buildCast();
+    // The replay page draws its own cast from a timeline instead of the static
+    // placements. Everything else about this scene - background, occlusion,
+    // camera, debug layers - is the same scene either way, which is the point.
+    if (this.staticCast !== false) this.buildCast();
     this.buildDebugLayers();
     this.setupCameraControls();
     this.setupZoomButtons();
     this.setupDebugToggle();
     this.fitScene();
     setStatus(this.castStatus ?? '2560×1440 clean WebP background');
+  }
+
+  /**
+   * Cut one sprite to whatever stands in front of it, and hand back a texture
+   * key. Split out of buildCast so a moving character can be recut when its
+   * depth row changes - the rule is the same one, applied more than once.
+   */
+  cutSprite(key, box, depthRow, textureKey) {
+    const source = this.textures.get(key).getSourceImage();
+    const w = Math.max(1, Math.round(box.w * PX_PER_UNIT));
+    const h = Math.max(1, Math.round(box.h * PX_PER_UNIT));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(source, 0, 0, w, h);
+    const depth = this.occDepth ?? (this.occDepth = this.readOccluderDepth());
+    let erased = 0;
+    if (depth) {
+      const x0 = Math.round(box.x * PX_PER_UNIT);
+      const y0 = Math.round(box.y * PX_PER_UNIT);
+      const floor = depthRow * PX_PER_UNIT;
+      const img = ctx.getImageData(0, 0, w, h);
+      const px = img.data;
+      for (let j = 0; j < h; j += 1) {
+        const sy = y0 + j;
+        if (sy < 0 || sy >= depth.h) continue;
+        for (let i = 0; i < w; i += 1) {
+          const sx = x0 + i;
+          if (sx < 0 || sx >= depth.w) continue;
+          if (depth.rows[sy * depth.w + sx] > floor) {
+            px[(j * w + i) * 4 + 3] = 0;
+            erased += 1;
+          }
+        }
+      }
+      if (erased) ctx.putImageData(img, 0, 0);
+    }
+    if (this.textures.exists(textureKey)) this.textures.remove(textureKey);
+    this.textures.addCanvas(textureKey, canvas);
+    return erased > 0;
   }
 
   /** The occluder's floor line per texture pixel, unpacked from occdepth.png. */
@@ -141,52 +185,14 @@ class ShowaLittleWorld extends Phaser.Scene {
       this.castStatus = '2560×1440 clean WebP background · 人物尚未載入';
       return;
     }
-    const depth = this.readOccluderDepth();
     let cut = 0;
 
     placements.forEach((p) => {
       const key = `cast-${p.key}`;
       if (!this.textures.exists(key)) return;
-      const source = this.textures.get(key).getSourceImage();
-      const w = Math.max(1, Math.round(p.w * PX_PER_UNIT));
-      const h = Math.max(1, Math.round(p.h * PX_PER_UNIT));
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(source, 0, 0, w, h);
-
-      if (depth) {
-        const x0 = Math.round(p.x * PX_PER_UNIT);
-        const y0 = Math.round(p.y * PX_PER_UNIT);
-        const floor = p.depth * PX_PER_UNIT;
-        const img = ctx.getImageData(0, 0, w, h);
-        const px = img.data;
-        let erased = 0;
-        for (let j = 0; j < h; j += 1) {
-          const sy = y0 + j;
-          if (sy < 0 || sy >= depth.h) continue;
-          for (let i = 0; i < w; i += 1) {
-            const sx = x0 + i;
-            if (sx < 0 || sx >= depth.w) continue;
-            const row = depth.rows[sy * depth.w + sx];
-            if (row > floor) {
-              px[(j * w + i) * 4 + 3] = 0;
-              erased += 1;
-            }
-          }
-        }
-        if (erased) {
-          ctx.putImageData(img, 0, 0);
-          cut += 1;
-        }
-      }
-
-      const textureKey = `cast-cut-${p.key}`;
-      if (this.textures.exists(textureKey)) this.textures.remove(textureKey);
-      this.textures.addCanvas(textureKey, canvas);
+      if (this.cutSprite(key, p, p.depth, `cast-cut-${p.key}`)) cut += 1;
       this.add
-        .image(p.x, p.y, textureKey)
+        .image(p.x, p.y, `cast-cut-${p.key}`)
         .setOrigin(0, 0)
         .setDisplaySize(p.w, p.h)
         .setDepth(1 + p.depth / 1000);
@@ -353,7 +359,9 @@ class ShowaLittleWorld extends Phaser.Scene {
   }
 }
 
-const game = new Phaser.Game({
+// The replay page constructs its own game around the same scene, so this file
+// only starts one when nothing else has claimed it.
+const game = window.LITTLEWORLD_NO_AUTOSTART ? null : new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: window.innerWidth,
@@ -373,9 +381,13 @@ const game = new Phaser.Game({
 
 // Handy from the browser console: game.scene.scenes[0].cameras.main.
 window.game = game;
+window.ShowaLittleWorld = ShowaLittleWorld;
+window.LITTLEWORLD = { WORLD_W, WORLD_H, PX_PER_UNIT, SPEC, CAST, setStatus };
 
-window.addEventListener('resize', () => {
-  game.scale.resize(window.innerWidth, window.innerHeight);
-  const scene = game.scene.getScene('ShowaLittleWorld');
-  if (scene?.scene?.isActive()) scene.fitScene();
-});
+if (game) {
+  window.addEventListener('resize', () => {
+    game.scale.resize(window.innerWidth, window.innerHeight);
+    const scene = game.scene.getScene('ShowaLittleWorld');
+    if (scene?.scene?.isActive()) scene.fitScene();
+  });
+}

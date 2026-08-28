@@ -1,0 +1,50 @@
+/* The transport bar. Everything else is inherited from the static scene's
+   stylesheet, because this is the same scene with a clock attached. */
+#transport {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(14, 16, 13, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  color: #e9e6dd;
+  font: 13px/1.2 system-ui, "Hiragino Sans", "Noto Sans TC", sans-serif;
+  z-index: 30;
+  max-width: min(720px, calc(100vw - 28px));
+}
+#transport button,
+#transport select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: inherit;
+  border-radius: 8px;
+  padding: 4px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+#transport button:hover { background: rgba(255, 255, 255, 0.16); }
+#scrub { flex: 1 1 200px; min-width: 90px; accent-color: #ffd23c; }
+#clock { font-variant-numeric: tabular-nums; opacity: 0.85; white-space: nowrap; }
+#speed-label { opacity: 0.7; }
+
+#subtitle {
+  position: fixed;
+  left: 50%;
+  bottom: 74px;
+  transform: translateX(-50%);
+  max-width: min(760px, calc(100vw - 40px));
+  text-align: center;
+  color: #f4f1e8;
+  font: 500 17px/1.5 system-ui, "Hiragino Sans", "Noto Sans TC", sans-serif;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 25;
+}
+#subtitle .who { display: block; font-size: 12px; opacity: 0.72; letter-spacing: 0.06em; }
+#subtitle .caption { color: #ffd98a; font-style: italic; }
