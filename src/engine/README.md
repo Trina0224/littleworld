@@ -1,4 +1,4 @@
-# World Engine — Phases 3A, 3C, 3D and 3E
+# World Engine — Phases 3A, 3C, 3D, 3E and 3F
 
 Plain ES modules, no dependencies, no build step. They run under Node today and
 in the browser later without change; only the scenario runner touches a host
@@ -434,7 +434,7 @@ coming survives into a recording.
 
 ### What the tests prove
 
-Ninety-three mutations, all biting. The fifteen most recent come from the first real
+One hundred and eighteen mutations, all biting. The fifteen most recent come from the first real
 Brain run and the three changes it forced: the budget that is the character's
 own rather than the cast's, the sentence-boundary cut, a second act silently
 dropped, a second act that skips the menu, a second person named who is not owed
@@ -513,6 +513,80 @@ The station one first caught nothing: the test fired a made-up resource id, so
 the `resource()` lookup already refused it and the `kind` check was doing no
 work. It now reserves and occupies the real `cafe-counter` station and the real
 `counter-stool-1` beside it, and asserts the two behave differently.
+
+## The cafe, the weather, and the seam (3F)
+
+> **Routine commerce is engine-owned; socially meaningful judgement is
+> Brain-owned.** One phase, not an A and a B: `docs/specs/engine/phase-3f.md`
+> retired that split because venue knowledge, ambient world knowledge, Brain
+> opportunities and provider transport turned out to be one interface boundary
+> the moment a real Brain used them.
+
+**The world stays in daylight.** `ambient.js` picks one weather and temperature
+per run - deterministically from the seed unless a director says otherwise - and
+records it, because a character mentions the weather and replay has to know what
+the run was told. The daypart is **authored**, never computed: `ticksPerDay` is
+attendance bookkeeping and not the sun, and grounding used to derive a five-part
+clock from tick fraction, which meant a long enough run told somebody darkness
+had arrived.
+
+**A person standing there knows some things.** The session bootstrap is said
+once (`prompt.js`): the handful of mundane facts the mechanics cannot teach a
+model, the kind of day it is, and what the cafe sells. Not a memory - writing
+「I remember that today was 22°C」 into private storage so the model keeps seeing
+it would be a lie about what remembering is - and not a per-turn cost, because
+per-turn is what dynamic grounding is for.
+
+**There is no classifier.** `order:<id>` is an engine-authored choice whose item
+is resolved against the menu; everything else a customer says to the shopkeeper
+is speech, and speech wakes her through the direct-address rule she already had.
+That IS the semantic router: one branch executes, the other is a person talking,
+and there is nothing in between to be wrong. It is also why an invented curry has
+nowhere to enter - the menu is the choice set, so a Brain never learns the menu
+from a rejection.
+
+Whether you may order at all is a fact, not a permission list: she has to be able
+to hear you at ordinary speaking volume. The far table is 78 units from the
+counter against a hearing range of 70, so people sitting there have to call
+across or come closer. Nobody wrote that rule; it is the room.
+
+**`cafe.js` finishes what it starts, with nobody's help.** The obligation with
+its grace and refresh, the queue, one person's capacity, preparation whose
+duration is the critical path rather than the sum, a complex nerikiri shaped by
+hand in seven committed steps, the cup carried to the person who ordered it, and
+the empty one collected afterwards. In the real-Brain run the tea arrived with
+the shopkeeper's Brain silent throughout - a provider outage would not have
+changed a fact of it.
+
+Two distinctions the code keeps apart because a mutation showed they were one:
+being **at capacity** gates what she can start; having **anything in hand at all**
+is what stretches a waiting customer's grace, because pressing somebody to order
+while she is already making something is the world nagging on a timer.
+
+**`brain-runtime.js` has no tick budget anywhere in it.** A request stays
+outstanding for as many simulation ticks as it takes. Infrastructure may give up
+- that is `drop` and `cancel` - but only because something outside the fiction
+said so, and `decline()` now records *who* declined, because a character saying
+nothing and a dropped request are identical in the fact stream and the audit is
+where they stop being the same thing.
+
+### What the integrated run proves
+
+`run-3f.js` is §12's fourteen cases as one scenario rather than fourteen helper
+tests: ten simulation days that do not bring on the night, a bootstrap said once
+against a turn that carries grounding, an ordinary order that needs nobody's
+judgement, five hundred ticks that fabricate no decline, and one seed that is one
+afternoon with nothing left held.
+
+Twenty-five mutations, all biting, and three of them found real bugs rather than
+confirming a rule. A busy shopkeeper whose customers' grace ran out anyway. An
+order that only cleared when its customer left, so an order placed by somebody
+who stays all afternoon never cleared at all - unbounded growth wearing the
+clothes of a plausible rule, found by a 5000-tick soak. And the one the real
+Brain found by refusing to produce a scenario at all: **an obligation coming due
+into a room that had already gone quiet**, firing into a sleeping table where
+nobody was ever asked. The same shape as arriving in a room not being social - a
+rule true in the engine and invisible in the world.
 
 ### What the second real Brain run changed
 
