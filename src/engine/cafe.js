@@ -62,7 +62,15 @@ export function createCafe(world, zones, { menu, attendant, config = {} } = {}) 
 
   /** Orders she currently has in hand. One person, bounded work. */
   const inHand = () => [...orders.values()].filter((o) => o.startedAt !== null && !o.servedAt);
-  const busy = () => inHand().length >= cfg.capacity;
+  /** No room to start anything else. */
+  const atCapacity = () => inHand().length >= cfg.capacity;
+  /**
+   * Doing anything at all. A different question from capacity, and the one the
+   * obligation asks: pressing a second customer to order while she is already
+   * making something is the world nagging on a timer, so her having work in hand
+   * - or an order waiting to be started - stretches everybody's grace.
+   */
+  const working = () => [...orders.values()].some((o) => !o.servedAt);
 
   function visit(id) {
     let v = visits.get(id);
@@ -172,7 +180,7 @@ export function createCafe(world, zones, { menu, attendant, config = {} } = {}) 
         const v = visit(id);
         // She is one person: while her hands are full, nobody's grace runs out.
         // Workload shaping, not scripted behaviour (venue §7).
-        if (busy()) { v.since += 1; continue; }
+        if (working()) { v.since += 1; continue; }
         if (v.state === 'settling' && world.tick - v.since >= cfg.graceTicks) {
           v.state = 'order_due';
           world.log.fact(world.tick, 'venue_obligation', { customer: id, state: 'order_due' });
@@ -184,7 +192,7 @@ export function createCafe(world, zones, { menu, attendant, config = {} } = {}) 
 
       // --- start what she has room for, oldest first ------------------------
       for (const o of [...orders.values()].sort((a, b) => a.placedAt - b.placedAt)) {
-        if (o.startedAt !== null || busy()) continue;
+        if (o.startedAt !== null || atCapacity()) continue;
         const item = byId.get(o.item);
         o.startedAt = world.tick;
         o.readyAt = world.tick + cfg.handlingTicks + item.prepTicks;

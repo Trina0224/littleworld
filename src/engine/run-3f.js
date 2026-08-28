@@ -123,9 +123,9 @@ const pick = (o, prefix) => o.menu.find((m) => m.startsWith(prefix)) ?? null;
   const b = createAmbient({ seed: 3060, tick: 0, log: { fact() {} } }).state;
   check(JSON.stringify(a) === JSON.stringify(b),
     `one seed gave two afternoons: ${JSON.stringify(a)} / ${JSON.stringify(b)}`);
-  const others = [7, 19, 101, 404, 808, 1234]
-    .map((seed) => JSON.stringify(createAmbient({ seed, tick: 0, log: { fact() {} } }).state));
-  check(new Set(others).size > 1, 'every seed is the same weather');
+  const others = [7, 19, 101, 404, 808, 1234, 55, 900]
+    .map((seed) => createAmbient({ seed, tick: 0, log: { fact() {} } }).state.weatherType);
+  check(new Set(others).size > 1, `every seed is ${others[0]}`);
   // A director may simply say what kind of day it is.
   const told = createAmbient({ seed: 1, tick: 0, log: { fact() {} } }, {
     config: { weather: { weatherType: '小雨', ambientTempC: 15, feltCondition: '肌寒い' } }
@@ -144,6 +144,7 @@ const pick = (o, prefix) => o.menu.find((m) => m.startsWith(prefix)) ?? null;
   world.spawn('grandma-01', NEAR_TABLE[0]);
   world.spawn('shopkeeper-01', COUNTER);
   world.spawn('man-01', NEAR_TABLE[1]);
+  world.spawn('brother-01', NEAR_TABLE[2]);     // a child, and not a customer
   loop.step();
   check(cafe.visitOf('grandma-01')?.state === 'settling',
     'somebody who had just sat down already owed an order');
@@ -164,8 +165,32 @@ const pick = (o, prefix) => o.menu.find((m) => m.startsWith(prefix)) ?? null;
   check(!ground.self('shopkeeper-01').noticing,
     'the woman running the shop was told to buy something from herself');
   // The two boys and the dog are not customers (venue-interactions 1).
+  check(world.log.facts.some((e) => e.type === 'venue_obligation'
+    && e.customer === 'man-01'), 'the test premise is wrong: the other adult was exempt too');
   check(!world.log.facts.some((e) => e.type === 'venue_obligation'
     && cafe.config.exempt.includes(e.customer)), 'a child was asked to buy something');
+  check(!ground.self('brother-01').noticing, 'a child was told to order or leave');
+}
+
+// --- while her hands are full, nobody's grace runs out ---------------------
+// Workload shaping rather than scripted behaviour (venue-interactions 7): she
+// is one person, and pressing a second customer to order while she is already
+// making something would be the world nagging on a timer.
+{
+  const { world, cafe, loop } = build({ config: { graceTicks: 30 } });
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('shopkeeper-01', COUNTER);
+  world.spawn('man-01', NEAR_TABLE[1]);
+  loop.step();
+  cafe.order('grandma-01', 'tea_assam');       // 210 ticks of steeping
+  for (let i = 0; i < 120; i += 1) loop.step();
+  check(cafe.orderOf('order-1')?.startedAt !== null,
+    'the test premise is wrong: she never started it');
+  check(cafe.visitOf('man-01')?.state === 'settling',
+    `the other customer was pressed to order while she was busy: ${cafe.visitOf('man-01')?.state}`);
+  for (let i = 0; i < 400; i += 1) loop.step();
+  check(cafe.visitOf('man-01')?.state === 'order_due',
+    'and once she was free again he was never asked at all');
 }
 
 // --- 3, 4. the bootstrap is session-level; the turn carries grounding ------
