@@ -520,6 +520,39 @@ function read2(id) {
   }
 }
 
+// --- and one that waited until it stopped being a question -----------------
+// A queued opportunity can go stale while it waits: the person walks out, the
+// Floor cancels, and by the time a slot frees there is nothing to ask. Sending
+// it anyway costs a provider call to be told 'no offer outstanding', which is
+// the exact waste a bounded scheduler exists to avoid.
+{
+  const { world, floors, loop } = build();
+  world.spawn('grandma-01', NEAR_TABLE[0]);
+  world.spawn('man-01', NEAR_TABLE[1]);
+  world.spawn('brother-01', PARK[0]);
+  world.spawn('shopkeeper-01', PARK[1]);
+  const runtime = createBrainRuntime(world, floors, { config: { maxInFlight: 1 } });
+  let waiting = null;
+  for (let i = 0; i < 60 && !waiting; i += 1) {
+    loop.step();
+    runtime.admit(floors.offers());
+    [waiting] = runtime.waiting();
+  }
+  check(waiting, 'the test premise is wrong: nothing was ever queued');
+  // The person it was queued for walks out of the scene entirely.
+  world.depart(waiting.entityId);
+  for (let i = 0; i < 4; i += 1) loop.step();
+  check(!world.present(waiting.entityId), 'the test premise is wrong: he is still here');
+  // Now free the slot. What comes back must not include a question nobody is
+  // there to answer.
+  const freed = runtime.inFlight()[0];
+  const next = freed ? runtime.answered(freed.entityId) : [];
+  check(!next.some((o) => o.entityId === waiting.entityId),
+    'a queued request was sent to somebody who had already left');
+  check(world.log.audit.some((e) => e.type === 'brain_stale' && e.agent === waiting.entityId),
+    'it was dropped from the queue without a word about why');
+}
+
 // --- 10, 11. the 3E contracts are unchanged, and speech is not duplicated ---
 {
   const { world, floors, loop } = build();
