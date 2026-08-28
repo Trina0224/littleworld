@@ -1,15 +1,15 @@
 # Cafe Menu — circa 1960 Fukushima
 
-**Implemented 2026-08-28** as `docs/specs/world/cafe-menu.json` (the data) and `src/engine/cafe.js` (the runtime), under `phase-3f.md`. Prep ticks in the JSON are already at `serviceTimeScale` 0.1, and the nerikiri shaping steps are the deterministic work §3 asks for rather than a shelf.
+**Implemented 2026-08-28** as `docs/specs/world/cafe-menu.json` (the authoritative live availability data) and `src/engine/cafe.js` (the runtime), under `phase-3f.md`. Prep ticks in the JSON are already at `serviceTimeScale` 0.1, and the nerikiri shaping steps are the deterministic work §3 asks for rather than a shelf.
 
-**Status:** menu/runtime design baseline  
+**Status:** menu/runtime design baseline; runtime JSON wins on current availability  
 **Created:** 2026-08-24 (`America/Los_Angeles`)  
-**Updated:** 2026-08-25 — simulation/replay timing boundary clarified  
-**Companion to:** `phase-3c-venue-interactions.md`, `simulation-replay-architecture.md`
+**Updated:** 2026-08-28 — aligned with current shop definition; no shortcake/cake  
+**Companion to:** `phase-3c-venue-interactions.md`, `phase-3f.md`, `replay-presentation.md`
 
 This document defines the initial fictional menu and preparation-time model for the LittleWorld cafe. The historical target is **around 1960 (昭和35年前後), Fukushima**, not an exact reconstruction of one real shop.
 
-The menu is intentionally broad enough to give Agent Brains meaningful choices, while keeping the cafe culturally plausible for the period.
+The menu is intentionally broad enough to give Agent Brains meaningful choices, while keeping the cafe culturally plausible for the period. The current character/world definition says this shop does **not** sell cake, so `ショートケーキ` is not part of the live menu.
 
 ## 1. Time model
 
@@ -42,7 +42,7 @@ Example:
 
 `service_time_scale` must be runtime/config data so the whole cafe can later be sped up or slowed down without rewriting the menu.
 
-**These ticks do not define audience replay duration.** Replay / Presentation may later compress deterministic service work, idle gaps, or provider latency according to its own presentation timeline while preserving causal order. See `simulation-replay-architecture.md`.
+**These ticks do not define audience replay duration.** Replay / Presentation may compress deterministic service work, idle gaps, or provider latency according to its own presentation timeline while preserving causal order. See `replay-presentation.md`.
 
 Therefore this menu answers **how long the authoritative Simulation treats work as occupying the shopkeeper/runtime**, not how long a demonstration viewer must watch that work.
 
@@ -82,7 +82,7 @@ order received
 → serve
 ```
 
-This is intentionally a meaningful **Simulation** shopkeeper activity. It gives the stationary shopkeeper deterministic work without requiring an LLM call. The first Replay implementation does not need a bespoke hand-animation for every shaping step; it only needs enough committed facts to present or summarize what happened later.
+This is intentionally a meaningful **Simulation** shopkeeper activity. It gives the stationary shopkeeper deterministic work without requiring an LLM call. Replay does not need a bespoke hand-animation for every shaping step; it only needs enough committed facts to present or summarize what happened later.
 
 Initial time classes after the 0.1 service-time compression:
 
@@ -100,8 +100,6 @@ Suggested initial classification:
 紫陽花 / 紅葉 / 雪      complex
 ```
 
-Exact step durations may be refined when the Cafe Runtime is implemented, but **nerikiri must not be collapsed back to a 30–45 tick 'take from shelf' action.**
-
 ## 4. Menu baseline
 
 Prices are fictionalized around a **50-yen ordinary coffee baseline**, appropriate to the project's circa-1960 atmosphere. They are designed for internal consistency rather than strict historical price reconstruction.
@@ -115,8 +113,6 @@ Prices are fictionalized around a **50-yen ordinary coffee baseline**, appropria
 | `coffee_kilimanjaro` | キリマンジャロ | 60円 | ~2 min | 120 |
 | `coffee_blue_mountain` | ブルーマウンテン | 70円 | ~2 min | 120 |
 | `coffee_milk` | ミルク珈琲 | 55円 | ~2.5 min | 150 |
-
-Blue Mountain is deliberately the premium item.
 
 ### 4.2 Black tea
 
@@ -137,8 +133,6 @@ Blue Mountain is deliberately the premium item.
 | `tea_matcha` | 抹茶 | 40円 | ~1.5 min | 90 |
 
 ### 4.4 Fukushima / traditional wagashi
-
-These are normally prepared earlier and require only deterministic cutting/plating/handling at order time unless a future item-specific rule says otherwise.
 
 | ID | Menu name | Price | Service handling | Initial prep ticks |
 |---|---|---:|---:|---:|
@@ -161,19 +155,16 @@ These are normally prepared earlier and require only deterministic cutting/plati
 | `nerikiri_momiji` | 練切・紅葉 | 30円 | complex | 270 |
 | `nerikiri_yuki` | 練切・雪 | 30円 | complex | 270 |
 
-Seasonal availability may later limit which nerikiri appear on a given day. The menu schema should allow this without changing the item IDs.
-
 ### 4.6 Limited western sweets
 
-Western sweets exist in the period, but this shop should not feel like a modern pastry cafe. Keep this category comparatively small.
+Western sweets exist in the period, but this shop is not a modern pastry cafe and **does not sell cake**.
 
 | ID | Menu name | Price | Service handling | Initial prep ticks |
 |---|---|---:|---:|---:|
 | `western_castella` | カステラ | 30円 | slice/plate | 30 |
-| `western_shortcake` | ショートケーキ | 40円 | plate | 45 |
 | `western_choux` | シュークリーム | 35円 | plate | 30 |
 
-Do not add later-standard items such as cheesecake merely for variety without checking the chosen historical baseline.
+`ショートケーキ` was removed from the live runtime on 2026-08-28 because it contradicted the current shop definition. Do not restore it merely because an older revision of this file listed it.
 
 ### 4.7 Light food / cold drinks
 
@@ -186,39 +177,15 @@ Do not add later-standard items such as cheesecake merely for variety without ch
 
 ## 5. Runtime requirements derived from this menu
 
-The later Cafe Runtime must support:
+The implemented Cafe Runtime supports fixed menu validation, service-time scaling, integer tick durations, parallelizable preparation, shopkeeper capacity, multi-step nerikiri shaping, serving and clearing.
 
-```text
-fixed menu validation
-service_time_scale configuration
-per-item realistic duration metadata
-integer tick durations
-parallelizable preparation work
-shopkeeper workload / single-person capacity
-multi-step deterministic nerikiri shaping
-seasonal availability
-order combinations
-serving after preparation completes
-```
+The runtime emits committed facts sufficient for Replay to explain routine commerce without parsing dialogue. In particular, `order_placed` is authoritative even if the natural-language sentence accompanying the structured order does not name the item.
 
-The runtime should emit enough public committed facts for future Replay to reconstruct the meaningful visible history without rerunning Cafe Runtime. Candidate facts include:
-
-```text
-shopkeeper starts shaping a nerikiri
-shopkeeper is finishing details with a small tool
-tea starts steeping / completes
-coffee preparation starts / completes
-order becomes ready
-service begins / completes
-```
-
-Phase 3C perception may surface those facts according to position/salience. They are not private shopkeeper thoughts.
-
-Replay may later collapse several internal preparation facts into one shorter presentation beat if that preserves the causal story.
+Replay may collapse several preparation facts into a shorter presentation beat as long as the order is not shown as served before it was prepared.
 
 ## 6. Brain boundary
 
-A customer Brain chooses what to order through structured `social_action` plus natural speech. The Cafe Runtime decides whether the item exists, how long it takes, how the work is scheduled, and when it is served.
+A customer Brain chooses what to order through an engine-authored structured choice plus natural speech. The Cafe Runtime decides whether the item exists, how long it takes, how the work is scheduled, and when it is served.
 
 The shopkeeper Brain is **not** invoked merely because a nerikiri takes several steps. Those steps remain deterministic routine commerce.
 
